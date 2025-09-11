@@ -1,10 +1,12 @@
 package com.sportenth
 
 import com.sportenth.data.database.entity.VerificationCodes
+import com.sportenth.domain.user.Gender
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.javatime.datetime
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 
@@ -16,7 +18,13 @@ class UserService(database: Database) {
         val id = integer("id").autoIncrement()
         val name = varchar("name", length = 50)
         val email = varchar("email", length = 50)
-        val age = integer("age")
+        val firstName = varchar("first_name", length = 100)
+        val lastName = varchar("last_name", length = 100)
+        val middleName = varchar("middle_name", length = 100)
+        val birthDate = datetime("birth_date")
+//        val gender: Gender,
+        val photo = varchar("photo", length = 300)
+        val phoneNumber = varchar("phone_number", length = 20)
 
         override val primaryKey = PrimaryKey(id)
     }
