@@ -12,29 +12,29 @@ import com.sportenth.data.services.smtp.sendVerificationCode
 import com.sportenth.data.services.smtp.tokens.generateAccessToken
 import com.sportenth.data.services.smtp.tokens.generateRefreshToken
 import io.ktor.http.*
-import io.ktor.http.set
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
-import org.h2.engine.User
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.time.LocalDate
 import java.time.LocalDateTime
-import kotlin.collections.set
 
 fun Application.configureDatabases() {
+//    val database = Database.connect(
+//        url = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1",
+//        user = "root",
+//        driver = "org.h2.Driver",
+//        password = "",
+//    )
+
     val database = Database.connect(
-        url = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1",
-        user = "root",
-        driver = "org.h2.Driver",
-        password = "",
+        url = "jdbc:postgresql://localhost:5432/sportenth",
+        driver = "org.postgresql.Driver",
+        user = "postgres",
+        password = "123456789"
     )
     val userService = UserService(database)
     routing {

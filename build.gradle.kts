@@ -32,15 +32,17 @@ dependencies {
     implementation("io.ktor:ktor-server-content-negotiation")
     implementation("io.ktor:ktor-serialization-gson")
     implementation("io.ktor:ktor-serialization-kotlinx-json")
+    implementation("io.ktor:ktor-server-websockets")
+    implementation("io.ktor:ktor-server-netty")
+    implementation("io.ktor:ktor-server-config-yaml")
+    implementation("io.github.damirdenis-tudor:ktor-server-rabbitmq:1.3.6")
+    testImplementation("io.ktor:ktor-server-test-host")
+
     implementation("com.h2database:h2:$h2_version")
     implementation("io.insert-koin:koin-ktor:$koin_version")
     implementation("io.insert-koin:koin-logger-slf4j:$koin_version")
-    implementation("io.github.damirdenis-tudor:ktor-server-rabbitmq:1.3.6")
-    implementation("io.ktor:ktor-server-websockets")
-    implementation("io.ktor:ktor-server-netty")
-    implementation("ch.qos.logback:logback-classic:$logback_version")
-    implementation("io.ktor:ktor-server-config-yaml")
-    testImplementation("io.ktor:ktor-server-test-host")
+
+    implementation("ch.qos.logback:logback-classic:${logback_version}")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 
     // Exposed + PostgreSQL
@@ -48,7 +50,7 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-core:${exposed_version}")
     implementation("org.jetbrains.exposed:exposed-jdbc:${exposed_version}")
     implementation("org.jetbrains.exposed:exposed-java-time:${exposed_version}")
-    implementation("org.postgresql:postgresql:42.7.1")
+    implementation("org.postgresql:postgresql:42.7.7")
 
     // SMTP
     implementation("com.sun.mail:jakarta.mail:2.0.1")
