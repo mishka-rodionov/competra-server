@@ -13,7 +13,7 @@ data class UserResponse(
     @SerializedName("middle_name")
     val middleName: String?, // отчество
     @SerializedName("birth_date")
-    val birthDate: Long,
+    val birthDate: String,
     @SerializedName("gender")
     val gender: Gender,
     @SerializedName("photo")

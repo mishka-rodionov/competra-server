@@ -8,5 +8,5 @@ data class BaseError(
     @SerializedName("message")
     val message: String,
     @SerializedName("type")
-    val type: Int
+    val type: Int? = null
 )

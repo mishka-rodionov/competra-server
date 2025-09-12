@@ -1,6 +1,6 @@
 package com.sportenth.domain.orienteering
 
-import com.rodionov.domain.models.Competition
+import com.sportenth.domain.Competition
 
 data class OrienteeringCompetition(
     val competitionId: Long,

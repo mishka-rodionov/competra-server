@@ -7,5 +7,5 @@ open class BaseModel(
     var status: Int? = null,
 
     @SerializedName("errors")
-    val errors: List<BaseError>? = null
+    var errors: List<BaseError>? = null
 )
