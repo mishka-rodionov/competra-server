@@ -3,9 +3,17 @@ package com.sportenth.data.database
 import com.rodionov.remote.request.user.UserRequest
 import com.sportenth.UserEntity
 import com.sportenth.UserService
+import com.sportenth.data.database.entity.Competitions
+import com.sportenth.data.database.entity.OrienteeringCompetitions
+import com.sportenth.data.database.entity.OrienteeringParticipants
+import com.sportenth.data.database.entity.OrienteeringResults
+import com.sportenth.data.database.entity.ParticipantGroups
+import com.sportenth.data.database.entity.RefreshTokens
+import com.sportenth.data.database.entity.SplitTimes
 import com.sportenth.data.database.entity.VerificationCodes
 import com.sportenth.data.requests.CodeVerificationRequest
 import com.sportenth.data.requests.EmailRequest
+import com.sportenth.data.requests.RefreshRequest
 import com.sportenth.data.response.AuthResponse
 import com.sportenth.data.response.TokenResponse
 import com.sportenth.data.response.base.BaseError
@@ -14,7 +22,12 @@ import com.sportenth.data.response.user.UserResponse
 import com.sportenth.data.services.smtp.sendVerificationCode
 import com.sportenth.data.services.smtp.tokens.generateAccessToken
 import com.sportenth.data.services.smtp.tokens.generateRefreshToken
+import com.sportenth.data.services.smtp.tokens.jwtAudience
+import com.sportenth.data.services.smtp.tokens.jwtIssuer
+import com.sportenth.data.services.smtp.tokens.jwtSecret
 import com.sportenth.domain.user.Gender
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -26,6 +39,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
 import java.util.UUID
+import kotlin.time.Duration.Companion.days
 
 val tempUsers = mutableListOf<UserRequest>()
 
@@ -38,12 +52,23 @@ fun Application.configureDatabases() {
 //    )
 
     val database = Database.connect(
-        url = "jdbc:postgresql://localhost:5432/sportenth",
+        url = "jdbc:postgresql://localhost:5432/postgres",
         driver = "org.postgresql.Driver",
-        user = "postgres",
+        user = "rodionov",
         password = "123456789"
     )
     val userService = UserService(database)
+    transaction(database) {
+        SchemaUtils.create(
+            Competitions,
+            OrienteeringCompetitions,
+            ParticipantGroups,
+            OrienteeringParticipants,
+            OrienteeringResults,
+            SplitTimes,
+            RefreshTokens
+        )
+    }
     routing {
         // Create user
         post("/users") {
@@ -135,6 +160,16 @@ fun Application.configureDatabases() {
 
             val accessToken = generateAccessToken(userId)
             val refreshToken = generateRefreshToken()
+
+            // Store refresh token in DB
+            transaction {
+                RefreshTokens.insert {
+                    it[token] = refreshToken
+                    it[RefreshTokens.userId] = userId
+                    it[expiresAt] = System.currentTimeMillis() + 30.days.inWholeMilliseconds
+                }
+            }
+
             tempUsers.removeIf { it.email == request.email }
 
             val user = userService.read(userId)
@@ -164,6 +199,73 @@ fun Application.configureDatabases() {
             call.respond(response)
         }
 
+        post("/refresh_token") {
+            val request = call.receive<RefreshRequest>()
+
+            val tokenRow = transaction {
+                RefreshTokens.selectAll()
+                    .where { RefreshTokens.token eq request.refreshToken }
+                    .singleOrNull()
+            }
+
+            if (tokenRow == null) {
+                call.respond(
+                    CommonModel<Any>().also { model ->
+                        model.status = 0
+                        model.errors = listOf(BaseError(401, "Invalid refresh token"))
+                    }
+                )
+                return@post
+            }
+
+            if (tokenRow[RefreshTokens.expiresAt] < System.currentTimeMillis()) {
+                transaction { RefreshTokens.deleteWhere { RefreshTokens.token eq request.refreshToken } }
+                call.respond(
+                    CommonModel<Any>().also { model ->
+                        model.status = 0
+                        model.errors = listOf(BaseError(401, "Refresh token expired"))
+                    }
+                )
+                return@post
+            }
+
+            val userId = tokenRow[RefreshTokens.userId]
+            val user = userService.read(userId)
+
+            // Rotate refresh token
+            transaction { RefreshTokens.deleteWhere { RefreshTokens.token eq request.refreshToken } }
+            val newAccessToken = generateAccessToken(userId)
+            val newRefreshToken = generateRefreshToken()
+            transaction {
+                RefreshTokens.insert {
+                    it[token] = newRefreshToken
+                    it[RefreshTokens.userId] = userId
+                    it[expiresAt] = System.currentTimeMillis() + 30.days.inWholeMilliseconds
+                }
+            }
+
+            val response = CommonModel<AuthResponse>().also { model -> model.status = if (user != null) 1 else 0 }
+            if (user != null) {
+                response.result = AuthResponse(
+                    user = UserResponse(
+                        id = user.id,
+                        firstName = user.firstName,
+                        lastName = user.lastName,
+                        middleName = user.middleName,
+                        birthDate = user.birthDate,
+                        gender = Gender.MALE,
+                        photo = user.photo,
+                        phoneNumber = user.phoneNumber,
+                        email = user.email,
+                        qualification = emptyList()
+                    ),
+                    token = TokenResponse(newAccessToken, newRefreshToken)
+                )
+            } else {
+                response.errors = listOf(BaseError(code = 500, message = "Internal Server Error: User is Null"))
+            }
+            call.respond(response)
+        }
     }
 }
 
