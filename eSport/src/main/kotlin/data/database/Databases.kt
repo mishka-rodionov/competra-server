@@ -52,10 +52,10 @@ fun Application.configureDatabases() {
 //    )
 
     val database = Database.connect(
-        url = "jdbc:postgresql://localhost:5432/postgres",
+        url = System.getenv("DB_URL") ?: "jdbc:postgresql://localhost:5432/postgres",
         driver = "org.postgresql.Driver",
-        user = "rodionov",
-        password = "123456789"
+        user = System.getenv("DB_USER") ?: "rodionov",
+        password = System.getenv("DB_PASSWORD") ?: "123456789"
     )
     val userService = UserService(database)
     transaction(database) {

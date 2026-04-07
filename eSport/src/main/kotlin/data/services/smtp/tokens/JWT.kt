@@ -6,9 +6,9 @@ import java.util.Date
 import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
 
-const val jwtIssuer = "ktor_server"
-const val jwtAudience = "ktor_audience"
-const val jwtSecret = "super_secret_jwt_key"
+val jwtIssuer: String = System.getenv("JWT_ISSUER") ?: "ktor_server"
+val jwtAudience: String = System.getenv("JWT_AUDIENCE") ?: "ktor_audience"
+val jwtSecret: String = System.getenv("JWT_SECRET") ?: "super_secret_jwt_key"
 
 fun generateAccessToken(userId: String): String =
     JWT.create()

@@ -46,7 +46,7 @@ fun Application.configureFrameworks() {
     val rabbitMQScope = CoroutineScope(SupervisorJob() + exceptionHandler)
 
     install(RabbitMQ) {
-        uri = "amqp://guest:guest@localhost:5672"
+        uri = System.getenv("RABBITMQ_URI") ?: "amqp://guest:guest@localhost:5672"
         defaultConnectionName = "default-connection"
         dispatcherThreadPollSize = 4
         tlsEnabled = false

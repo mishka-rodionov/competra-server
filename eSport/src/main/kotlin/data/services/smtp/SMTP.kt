@@ -6,8 +6,8 @@ import jakarta.mail.internet.MimeMessage
 import java.util.*
 
 fun sendVerificationCode(email: String, code: String) {
-    val username = "rodionov.mikhail.a@yandex.ru"
-    val password = "zbketatgxwmryfvh"
+    val username = System.getenv("SMTP_USER") ?: ""
+    val password = System.getenv("SMTP_PASSWORD") ?: ""
 
     val props = Properties().apply {
         put("mail.smtp.auth", "true")

@@ -1,0 +1,13 @@
+.gradle/
+build/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Environment secrets — никогда не коммитить!
+.env
+
+# Logs
+*.log
+logs/
