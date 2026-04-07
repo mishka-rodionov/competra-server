@@ -52,6 +52,15 @@ fun Route.orienteeringRoutes(
         })
     }
 
+    get("/event/orienteering/competitions/public") {
+        val kindOfSports = call.request.queryParameters.getAll("kind_of_sports") ?: emptyList()
+        val list = competitionService.getByKindOfSports(kindOfSports)
+        call.respond(CommonModel<Any>().also { model ->
+            model.status = 1
+            model.result = list
+        })
+    }
+
     post("/event/orienteering/save/participantGroup") {
         val requests = call.receive<List<ParticipantGroupRequest>>()
         val result = groupService.upsertAll(requests)

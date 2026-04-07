@@ -183,6 +183,48 @@ class OrienteeringCompetitionService {
             }
     }
 
+    /**
+     * Возвращает список соревнований, отфильтрованных по видам спорта.
+     * Если список видов спорта пустой — возвращает все соревнования.
+     *
+     * @param kindOfSports список строковых наименований видов спорта (например, ["Orienteering"])
+     */
+    suspend fun getByKindOfSports(kindOfSports: List<String>): List<CompetitionResponse> = dbQuery {
+        val query = if (kindOfSports.isEmpty()) {
+            Competitions.selectAll()
+        } else {
+            Competitions.selectAll().where { Competitions.kindOfSport inList kindOfSports }
+        }
+
+        query.map { comp ->
+            CompetitionResponse(
+                remoteId = comp[Competitions.id],
+                title = comp[Competitions.title],
+                startDate = comp[Competitions.startDate],
+                endDate = comp[Competitions.endDate],
+                kindOfSport = comp[Competitions.kindOfSport],
+                description = comp[Competitions.description],
+                address = comp[Competitions.address],
+                mainOrganizerId = comp[Competitions.mainOrganizerId],
+                coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
+                    CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
+                else null,
+                status = comp[Competitions.status],
+                registrationStart = comp[Competitions.registrationStart],
+                registrationEnd = comp[Competitions.registrationEnd],
+                maxParticipants = comp[Competitions.maxParticipants],
+                feeAmount = comp[Competitions.feeAmount],
+                feeCurrency = comp[Competitions.feeCurrency],
+                regulationUrl = comp[Competitions.regulationUrl],
+                mapUrl = comp[Competitions.mapUrl],
+                contactPhone = comp[Competitions.contactPhone],
+                contactEmail = comp[Competitions.contactEmail],
+                website = comp[Competitions.website],
+                resultsStatus = comp[Competitions.resultsStatus]
+            )
+        }
+    }
+
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
 }
