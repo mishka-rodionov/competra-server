@@ -40,7 +40,7 @@ class OrienteeringCompetitionService {
                 it[mainOrganizerId] = req.competition.mainOrganizerId
                 it[latitude] = req.competition.coordinates?.latitude
                 it[longitude] = req.competition.coordinates?.longitude
-                it[status] = req.competition.status
+                it[status] = if (req.competition.registrationStart == null) "REGISTRATION_OPEN" else "CREATED"
                 it[registrationStart] = req.competition.registrationStart
                 it[registrationEnd] = req.competition.registrationEnd
                 it[maxParticipants] = req.competition.maxParticipants
@@ -64,7 +64,6 @@ class OrienteeringCompetitionService {
                 it[mainOrganizerId] = req.competition.mainOrganizerId
                 it[latitude] = req.competition.coordinates?.latitude
                 it[longitude] = req.competition.coordinates?.longitude
-                it[status] = req.competition.status
                 it[registrationStart] = req.competition.registrationStart
                 it[registrationEnd] = req.competition.registrationEnd
                 it[maxParticipants] = req.competition.maxParticipants

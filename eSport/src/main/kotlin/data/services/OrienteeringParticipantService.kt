@@ -68,6 +68,28 @@ class OrienteeringParticipantService {
         )
     }
 
+    suspend fun getByGroup(groupId: String): List<OrienteeringParticipantResponse> = dbQuery {
+        OrienteeringParticipants.selectAll()
+            .where { OrienteeringParticipants.groupId eq groupId }
+            .map { row ->
+                OrienteeringParticipantResponse(
+                    id = row[OrienteeringParticipants.id],
+                    userId = row[OrienteeringParticipants.userId],
+                    firstName = row[OrienteeringParticipants.firstName],
+                    lastName = row[OrienteeringParticipants.lastName],
+                    groupId = row[OrienteeringParticipants.groupId],
+                    groupName = row[OrienteeringParticipants.groupName],
+                    competitionId = row[OrienteeringParticipants.competitionId],
+                    commandName = row[OrienteeringParticipants.commandName],
+                    startNumber = row[OrienteeringParticipants.startNumber],
+                    startTime = row[OrienteeringParticipants.startTime],
+                    chipNumber = row[OrienteeringParticipants.chipNumber],
+                    comment = row[OrienteeringParticipants.comment],
+                    isChipGiven = row[OrienteeringParticipants.isChipGiven]
+                )
+            }
+    }
+
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
 }

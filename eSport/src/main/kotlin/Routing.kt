@@ -25,7 +25,7 @@ fun Application.configureRouting() {
             call.respondText("Hello World!")
         }
 
-        orienteeringPublicRoutes(competitionService)
+        orienteeringPublicRoutes(competitionService, participantService)
 
         authenticate("auth-jwt") {
             orienteeringRoutes(competitionService, groupService, participantService, resultService)
