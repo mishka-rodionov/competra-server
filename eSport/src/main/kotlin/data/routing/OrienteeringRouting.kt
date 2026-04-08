@@ -28,6 +28,23 @@ fun Route.orienteeringPublicRoutes(
             model.result = list
         })
     }
+
+    get("/event/orienteering/competitions/public/{id}") {
+        val id = call.parameters["id"]
+            ?: return@get call.respond(
+                HttpStatusCode.BadRequest,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "id is required")) }
+            )
+        val detail = competitionService.getById(id)
+            ?: return@get call.respond(
+                HttpStatusCode.NotFound,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(404, "Competition not found")) }
+            )
+        call.respond(CommonModel<Any>().also { model ->
+            model.status = 1
+            model.result = detail
+        })
+    }
 }
 
 fun Route.orienteeringRoutes(

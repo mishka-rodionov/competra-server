@@ -2,10 +2,14 @@ package com.sportenth.data.services
 
 import com.sportenth.data.database.entity.Competitions
 import com.sportenth.data.database.entity.OrienteeringCompetitions
+import com.sportenth.data.database.entity.OrienteeringParticipants
+import com.sportenth.data.database.entity.ParticipantGroups
 import com.sportenth.data.requests.orienteering.OrienteeringCompetitionRequest
+import com.sportenth.data.response.orienteering.CompetitionDetailResponse
 import com.sportenth.data.response.orienteering.CompetitionResponse
 import com.sportenth.data.response.orienteering.CoordinatesResponse
 import com.sportenth.data.response.orienteering.OrienteeringCompetitionResponse
+import com.sportenth.data.response.orienteering.ParticipantGroupDetailResponse
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.deleteWhere
@@ -223,6 +227,53 @@ class OrienteeringCompetitionService {
                 resultsStatus = comp[Competitions.resultsStatus]
             )
         }
+    }
+
+    suspend fun getById(competitionId: String): CompetitionDetailResponse? = dbQuery {
+        val comp = Competitions.selectAll()
+            .where { Competitions.id eq competitionId }
+            .singleOrNull() ?: return@dbQuery null
+
+        val groups = ParticipantGroups.selectAll()
+            .where { ParticipantGroups.competitionId eq competitionId }
+            .map { group ->
+                val registeredCount = OrienteeringParticipants.selectAll()
+                    .where { OrienteeringParticipants.groupId eq group[ParticipantGroups.id] }
+                    .count().toInt()
+                ParticipantGroupDetailResponse(
+                    groupId = group[ParticipantGroups.id],
+                    title = group[ParticipantGroups.title],
+                    maxParticipants = group[ParticipantGroups.maxParticipants],
+                    registeredCount = registeredCount
+                )
+            }
+
+        CompetitionDetailResponse(
+            remoteId = comp[Competitions.id],
+            title = comp[Competitions.title],
+            startDate = comp[Competitions.startDate],
+            endDate = comp[Competitions.endDate],
+            kindOfSport = comp[Competitions.kindOfSport],
+            description = comp[Competitions.description],
+            address = comp[Competitions.address],
+            mainOrganizerId = comp[Competitions.mainOrganizerId],
+            coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
+                CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
+            else null,
+            status = comp[Competitions.status],
+            registrationStart = comp[Competitions.registrationStart],
+            registrationEnd = comp[Competitions.registrationEnd],
+            maxParticipants = comp[Competitions.maxParticipants],
+            feeAmount = comp[Competitions.feeAmount],
+            feeCurrency = comp[Competitions.feeCurrency],
+            regulationUrl = comp[Competitions.regulationUrl],
+            mapUrl = comp[Competitions.mapUrl],
+            contactPhone = comp[Competitions.contactPhone],
+            contactEmail = comp[Competitions.contactEmail],
+            website = comp[Competitions.website],
+            resultsStatus = comp[Competitions.resultsStatus],
+            participantGroups = groups
+        )
     }
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
