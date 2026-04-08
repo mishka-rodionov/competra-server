@@ -17,6 +17,19 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
+fun Route.orienteeringPublicRoutes(
+    competitionService: OrienteeringCompetitionService
+) {
+    get("/event/orienteering/competitions/public") {
+        val kindOfSports = call.request.queryParameters.getAll("kind_of_sports") ?: emptyList()
+        val list = competitionService.getByKindOfSports(kindOfSports)
+        call.respond(CommonModel<Any>().also { model ->
+            model.status = 1
+            model.result = list
+        })
+    }
+}
+
 fun Route.orienteeringRoutes(
     competitionService: OrienteeringCompetitionService,
     groupService: ParticipantGroupService,
@@ -46,15 +59,6 @@ fun Route.orienteeringRoutes(
             )
 
         val list = competitionService.getByUserId(userId)
-        call.respond(CommonModel<Any>().also { model ->
-            model.status = 1
-            model.result = list
-        })
-    }
-
-    get("/event/orienteering/competitions/public") {
-        val kindOfSports = call.request.queryParameters.getAll("kind_of_sports") ?: emptyList()
-        val list = competitionService.getByKindOfSports(kindOfSports)
         call.respond(CommonModel<Any>().also { model ->
             model.status = 1
             model.result = list

@@ -1,5 +1,6 @@
 package com.sportenth
 
+import com.sportenth.data.routing.orienteeringPublicRoutes
 import com.sportenth.data.routing.orienteeringRoutes
 import com.sportenth.data.services.OrienteeringCompetitionService
 import com.sportenth.data.services.OrienteeringParticipantService
@@ -23,6 +24,8 @@ fun Application.configureRouting() {
         get("/info") {
             call.respondText("Hello World!")
         }
+
+        orienteeringPublicRoutes(competitionService)
 
         authenticate("auth-jwt") {
             orienteeringRoutes(competitionService, groupService, participantService, resultService)
