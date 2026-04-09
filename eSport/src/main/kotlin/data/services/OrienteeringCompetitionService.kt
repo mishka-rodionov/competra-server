@@ -12,6 +12,7 @@ import com.sportenth.data.response.orienteering.OrienteeringCompetitionResponse
 import com.sportenth.data.response.orienteering.ParticipantGroupDetailResponse
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
@@ -228,7 +229,7 @@ class OrienteeringCompetitionService {
         }
     }
 
-    suspend fun getById(competitionId: String): CompetitionDetailResponse? = dbQuery {
+    suspend fun getById(competitionId: String, userId: String? = null): CompetitionDetailResponse? = dbQuery {
         val comp = Competitions.selectAll()
             .where { Competitions.id eq competitionId }
             .singleOrNull() ?: return@dbQuery null
@@ -246,6 +247,15 @@ class OrienteeringCompetitionService {
                     registeredCount = registeredCount
                 )
             }
+
+        val isUserRegistered = if (userId != null) {
+            OrienteeringParticipants.selectAll()
+                .where {
+                    (OrienteeringParticipants.userId eq userId) and
+                    (OrienteeringParticipants.competitionId eq competitionId)
+                }
+                .singleOrNull() != null
+        } else false
 
         CompetitionDetailResponse(
             remoteId = comp[Competitions.id],
@@ -271,7 +281,8 @@ class OrienteeringCompetitionService {
             contactEmail = comp[Competitions.contactEmail],
             website = comp[Competitions.website],
             resultsStatus = comp[Competitions.resultsStatus],
-            participantGroups = groups
+            participantGroups = groups,
+            isUserRegistered = isUserRegistered
         )
     }
 

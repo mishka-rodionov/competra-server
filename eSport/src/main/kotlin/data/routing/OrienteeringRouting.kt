@@ -4,6 +4,7 @@ import com.sportenth.data.requests.orienteering.OrienteeringCompetitionRequest
 import com.sportenth.data.requests.orienteering.OrienteeringParticipantRequest
 import com.sportenth.data.requests.orienteering.OrienteeringResultRequest
 import com.sportenth.data.requests.orienteering.ParticipantGroupRequest
+import com.sportenth.data.requests.orienteering.RegisterParticipantRequest
 import com.sportenth.data.response.base.BaseError
 import com.sportenth.data.response.base.CommonModel
 import com.sportenth.data.services.OrienteeringCompetitionService
@@ -49,7 +50,8 @@ fun Route.orienteeringPublicRoutes(
                 HttpStatusCode.BadRequest,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "id is required")) }
             )
-        val detail = competitionService.getById(id)
+        val userId = call.request.queryParameters["userId"]
+        val detail = competitionService.getById(id, userId)
             ?: return@get call.respond(
                 HttpStatusCode.NotFound,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(404, "Competition not found")) }
@@ -121,5 +123,44 @@ fun Route.orienteeringRoutes(
             model.status = 1
             model.result = result
         })
+    }
+
+    post("/event/orienteering/register") {
+        val userId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
+            ?: return@post call.respond(
+                HttpStatusCode.Unauthorized,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(401, "Unauthorized")) }
+            )
+
+        val req = call.receive<RegisterParticipantRequest>()
+        try {
+            val result = participantService.register(req, userId)
+            call.respond(CommonModel<Any>().also { model ->
+                model.status = 1
+                model.result = result
+            })
+        } catch (e: IllegalStateException) {
+            call.respond(
+                HttpStatusCode.Conflict,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(409, e.message ?: "Already registered")) }
+            )
+        }
+    }
+
+    delete("/event/orienteering/register/{competitionId}") {
+        val userId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
+            ?: return@delete call.respond(
+                HttpStatusCode.Unauthorized,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(401, "Unauthorized")) }
+            )
+
+        val competitionId = call.parameters["competitionId"]
+            ?: return@delete call.respond(
+                HttpStatusCode.BadRequest,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }
+            )
+
+        participantService.cancelRegistration(competitionId, userId)
+        call.respond(CommonModel<Any>().also { it.status = 1 })
     }
 }

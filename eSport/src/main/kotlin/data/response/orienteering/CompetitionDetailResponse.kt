@@ -29,5 +29,6 @@ data class CompetitionDetailResponse(
     val contactEmail: String?,
     val website: String?,
     val resultsStatus: String,
-    val participantGroups: List<ParticipantGroupDetailResponse>
+    val participantGroups: List<ParticipantGroupDetailResponse>,
+    val isUserRegistered: Boolean = false
 )
