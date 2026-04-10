@@ -111,6 +111,20 @@ fun Application.configureDatabases() {
 
         post("/user/register") {
             val userRequest = call.receive<UserRequest>()
+
+            val emailAlreadyUsed = transaction {
+                UserService.Users.selectAll().where { UserService.Users.email eq userRequest.email }.singleOrNull() != null
+            }
+            if (emailAlreadyUsed) {
+                call.respond(
+                    CommonModel<Any>().also { model ->
+                        model.status = 0
+                        model.errors = listOf(BaseError(code = 1001, message = "Данная электронная почта уже используется"))
+                    }
+                )
+                return@post
+            }
+
             createAndSendVerificationCode(userRequest.email)
             tempUsers.add(userRequest)
             call.respond(CommonModel<Any>().also { model -> model.status = 1 })
