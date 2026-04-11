@@ -119,7 +119,7 @@ fun Application.configureDatabases() {
                 call.respond(
                     CommonModel<Any>().also { model ->
                         model.status = 0
-                        model.errors = listOf(BaseError(code = 1001, message = "Данная электронная почта уже используется"))
+                        model.errors = listOf(BaseError(code = 1001, message = "Данная электронная почта уже используется. Введите новую."))
                     }
                 )
                 return@post
