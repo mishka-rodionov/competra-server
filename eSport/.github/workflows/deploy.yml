@@ -48,14 +48,21 @@ jobs:
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          LOKI_URL: ${{ secrets.LOKI_URL }}
+          LOKI_USER_ID: ${{ secrets.LOKI_USER_ID }}
+          LOKI_API_KEY: ${{ secrets.LOKI_API_KEY }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: GITHUB_REPOSITORY
+          envs: GITHUB_REPOSITORY,LOKI_URL,LOKI_USER_ID,LOKI_API_KEY
           script: |
             cd /opt/esport
             echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY" >> .env
+            echo "LOKI_URL=$LOKI_URL" >> .env
+            echo "LOKI_USER_ID=$LOKI_USER_ID" >> .env
+            echo "LOKI_API_KEY=$LOKI_API_KEY" >> .env
             docker login ghcr.io -u ${{ github.actor }} --password-stdin <<< "${{ secrets.GITHUB_TOKEN }}"
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull app
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
