@@ -35,7 +35,7 @@
             </message>
             <sortByTime>true</sortByTime>
         </format>
-        <verbose>true</verbose>
+<!--        <verbose>true</verbose>-->
     </appender>
 
     <!-- SQL запросы Exposed (уровень DEBUG, видны только если включить ниже) -->
