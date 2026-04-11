@@ -35,8 +35,7 @@
             </message>
             <sortByTime>true</sortByTime>
         </format>
-        <!-- Не роняем приложение если Loki недоступен -->
-        <dropRatioOnRetry>0</dropRatioOnRetry>
+        <verbose>true</verbose>
     </appender>
 
     <!-- SQL запросы Exposed (уровень DEBUG, видны только если включить ниже) -->
