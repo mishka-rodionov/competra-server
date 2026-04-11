@@ -98,6 +98,9 @@ class UserService(database: Database) {
     }
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO) { block() }
+        newSuspendedTransaction(Dispatchers.IO) {
+            addLogger(Slf4jSqlDebugLogger)
+            block()
+        }
 }
 

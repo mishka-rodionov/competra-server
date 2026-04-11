@@ -43,6 +43,7 @@ dependencies {
     implementation("io.insert-koin:koin-logger-slf4j:$koin_version")
 
     implementation("ch.qos.logback:logback-classic:${logback_version}")
+    implementation("com.github.loki4j:loki-logback-appender:1.5.2")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 
     // Exposed + PostgreSQL

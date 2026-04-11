@@ -1,12 +1,56 @@
 <configuration>
+
+    <!-- Консоль (для локальной разработки) -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
-    <root level="INFO">
+
+    <!--
+        Grafana Cloud Loki appender.
+        Требует переменных окружения:
+          LOKI_URL      — хост без пути, напр. https://logs-prod-eu-west-0.grafana.net
+          LOKI_USER_ID  — числовой User ID из раздела Loki в Grafana Cloud
+          LOKI_API_KEY  — API Key (пароль) из Grafana Cloud
+    -->
+    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <http>
+            <url>${LOKI_URL:-http://localhost:3100}/loki/api/v1/push</url>
+            <auth>
+                <username>${LOKI_USER_ID:-}</username>
+                <password>${LOKI_API_KEY:-}</password>
+            </auth>
+            <connectionTimeoutMs>5000</connectionTimeoutMs>
+            <requestTimeoutMs>5000</requestTimeoutMs>
+        </http>
+        <format>
+            <label>
+                <!-- Лейблы — по ним фильтруешь в Grafana (LogQL: {app="esport"}) -->
+                <pattern>app=esport,level=%level,host=${HOSTNAME:-local}</pattern>
+                <readMarker>true</readMarker>
+            </label>
+            <message>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            </message>
+            <sortByTime>true</sortByTime>
+        </format>
+        <!-- Не роняем приложение если Loki недоступен -->
+        <dropRatioOnRetry>0</dropRatioOnRetry>
+    </appender>
+
+    <!-- SQL запросы Exposed (уровень DEBUG, видны только если включить ниже) -->
+    <logger name="Exposed" level="DEBUG" additivity="false">
         <appender-ref ref="STDOUT"/>
-    </root>
+        <appender-ref ref="LOKI"/>
+    </logger>
+
     <logger name="org.eclipse.jetty" level="INFO"/>
     <logger name="io.netty" level="INFO"/>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="LOKI"/>
+    </root>
+
 </configuration>

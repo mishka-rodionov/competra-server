@@ -13,6 +13,9 @@ services:
       RABBITMQ_URI: amqp://esport:${RABBITMQ_PASSWORD}@rabbitmq:5672
       SMTP_USER: ${SMTP_USER}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
+      LOKI_URL: ${LOKI_URL:-}
+      LOKI_USER_ID: ${LOKI_USER_ID:-}
+      LOKI_API_KEY: ${LOKI_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

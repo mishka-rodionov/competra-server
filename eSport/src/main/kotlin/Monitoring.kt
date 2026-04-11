@@ -43,5 +43,15 @@ fun Application.configureMonitoring() {
     install(CallLogging) {
         level = Level.INFO
         filter { call -> call.request.path().startsWith("/") }
+        format { call ->
+            val status = call.response.status()
+            val method = call.request.httpMethod.value
+            val path = call.request.path()
+            "HTTP $method $path → ${status?.value ?: "?"} ${status?.description ?: ""}"
+        }
+        // MDC-поля попадают в Loki как структурированные поля — удобно для фильтрации
+        mdc("http_method") { it.request.httpMethod.value }
+        mdc("http_path") { it.request.path() }
+        mdc("http_status") { it.response.status()?.value?.toString() ?: "-" }
     }
 }
