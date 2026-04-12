@@ -3,7 +3,7 @@ package com.sportenth.data.database.entity
 import org.jetbrains.exposed.sql.Table
 
 object Competitions : Table("competitions") {
-    val id = varchar("id", 200)
+    val id = long("id").autoIncrement()
     val title = varchar("title", 500)
     val startDate = long("start_date")
     val endDate = long("end_date").nullable()

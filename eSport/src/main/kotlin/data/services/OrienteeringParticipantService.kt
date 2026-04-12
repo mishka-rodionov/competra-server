@@ -137,7 +137,7 @@ class OrienteeringParticipantService {
     /**
      * Отменяет регистрацию пользователя на соревнование.
      */
-    suspend fun cancelRegistration(competitionId: String, userId: String) = dbQuery {
+    suspend fun cancelRegistration(competitionId: Long, userId: String) = dbQuery {
         OrienteeringParticipants.deleteWhere {
             (OrienteeringParticipants.userId eq userId) and
             (OrienteeringParticipants.competitionId eq competitionId)
@@ -147,7 +147,7 @@ class OrienteeringParticipantService {
     /**
      * Проверяет, зарегистрирован ли пользователь на данное соревнование.
      */
-    suspend fun isRegistered(competitionId: String, userId: String): Boolean = dbQuery {
+    suspend fun isRegistered(competitionId: Long, userId: String): Boolean = dbQuery {
         OrienteeringParticipants.selectAll()
             .where {
                 (OrienteeringParticipants.userId eq userId) and

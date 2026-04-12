@@ -4,7 +4,7 @@ import org.jetbrains.exposed.sql.Table
 
 object OrienteeringCompetitions : Table("orienteering_competitions") {
     val id = varchar("id", 200)
-    val competitionId = varchar("competition_id", 200)
+    val competitionId = long("competition_id")
     val userId = varchar("user_id", 200)
     val direction = varchar("direction", 100)
     val punchingSystem = varchar("punching_system", 100)

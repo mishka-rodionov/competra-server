@@ -45,7 +45,7 @@ fun Route.orienteeringPublicRoutes(
     }
 
     get("/event/orienteering/competitions/public/{id}") {
-        val id = call.parameters["id"]
+        val id = call.parameters["id"]?.toLongOrNull()
             ?: return@get call.respond(
                 HttpStatusCode.BadRequest,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "id is required")) }
@@ -154,7 +154,7 @@ fun Route.orienteeringRoutes(
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(401, "Unauthorized")) }
             )
 
-        val competitionId = call.parameters["competitionId"]
+        val competitionId = call.parameters["competitionId"]?.toLongOrNull()
             ?: return@delete call.respond(
                 HttpStatusCode.BadRequest,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }

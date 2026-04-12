@@ -9,7 +9,7 @@ object OrienteeringParticipants : Table("orienteering_participants") {
     val lastName = varchar("last_name", 200)
     val groupId = varchar("group_id", 200)
     val groupName = varchar("group_name", 200)
-    val competitionId = varchar("competition_id", 200)
+    val competitionId = long("competition_id")
     val commandName = varchar("command_name", 200).nullable()
     val startNumber = integer("start_number")
     val startTime = long("start_time")

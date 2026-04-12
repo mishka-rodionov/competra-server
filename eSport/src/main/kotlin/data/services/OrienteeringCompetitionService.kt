@@ -18,20 +18,36 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
-import java.util.UUID
 
 class OrienteeringCompetitionService {
 
     suspend fun upsert(req: OrienteeringCompetitionRequest, userId: String): OrienteeringCompetitionResponse = dbQuery {
-        val competitionId = req.competition.remoteId ?: UUID.randomUUID().toString()
-
-        val existingCompetition = Competitions.selectAll()
-            .where { Competitions.id eq competitionId }
-            .singleOrNull()
-
-        if (existingCompetition == null) {
+        val competitionId: Long = if (req.competition.remoteId != null) {
+            Competitions.update({ Competitions.id eq req.competition.remoteId }) {
+                it[title] = req.competition.title
+                it[startDate] = req.competition.startDate
+                it[endDate] = req.competition.endDate
+                it[kindOfSport] = req.competition.kindOfSport
+                it[description] = req.competition.description
+                it[address] = req.competition.address
+                it[mainOrganizerId] = req.competition.mainOrganizerId
+                it[latitude] = req.competition.coordinates?.latitude
+                it[longitude] = req.competition.coordinates?.longitude
+                it[registrationStart] = req.competition.registrationStart
+                it[registrationEnd] = req.competition.registrationEnd
+                it[maxParticipants] = req.competition.maxParticipants
+                it[feeAmount] = req.competition.feeAmount
+                it[feeCurrency] = req.competition.feeCurrency
+                it[regulationUrl] = req.competition.regulationUrl
+                it[mapUrl] = req.competition.mapUrl
+                it[contactPhone] = req.competition.contactPhone
+                it[contactEmail] = req.competition.contactEmail
+                it[website] = req.competition.website
+                it[resultsStatus] = req.competition.resultsStatus
+            }
+            req.competition.remoteId
+        } else {
             Competitions.insert {
-                it[id] = competitionId
                 it[title] = req.competition.title
                 it[startDate] = req.competition.startDate
                 it[endDate] = req.competition.endDate
@@ -53,30 +69,7 @@ class OrienteeringCompetitionService {
                 it[contactEmail] = req.competition.contactEmail
                 it[website] = req.competition.website
                 it[resultsStatus] = req.competition.resultsStatus
-            }
-        } else {
-            Competitions.update({ Competitions.id eq competitionId }) {
-                it[title] = req.competition.title
-                it[startDate] = req.competition.startDate
-                it[endDate] = req.competition.endDate
-                it[kindOfSport] = req.competition.kindOfSport
-                it[description] = req.competition.description
-                it[address] = req.competition.address
-                it[mainOrganizerId] = req.competition.mainOrganizerId
-                it[latitude] = req.competition.coordinates?.latitude
-                it[longitude] = req.competition.coordinates?.longitude
-                it[registrationStart] = req.competition.registrationStart
-                it[registrationEnd] = req.competition.registrationEnd
-                it[maxParticipants] = req.competition.maxParticipants
-                it[feeAmount] = req.competition.feeAmount
-                it[feeCurrency] = req.competition.feeCurrency
-                it[regulationUrl] = req.competition.regulationUrl
-                it[mapUrl] = req.competition.mapUrl
-                it[contactPhone] = req.competition.contactPhone
-                it[contactEmail] = req.competition.contactEmail
-                it[website] = req.competition.website
-                it[resultsStatus] = req.competition.resultsStatus
-            }
+            } get Competitions.id
         }
 
         val existingOrienteering = OrienteeringCompetitions.selectAll()
@@ -229,7 +222,7 @@ class OrienteeringCompetitionService {
         }
     }
 
-    suspend fun getById(competitionId: String, userId: String? = null): CompetitionDetailResponse? = dbQuery {
+    suspend fun getById(competitionId: Long, userId: String? = null): CompetitionDetailResponse? = dbQuery {
         val comp = Competitions.selectAll()
             .where { Competitions.id eq competitionId }
             .singleOrNull() ?: return@dbQuery null

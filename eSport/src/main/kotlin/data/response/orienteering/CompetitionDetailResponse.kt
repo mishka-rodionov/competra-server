@@ -8,7 +8,7 @@ data class ParticipantGroupDetailResponse(
 )
 
 data class CompetitionDetailResponse(
-    val remoteId: String,
+    val remoteId: Long,
     val title: String,
     val startDate: Long,
     val endDate: Long?,
