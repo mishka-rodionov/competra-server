@@ -59,7 +59,7 @@ fun Application.configureDatabases() {
     )
     val userService = UserService(database)
     transaction(database) {
-        SchemaUtils.create(
+        SchemaUtils.createMissingTablesAndColumns(
             Competitions,
             OrienteeringCompetitions,
             ParticipantGroups,
