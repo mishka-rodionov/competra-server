@@ -68,6 +68,12 @@ fun Application.configureDatabases() {
             SplitTimes,
             RefreshTokens
         )
+        // Восстанавливаем sequence для автоинкремента id в competitions (если был потерян)
+        exec("CREATE SEQUENCE IF NOT EXISTS competitions_id_seq")
+        exec("ALTER TABLE competitions ALTER COLUMN id SET DEFAULT nextval('competitions_id_seq')")
+        exec("ALTER SEQUENCE competitions_id_seq OWNED BY competitions.id")
+        exec("SELECT setval('competitions_id_seq', COALESCE((SELECT MAX(id) FROM competitions), 0) + 1, false)")
+
         // Добавляем колонки, которых может не быть в уже существующей таблице
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS status VARCHAR(100) NOT NULL DEFAULT 'CREATED'")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS results_status VARCHAR(100) NOT NULL DEFAULT 'NOT_PUBLISHED'")
