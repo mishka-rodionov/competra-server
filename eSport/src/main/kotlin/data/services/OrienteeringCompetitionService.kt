@@ -86,7 +86,7 @@ class OrienteeringCompetitionService {
                 it[startTimeMode] = req.startTimeMode
                 it[countdownTimer] = req.countdownTimer
                 it[startTime] = null
-                it[startIntervalSeconds] = null
+                it[startIntervalSeconds] = req.startIntervalSeconds
             }
         } else {
             OrienteeringCompetitions.update({ OrienteeringCompetitions.id eq req.competitionId }) {
@@ -95,6 +95,7 @@ class OrienteeringCompetitionService {
                 it[punchingSystem] = req.punchingSystem
                 it[startTimeMode] = req.startTimeMode
                 it[countdownTimer] = req.countdownTimer
+                it[startIntervalSeconds] = req.startIntervalSeconds
             }
         }
 
@@ -132,7 +133,8 @@ class OrienteeringCompetitionService {
             punchingSystem = orient[OrienteeringCompetitions.punchingSystem],
             startTimeMode = orient[OrienteeringCompetitions.startTimeMode],
             countdownTimer = orient[OrienteeringCompetitions.countdownTimer],
-            startTime = orient[OrienteeringCompetitions.startTime]
+            startTime = orient[OrienteeringCompetitions.startTime],
+            startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds]
         )
     }
 
@@ -175,7 +177,8 @@ class OrienteeringCompetitionService {
                     punchingSystem = orient[OrienteeringCompetitions.punchingSystem],
                     startTimeMode = orient[OrienteeringCompetitions.startTimeMode],
                     countdownTimer = orient[OrienteeringCompetitions.countdownTimer],
-                    startTime = orient[OrienteeringCompetitions.startTime]
+                    startTime = orient[OrienteeringCompetitions.startTime],
+                    startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds]
                 )
             }
     }

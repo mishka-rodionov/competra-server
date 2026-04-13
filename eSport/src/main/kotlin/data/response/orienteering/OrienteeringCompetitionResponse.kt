@@ -9,5 +9,6 @@ data class OrienteeringCompetitionResponse(
     @SerializedName("punchingSystem") val punchingSystem: String,
     @SerializedName("startTimeMode") val startTimeMode: String,
     @SerializedName("countdownTimer") val countdownTimer: Long?,
-    @SerializedName("startTime") val startTime: Long?
+    @SerializedName("startTime") val startTime: Long?,
+    @SerializedName("startIntervalSeconds") val startIntervalSeconds: Int? = null
 )
