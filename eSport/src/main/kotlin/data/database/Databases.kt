@@ -59,7 +59,7 @@ fun Application.configureDatabases() {
     )
     val userService = UserService(database)
     transaction(database) {
-        SchemaUtils.createMissingTablesAndColumns(
+        SchemaUtils.create(
             Competitions,
             OrienteeringCompetitions,
             ParticipantGroups,
@@ -68,6 +68,19 @@ fun Application.configureDatabases() {
             SplitTimes,
             RefreshTokens
         )
+        // Добавляем колонки, которых может не быть в уже существующей таблице
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS status VARCHAR(100) NOT NULL DEFAULT 'CREATED'")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS results_status VARCHAR(100) NOT NULL DEFAULT 'NOT_PUBLISHED'")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS registration_start BIGINT")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS registration_end BIGINT")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS max_participants INTEGER")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS fee_amount DOUBLE PRECISION")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS fee_currency VARCHAR(10)")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS regulation_url VARCHAR(500)")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS map_url VARCHAR(500)")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50)")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS contact_email VARCHAR(200)")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS website VARCHAR(500)")
     }
     routing {
         // Create user
