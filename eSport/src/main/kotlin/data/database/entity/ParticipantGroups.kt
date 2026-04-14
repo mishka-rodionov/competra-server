@@ -9,7 +9,7 @@ object ParticipantGroups : Table("participant_groups") {
     val gender = varchar("gender", 20).nullable()
     val minAge = integer("min_age").nullable()
     val maxAge = integer("max_age").nullable()
-    val distanceId = varchar("distance_id", 200)
+    val distanceId = long("distance_id")
     val maxParticipants = integer("max_participants").nullable()
 
     override val primaryKey = PrimaryKey(id)

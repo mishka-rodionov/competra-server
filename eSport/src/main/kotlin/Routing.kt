@@ -2,6 +2,7 @@ package com.sportenth
 
 import com.sportenth.data.routing.orienteeringPublicRoutes
 import com.sportenth.data.routing.orienteeringRoutes
+import com.sportenth.data.services.DistanceService
 import com.sportenth.data.services.OrienteeringCompetitionService
 import com.sportenth.data.services.OrienteeringParticipantService
 import com.sportenth.data.services.OrienteeringResultService
@@ -19,6 +20,7 @@ fun Application.configureRouting() {
     val groupService = ParticipantGroupService()
     val participantService = OrienteeringParticipantService()
     val resultService = OrienteeringResultService()
+    val distanceService = DistanceService()
 
     routing {
         get("/info") {
@@ -28,7 +30,7 @@ fun Application.configureRouting() {
         orienteeringPublicRoutes(competitionService, participantService)
 
         authenticate("auth-jwt") {
-            orienteeringRoutes(competitionService, groupService, participantService, resultService)
+            orienteeringRoutes(competitionService, groupService, participantService, resultService, distanceService)
         }
     }
 }

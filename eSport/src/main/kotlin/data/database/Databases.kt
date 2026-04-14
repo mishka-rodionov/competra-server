@@ -4,6 +4,7 @@ import com.rodionov.remote.request.user.UserRequest
 import com.sportenth.UserEntity
 import com.sportenth.UserService
 import com.sportenth.data.database.entity.Competitions
+import com.sportenth.data.database.entity.Distances
 import com.sportenth.data.database.entity.OrienteeringCompetitions
 import com.sportenth.data.database.entity.OrienteeringParticipants
 import com.sportenth.data.database.entity.OrienteeringResults
@@ -62,6 +63,7 @@ fun Application.configureDatabases() {
         SchemaUtils.create(
             Competitions,
             OrienteeringCompetitions,
+            Distances,
             ParticipantGroups,
             OrienteeringParticipants,
             OrienteeringResults,
@@ -69,6 +71,7 @@ fun Application.configureDatabases() {
             RefreshTokens
         )
         // Добавляем колонки, которых может не быть в уже существующей таблице
+        exec("ALTER TABLE participant_groups ALTER COLUMN distance_id TYPE BIGINT USING distance_id::BIGINT")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS status VARCHAR(100) NOT NULL DEFAULT 'CREATED'")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS results_status VARCHAR(100) NOT NULL DEFAULT 'NOT_PUBLISHED'")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS registration_start BIGINT")
