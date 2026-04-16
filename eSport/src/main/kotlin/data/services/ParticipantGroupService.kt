@@ -58,6 +58,23 @@ class ParticipantGroupService {
         }
     }
 
+    suspend fun getByCompetition(competitionId: Long): List<ParticipantGroupResponse> = dbQuery {
+        ParticipantGroups.selectAll()
+            .where { ParticipantGroups.competitionId eq competitionId }
+            .map { row ->
+                ParticipantGroupResponse(
+                    groupId = row[ParticipantGroups.id],
+                    competitionId = row[ParticipantGroups.competitionId],
+                    title = row[ParticipantGroups.title],
+                    gender = row[ParticipantGroups.gender],
+                    minAge = row[ParticipantGroups.minAge],
+                    maxAge = row[ParticipantGroups.maxAge],
+                    distanceId = row[ParticipantGroups.distanceId],
+                    maxParticipants = row[ParticipantGroups.maxParticipants]
+                )
+            }
+    }
+
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
 }
