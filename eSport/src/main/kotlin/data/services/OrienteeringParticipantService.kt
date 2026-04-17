@@ -1,6 +1,7 @@
 package com.sportenth.data.services
 
 import com.sportenth.data.database.entity.OrienteeringParticipants
+import com.sportenth.data.database.entity.ParticipantGroups
 import com.sportenth.data.requests.orienteering.OrienteeringParticipantRequest
 import com.sportenth.data.requests.orienteering.RegisterParticipantRequest
 import com.sportenth.data.response.orienteering.OrienteeringParticipantResponse
@@ -89,6 +90,12 @@ class OrienteeringParticipantService {
             throw IllegalStateException("Вы уже зарегистрированы на данный старт")
         }
 
+        val groupName = ParticipantGroups.selectAll()
+            .where { ParticipantGroups.id eq req.groupId }
+            .singleOrNull()
+            ?.get(ParticipantGroups.title)
+            ?: ""
+
         val participantId = UUID.randomUUID().toString()
         OrienteeringParticipants.insert {
             it[id] = participantId
@@ -96,7 +103,7 @@ class OrienteeringParticipantService {
             it[firstName] = req.firstName
             it[lastName] = req.lastName
             it[groupId] = req.groupId
-            it[OrienteeringParticipants.groupName] = req.groupName
+            it[OrienteeringParticipants.groupName] = groupName
             it[competitionId] = req.competitionId
             it[commandName] = null
             it[startNumber] = 0
