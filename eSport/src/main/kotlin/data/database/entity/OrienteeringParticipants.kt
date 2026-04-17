@@ -7,7 +7,7 @@ object OrienteeringParticipants : Table("orienteering_participants") {
     val userId = varchar("user_id", 200).nullable()
     val firstName = varchar("first_name", 200)
     val lastName = varchar("last_name", 200)
-    val groupId = varchar("group_id", 200)
+    val groupId = long("group_id")
     val groupName = varchar("group_name", 200)
     val competitionId = long("competition_id")
     val commandName = varchar("command_name", 200).nullable()

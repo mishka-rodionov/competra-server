@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName
 data class OrienteeringResultResponse(
     @SerializedName("id") val id: String,
     @SerializedName("competitionId") val competitionId: Long,
-    @SerializedName("groupId") val groupId: String,
+    @SerializedName("groupId") val groupId: Long,
     @SerializedName("participantId") val participantId: String,
     @SerializedName("startTime") val startTime: Long?,
     @SerializedName("finishTime") val finishTime: Long?,

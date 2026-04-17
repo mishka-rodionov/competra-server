@@ -34,7 +34,7 @@ fun Route.orienteeringPublicRoutes(
     }
 
     get("/event/orienteering/participants") {
-        val groupId = call.request.queryParameters["groupId"]
+        val groupId = call.request.queryParameters["groupId"]?.toLongOrNull()
             ?: return@get call.respond(
                 HttpStatusCode.BadRequest,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "groupId is required")) }

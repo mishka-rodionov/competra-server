@@ -3,7 +3,7 @@ package com.sportenth.data.response.orienteering
 import com.google.gson.annotations.SerializedName
 
 data class ParticipantGroupResponse(
-    @SerializedName("groupId") val groupId: String,
+    @SerializedName("groupId") val groupId: Long,
     @SerializedName("competitionId") val competitionId: Long,
     @SerializedName("title") val title: String,
     @SerializedName("gender") val gender: String?,

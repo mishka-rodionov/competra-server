@@ -7,7 +7,7 @@ data class OrienteeringParticipantResponse(
     @SerializedName("userId") val userId: String?,
     @SerializedName("firstName") val firstName: String,
     @SerializedName("lastName") val lastName: String,
-    @SerializedName("groupId") val groupId: String,
+    @SerializedName("groupId") val groupId: Long,
     @SerializedName("groupName") val groupName: String,
     @SerializedName("competitionId") val competitionId: Long,
     @SerializedName("commandName") val commandName: String?,

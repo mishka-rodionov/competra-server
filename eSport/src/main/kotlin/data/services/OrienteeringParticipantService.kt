@@ -1,7 +1,6 @@
 package com.sportenth.data.services
 
 import com.sportenth.data.database.entity.OrienteeringParticipants
-import com.sportenth.data.database.entity.ParticipantGroups
 import com.sportenth.data.requests.orienteering.OrienteeringParticipantRequest
 import com.sportenth.data.requests.orienteering.RegisterParticipantRequest
 import com.sportenth.data.response.orienteering.OrienteeringParticipantResponse
@@ -90,13 +89,6 @@ class OrienteeringParticipantService {
             throw IllegalStateException("Вы уже зарегистрированы на данный старт")
         }
 
-        // Получаем название группы
-        val groupName = ParticipantGroups.selectAll()
-            .where { ParticipantGroups.id eq req.groupId }
-            .singleOrNull()
-            ?.get(ParticipantGroups.title)
-            ?: req.groupId
-
         val participantId = UUID.randomUUID().toString()
         OrienteeringParticipants.insert {
             it[id] = participantId
@@ -104,7 +96,7 @@ class OrienteeringParticipantService {
             it[firstName] = req.firstName
             it[lastName] = req.lastName
             it[groupId] = req.groupId
-            it[OrienteeringParticipants.groupName] = groupName
+            it[OrienteeringParticipants.groupName] = req.groupName
             it[competitionId] = req.competitionId
             it[commandName] = null
             it[startNumber] = 0
@@ -156,7 +148,7 @@ class OrienteeringParticipantService {
             .singleOrNull() != null
     }
 
-    suspend fun getByGroup(groupId: String): List<OrienteeringParticipantResponse> = dbQuery {
+    suspend fun getByGroup(groupId: Long): List<OrienteeringParticipantResponse> = dbQuery {
         OrienteeringParticipants.selectAll()
             .where { OrienteeringParticipants.groupId eq groupId }
             .map { row ->
