@@ -1,7 +1,7 @@
 package com.sportenth.data.response.orienteering
 
 data class ParticipantGroupDetailResponse(
-    val groupId: String,
+    val groupId: Long,
     val title: String,
     val maxParticipants: Int?,
     val registeredCount: Int
