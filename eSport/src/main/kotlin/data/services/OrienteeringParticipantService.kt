@@ -6,6 +6,7 @@ import com.sportenth.data.requests.orienteering.OrienteeringParticipantRequest
 import com.sportenth.data.requests.orienteering.RegisterParticipantRequest
 import com.sportenth.data.response.orienteering.OrienteeringParticipantResponse
 import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
@@ -155,27 +156,33 @@ class OrienteeringParticipantService {
             .singleOrNull() != null
     }
 
+    suspend fun getByCompetition(competitionId: Long): List<OrienteeringParticipantResponse> = dbQuery {
+        OrienteeringParticipants.selectAll()
+            .where { OrienteeringParticipants.competitionId eq competitionId }
+            .map { row -> row.toResponse() }
+    }
+
     suspend fun getByGroup(groupId: Long): List<OrienteeringParticipantResponse> = dbQuery {
         OrienteeringParticipants.selectAll()
             .where { OrienteeringParticipants.groupId eq groupId }
-            .map { row ->
-                OrienteeringParticipantResponse(
-                    id = row[OrienteeringParticipants.id],
-                    userId = row[OrienteeringParticipants.userId],
-                    firstName = row[OrienteeringParticipants.firstName],
-                    lastName = row[OrienteeringParticipants.lastName],
-                    groupId = row[OrienteeringParticipants.groupId],
-                    groupName = row[OrienteeringParticipants.groupName],
-                    competitionId = row[OrienteeringParticipants.competitionId],
-                    commandName = row[OrienteeringParticipants.commandName],
-                    startNumber = row[OrienteeringParticipants.startNumber],
-                    startTime = row[OrienteeringParticipants.startTime],
-                    chipNumber = row[OrienteeringParticipants.chipNumber],
-                    comment = row[OrienteeringParticipants.comment],
-                    isChipGiven = row[OrienteeringParticipants.isChipGiven]
-                )
-            }
+            .map { it.toResponse() }
     }
+
+    private fun ResultRow.toResponse() = OrienteeringParticipantResponse(
+        id = this[OrienteeringParticipants.id],
+        userId = this[OrienteeringParticipants.userId],
+        firstName = this[OrienteeringParticipants.firstName],
+        lastName = this[OrienteeringParticipants.lastName],
+        groupId = this[OrienteeringParticipants.groupId],
+        groupName = this[OrienteeringParticipants.groupName],
+        competitionId = this[OrienteeringParticipants.competitionId],
+        commandName = this[OrienteeringParticipants.commandName],
+        startNumber = this[OrienteeringParticipants.startNumber],
+        startTime = this[OrienteeringParticipants.startTime],
+        chipNumber = this[OrienteeringParticipants.chipNumber],
+        comment = this[OrienteeringParticipants.comment],
+        isChipGiven = this[OrienteeringParticipants.isChipGiven]
+    )
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }

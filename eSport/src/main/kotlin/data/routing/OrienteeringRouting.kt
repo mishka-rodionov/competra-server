@@ -185,6 +185,19 @@ fun Route.orienteeringRoutes(
         })
     }
 
+    get("/event/orienteering/participants/competition") {
+        val competitionId = call.request.queryParameters["competitionId"]?.toLongOrNull()
+            ?: return@get call.respond(
+                HttpStatusCode.BadRequest,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }
+            )
+        val result = participantService.getByCompetition(competitionId)
+        call.respond(CommonModel<Any>().also { model ->
+            model.status = 1
+            model.result = result
+        })
+    }
+
     delete("/event/orienteering/register/{competitionId}") {
         val userId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
             ?: return@delete call.respond(
