@@ -18,6 +18,52 @@ import java.util.UUID
 
 class OrienteeringParticipantService {
 
+    suspend fun upsertAll(requests: List<OrienteeringParticipantRequest>): List<OrienteeringParticipantResponse> = dbQuery {
+        requests.map { req ->
+            val existing = OrienteeringParticipants.selectAll()
+                .where { OrienteeringParticipants.id eq req.id }
+                .singleOrNull()
+
+            if (existing == null) {
+                OrienteeringParticipants.insert {
+                    it[id] = req.id
+                    it[userId] = req.userId
+                    it[firstName] = req.firstName
+                    it[lastName] = req.lastName
+                    it[groupId] = req.groupId
+                    it[groupName] = req.groupName
+                    it[competitionId] = req.competitionId
+                    it[commandName] = req.commandName
+                    it[startNumber] = req.startNumber
+                    it[startTime] = req.startTime
+                    it[chipNumber] = req.chipNumber
+                    it[comment] = req.comment
+                    it[isChipGiven] = req.isChipGiven
+                }
+            } else {
+                OrienteeringParticipants.update({ OrienteeringParticipants.id eq req.id }) {
+                    it[userId] = req.userId
+                    it[firstName] = req.firstName
+                    it[lastName] = req.lastName
+                    it[groupId] = req.groupId
+                    it[groupName] = req.groupName
+                    it[competitionId] = req.competitionId
+                    it[commandName] = req.commandName
+                    it[startNumber] = req.startNumber
+                    it[startTime] = req.startTime
+                    it[chipNumber] = req.chipNumber
+                    it[comment] = req.comment
+                    it[isChipGiven] = req.isChipGiven
+                }
+            }
+
+            OrienteeringParticipants.selectAll()
+                .where { OrienteeringParticipants.id eq req.id }
+                .single()
+                .toResponse()
+        }
+    }
+
     suspend fun upsert(req: OrienteeringParticipantRequest): OrienteeringParticipantResponse = dbQuery {
         val existing = OrienteeringParticipants.selectAll()
             .where { OrienteeringParticipants.id eq req.id }

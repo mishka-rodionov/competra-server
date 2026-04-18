@@ -119,6 +119,15 @@ fun Route.orienteeringRoutes(
         })
     }
 
+    post("/event/orienteering/save/participants") {
+        val requests = call.receive<List<OrienteeringParticipantRequest>>()
+        val result = participantService.upsertAll(requests)
+        call.respond(CommonModel<Any>().also { model ->
+            model.status = 1
+            model.result = result
+        })
+    }
+
     post("/event/orienteering/save/result") {
         val req = call.receive<OrienteeringResultRequest>()
         val result = resultService.upsert(req)
