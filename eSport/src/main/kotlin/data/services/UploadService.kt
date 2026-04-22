@@ -17,13 +17,15 @@ class UploadService {
     private val endpoint  = System.getenv("S3_ENDPOINT") ?: "https://storage.yandexcloud.net"
     private val region    = System.getenv("S3_REGION") ?: "ru-central1"
 
-    private val s3: S3Client = S3Client.builder()
-        .endpointOverride(URI.create(endpoint))
-        .region(Region.of(region))
-        .credentialsProvider(
-            StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey))
-        )
-        .build()
+    private val s3: S3Client by lazy {
+        S3Client.builder()
+            .endpointOverride(URI.create(endpoint))
+            .region(Region.of(region))
+            .credentialsProvider(
+                StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey))
+            )
+            .build()
+    }
 
     /**
      * Загружает файл в S3 и возвращает публичный URL.
