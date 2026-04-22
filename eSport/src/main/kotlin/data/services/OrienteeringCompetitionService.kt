@@ -38,6 +38,7 @@ class OrienteeringCompetitionService {
                 it[maxParticipants] = req.competition.maxParticipants
                 it[feeAmount] = req.competition.feeAmount
                 it[feeCurrency] = req.competition.feeCurrency
+                it[imageUrl] = req.competition.imageUrl
                 it[regulationUrl] = req.competition.regulationUrl
                 it[mapUrl] = req.competition.mapUrl
                 it[contactPhone] = req.competition.contactPhone
@@ -63,6 +64,7 @@ class OrienteeringCompetitionService {
                 it[maxParticipants] = req.competition.maxParticipants
                 it[feeAmount] = req.competition.feeAmount
                 it[feeCurrency] = req.competition.feeCurrency
+                it[imageUrl] = req.competition.imageUrl
                 it[regulationUrl] = req.competition.regulationUrl
                 it[mapUrl] = req.competition.mapUrl
                 it[contactPhone] = req.competition.contactPhone
@@ -122,6 +124,7 @@ class OrienteeringCompetitionService {
                 maxParticipants = comp[Competitions.maxParticipants],
                 feeAmount = comp[Competitions.feeAmount],
                 feeCurrency = comp[Competitions.feeCurrency],
+                imageUrl = comp[Competitions.imageUrl],
                 regulationUrl = comp[Competitions.regulationUrl],
                 mapUrl = comp[Competitions.mapUrl],
                 contactPhone = comp[Competitions.contactPhone],
@@ -166,6 +169,7 @@ class OrienteeringCompetitionService {
                         maxParticipants = comp[Competitions.maxParticipants],
                         feeAmount = comp[Competitions.feeAmount],
                         feeCurrency = comp[Competitions.feeCurrency],
+                        imageUrl = comp[Competitions.imageUrl],
                         regulationUrl = comp[Competitions.regulationUrl],
                         mapUrl = comp[Competitions.mapUrl],
                         contactPhone = comp[Competitions.contactPhone],
@@ -215,6 +219,7 @@ class OrienteeringCompetitionService {
                 maxParticipants = comp[Competitions.maxParticipants],
                 feeAmount = comp[Competitions.feeAmount],
                 feeCurrency = comp[Competitions.feeCurrency],
+                imageUrl = comp[Competitions.imageUrl],
                 regulationUrl = comp[Competitions.regulationUrl],
                 mapUrl = comp[Competitions.mapUrl],
                 contactPhone = comp[Competitions.contactPhone],
@@ -271,6 +276,7 @@ class OrienteeringCompetitionService {
             maxParticipants = comp[Competitions.maxParticipants],
             feeAmount = comp[Competitions.feeAmount],
             feeCurrency = comp[Competitions.feeCurrency],
+            imageUrl = comp[Competitions.imageUrl],
             regulationUrl = comp[Competitions.regulationUrl],
             mapUrl = comp[Competitions.mapUrl],
             contactPhone = comp[Competitions.contactPhone],

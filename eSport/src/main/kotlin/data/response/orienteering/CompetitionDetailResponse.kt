@@ -23,6 +23,7 @@ data class CompetitionDetailResponse(
     val maxParticipants: Int?,
     val feeAmount: Double?,
     val feeCurrency: String?,
+    val imageUrl: String? = null,
     val regulationUrl: String?,
     val mapUrl: String?,
     val contactPhone: String?,

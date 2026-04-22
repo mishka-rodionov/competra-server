@@ -19,6 +19,7 @@ object Competitions : Table("competitions") {
     val maxParticipants = integer("max_participants").nullable()
     val feeAmount = double("fee_amount").nullable()
     val feeCurrency = varchar("fee_currency", 10).nullable()
+    val imageUrl = varchar("image_url", 500).nullable()
     val regulationUrl = varchar("regulation_url", 500).nullable()
     val mapUrl = varchar("map_url", 500).nullable()
     val contactPhone = varchar("contact_phone", 50).nullable()

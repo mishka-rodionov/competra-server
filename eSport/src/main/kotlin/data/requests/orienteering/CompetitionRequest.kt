@@ -18,6 +18,7 @@ data class CompetitionRequest(
     @SerializedName("maxParticipants") val maxParticipants: Int?,
     @SerializedName("feeAmount") val feeAmount: Double?,
     @SerializedName("feeCurrency") val feeCurrency: String?,
+    @SerializedName("imageUrl") val imageUrl: String? = null,
     @SerializedName("regulationUrl") val regulationUrl: String?,
     @SerializedName("mapUrl") val mapUrl: String?,
     @SerializedName("contactPhone") val contactPhone: String?,
