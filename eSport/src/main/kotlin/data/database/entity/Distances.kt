@@ -10,6 +10,7 @@ object Distances : Table("distances") {
     val climbMeters = integer("climb_meters")
     val controlsCount = integer("controls_count")
     val description = varchar("description", 1000).nullable()
+    val controlPoints = text("control_points").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

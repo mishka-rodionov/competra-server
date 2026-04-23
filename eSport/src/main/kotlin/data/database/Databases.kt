@@ -85,6 +85,7 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50)")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS contact_email VARCHAR(200)")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS website VARCHAR(500)")
+        exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS control_points TEXT")
     }
     routing {
         // Create user
