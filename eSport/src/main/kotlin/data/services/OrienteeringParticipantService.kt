@@ -1,5 +1,7 @@
 package com.sportenth.data.services
 
+import com.sportenth.data.database.entity.Competitions
+import com.sportenth.data.database.entity.OrienteeringCompetitions
 import com.sportenth.data.database.entity.OrienteeringParticipants
 import com.sportenth.data.database.entity.ParticipantGroups
 import com.sportenth.data.requests.orienteering.OrienteeringParticipantRequest
@@ -17,6 +19,22 @@ import org.jetbrains.exposed.sql.update
 import java.util.UUID
 
 class OrienteeringParticipantService {
+
+    private fun computeEffectiveStatus(
+        storedStatus: String,
+        registrationStart: Long?,
+        registrationEnd: Long?,
+        startTime: Long?
+    ): String {
+        if (storedStatus == "IN_PROGRESS" || storedStatus == "FINISHED") return storedStatus
+        val now = System.currentTimeMillis()
+        return when {
+            startTime != null && now >= startTime -> "IN_PROGRESS"
+            registrationEnd != null && now >= registrationEnd -> "REGISTRATION_CLOSED"
+            registrationStart == null || now >= registrationStart -> "REGISTRATION_OPEN"
+            else -> "CREATED"
+        }
+    }
 
     suspend fun upsertAll(requests: List<OrienteeringParticipantRequest>): List<OrienteeringParticipantResponse> = dbQuery {
         requests.map { req ->
@@ -125,6 +143,25 @@ class OrienteeringParticipantService {
      * Если пользователь уже зарегистрирован — выбрасывает IllegalStateException.
      */
     suspend fun register(req: RegisterParticipantRequest, userId: String): OrienteeringParticipantResponse = dbQuery {
+        // Проверяем статус соревнования — регистрация доступна только при REGISTRATION_OPEN
+        val comp = Competitions.selectAll()
+            .where { Competitions.id eq req.competitionId }
+            .singleOrNull() ?: throw IllegalStateException("Соревнование не найдено")
+
+        val orient = OrienteeringCompetitions.selectAll()
+            .where { OrienteeringCompetitions.competitionId eq req.competitionId }
+            .singleOrNull()
+
+        val effectiveStatus = computeEffectiveStatus(
+            storedStatus = comp[Competitions.status],
+            registrationStart = comp[Competitions.registrationStart],
+            registrationEnd = comp[Competitions.registrationEnd],
+            startTime = orient?.get(OrienteeringCompetitions.startTime)
+        )
+        if (effectiveStatus != "REGISTRATION_OPEN") {
+            throw IllegalStateException("Регистрация на данное соревнование недоступна")
+        }
+
         // Проверяем, не зарегистрирован ли уже пользователь на это соревнование
         val alreadyRegistered = OrienteeringParticipants.selectAll()
             .where {

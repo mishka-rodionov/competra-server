@@ -21,6 +21,28 @@ import org.jetbrains.exposed.sql.update
 
 class OrienteeringCompetitionService {
 
+    /**
+     * Вычисляет эффективный статус соревнования на основе сохранённого статуса и текущего времени.
+     *
+     * Статусы IN_PROGRESS и FINISHED задаются организатором вручную и не переопределяются.
+     * Остальные статусы вычисляются динамически по датам регистрации и времени старта.
+     */
+    private fun computeEffectiveStatus(
+        storedStatus: String,
+        registrationStart: Long?,
+        registrationEnd: Long?,
+        startTime: Long?
+    ): String {
+        if (storedStatus == "IN_PROGRESS" || storedStatus == "FINISHED") return storedStatus
+        val now = System.currentTimeMillis()
+        return when {
+            startTime != null && now >= startTime -> "IN_PROGRESS"
+            registrationEnd != null && now >= registrationEnd -> "REGISTRATION_CLOSED"
+            registrationStart == null || now >= registrationStart -> "REGISTRATION_OPEN"
+            else -> "CREATED"
+        }
+    }
+
     suspend fun upsert(req: OrienteeringCompetitionRequest, userId: String): OrienteeringCompetitionResponse = dbQuery {
         val competitionId: Long = if (req.competition.remoteId != null) {
             Competitions.update({ Competitions.id eq req.competition.remoteId }) {
@@ -33,6 +55,7 @@ class OrienteeringCompetitionService {
                 it[mainOrganizerId] = req.competition.mainOrganizerId
                 it[latitude] = req.competition.coordinates?.latitude
                 it[longitude] = req.competition.coordinates?.longitude
+                it[status] = req.competition.status
                 it[registrationStart] = req.competition.registrationStart
                 it[registrationEnd] = req.competition.registrationEnd
                 it[maxParticipants] = req.competition.maxParticipants
@@ -118,7 +141,12 @@ class OrienteeringCompetitionService {
                 coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
                     CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
                 else null,
-                status = comp[Competitions.status],
+                status = computeEffectiveStatus(
+                    storedStatus = comp[Competitions.status],
+                    registrationStart = comp[Competitions.registrationStart],
+                    registrationEnd = comp[Competitions.registrationEnd],
+                    startTime = orient[OrienteeringCompetitions.startTime]
+                ),
                 registrationStart = comp[Competitions.registrationStart],
                 registrationEnd = comp[Competitions.registrationEnd],
                 maxParticipants = comp[Competitions.maxParticipants],
@@ -163,7 +191,12 @@ class OrienteeringCompetitionService {
                         coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
                             CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
                         else null,
-                        status = comp[Competitions.status],
+                        status = computeEffectiveStatus(
+                            storedStatus = comp[Competitions.status],
+                            registrationStart = comp[Competitions.registrationStart],
+                            registrationEnd = comp[Competitions.registrationEnd],
+                            startTime = orient[OrienteeringCompetitions.startTime]
+                        ),
                         registrationStart = comp[Competitions.registrationStart],
                         registrationEnd = comp[Competitions.registrationEnd],
                         maxParticipants = comp[Competitions.maxParticipants],
@@ -213,7 +246,13 @@ class OrienteeringCompetitionService {
                 coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
                     CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
                 else null,
-                status = comp[Competitions.status],
+                // Для публичного списка startTime недоступен без джойна — используем даты регистрации
+                status = computeEffectiveStatus(
+                    storedStatus = comp[Competitions.status],
+                    registrationStart = comp[Competitions.registrationStart],
+                    registrationEnd = comp[Competitions.registrationEnd],
+                    startTime = null
+                ),
                 registrationStart = comp[Competitions.registrationStart],
                 registrationEnd = comp[Competitions.registrationEnd],
                 maxParticipants = comp[Competitions.maxParticipants],
@@ -234,6 +273,10 @@ class OrienteeringCompetitionService {
         val comp = Competitions.selectAll()
             .where { Competitions.id eq competitionId }
             .singleOrNull() ?: return@dbQuery null
+
+        val orient = OrienteeringCompetitions.selectAll()
+            .where { OrienteeringCompetitions.competitionId eq competitionId }
+            .singleOrNull()
 
         val groups = ParticipantGroups.selectAll()
             .where { ParticipantGroups.competitionId eq competitionId }
@@ -270,7 +313,12 @@ class OrienteeringCompetitionService {
             coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
                 CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
             else null,
-            status = comp[Competitions.status],
+            status = computeEffectiveStatus(
+                storedStatus = comp[Competitions.status],
+                registrationStart = comp[Competitions.registrationStart],
+                registrationEnd = comp[Competitions.registrationEnd],
+                startTime = orient?.get(OrienteeringCompetitions.startTime)
+            ),
             registrationStart = comp[Competitions.registrationStart],
             registrationEnd = comp[Competitions.registrationEnd],
             maxParticipants = comp[Competitions.maxParticipants],
