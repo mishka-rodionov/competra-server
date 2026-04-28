@@ -7,6 +7,7 @@ import com.sportenth.data.response.orienteering.OrienteeringResultResponse
 import com.sportenth.data.response.orienteering.SplitTimeResponse
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
@@ -61,6 +62,9 @@ class OrienteeringResultService {
             }
         }
 
+        // Пересчитываем места для всей группы внутри той же транзакции
+        recalculateRanksForGroup(req.competitionId, req.groupId)
+
         val row = OrienteeringResults.selectAll().where { OrienteeringResults.id eq req.id }.single()
         val splits = SplitTimes.selectAll()
             .where { SplitTimes.resultId eq req.id }
@@ -81,6 +85,40 @@ class OrienteeringResultService {
             isEditable = row[OrienteeringResults.isEditable],
             isEdited = row[OrienteeringResults.isEdited]
         )
+    }
+
+    /**
+     * Пересчитывает места для всех FINISHED-результатов группы.
+     * Вызывается внутри транзакции сразу после upsert нового результата.
+     */
+    private fun recalculateRanksForGroup(competitionId: Long, groupId: Long) {
+        val finishedRows = OrienteeringResults.selectAll()
+            .where {
+                (OrienteeringResults.competitionId eq competitionId) and
+                (OrienteeringResults.groupId eq groupId) and
+                (OrienteeringResults.status eq "FINISHED")
+            }
+            .toList()
+            .sortedBy { (it[OrienteeringResults.totalTime] ?: Long.MAX_VALUE) + it[OrienteeringResults.penaltyTime] }
+
+        var rank = 1
+        var prevTime: Long? = null
+        var skipCount = 0
+
+        finishedRows.forEachIndexed { index, row ->
+            val effectiveTime = (row[OrienteeringResults.totalTime] ?: Long.MAX_VALUE) + row[OrienteeringResults.penaltyTime]
+
+            if (prevTime != null && effectiveTime == prevTime) {
+                skipCount++
+            } else {
+                rank = index + 1 - skipCount
+                prevTime = effectiveTime
+            }
+
+            OrienteeringResults.update({ OrienteeringResults.id eq row[OrienteeringResults.id] }) {
+                it[OrienteeringResults.rank] = rank
+            }
+        }
     }
 
     suspend fun getByCompetition(competitionId: Long): List<OrienteeringResultResponse> = dbQuery {
