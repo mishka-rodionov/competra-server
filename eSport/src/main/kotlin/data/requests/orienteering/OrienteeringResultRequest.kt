@@ -10,6 +10,7 @@ data class OrienteeringResultRequest(
     @SerializedName("startTime") val startTime: Long?,
     @SerializedName("finishTime") val finishTime: Long?,
     @SerializedName("totalTime") val totalTime: Long?,
+    @SerializedName("rank") val rank: Int?,
     @SerializedName("status") val status: String,
     @SerializedName("penaltyTime") val penaltyTime: Long,
     @SerializedName("splits") val splits: List<SplitTimeRequest>?,

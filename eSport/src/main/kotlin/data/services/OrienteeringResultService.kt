@@ -29,7 +29,7 @@ class OrienteeringResultService {
                 it[startTime] = req.startTime
                 it[finishTime] = req.finishTime
                 it[totalTime] = req.totalTime
-                it[rank] = null
+                it[rank] = req.rank
                 it[status] = req.status
                 it[penaltyTime] = req.penaltyTime
                 it[isEditable] = req.isEditable
@@ -43,6 +43,7 @@ class OrienteeringResultService {
                 it[startTime] = req.startTime
                 it[finishTime] = req.finishTime
                 it[totalTime] = req.totalTime
+                it[rank] = req.rank
                 it[status] = req.status
                 it[penaltyTime] = req.penaltyTime
                 it[isEditable] = req.isEditable
