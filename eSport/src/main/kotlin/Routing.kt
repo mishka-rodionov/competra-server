@@ -38,7 +38,7 @@ fun Application.configureRouting() {
             call.respondText("Hello World!")
         }
 
-        orienteeringPublicRoutes(competitionService, participantService, resultService)
+        orienteeringPublicRoutes(competitionService, participantService, resultService, groupService)
 
         authenticate("auth-jwt") {
             post("/upload/file") {

@@ -23,7 +23,8 @@ import io.ktor.server.routing.*
 fun Route.orienteeringPublicRoutes(
     competitionService: OrienteeringCompetitionService,
     participantService: OrienteeringParticipantService,
-    resultService: OrienteeringResultService
+    resultService: OrienteeringResultService,
+    groupService: ParticipantGroupService
 ) {
     get("/event/orienteering/competitions/public") {
         val kindOfSports = call.request.queryParameters.getAll("kind_of_sports") ?: emptyList()
@@ -57,6 +58,32 @@ fun Route.orienteeringPublicRoutes(
         call.respond(CommonModel<Any>().also { model ->
             model.status = 1
             model.result = results
+        })
+    }
+
+    get("/event/orienteering/participantGroups") {
+        val competitionId = call.request.queryParameters["competitionId"]?.toLongOrNull()
+            ?: return@get call.respond(
+                HttpStatusCode.BadRequest,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }
+            )
+        val result = groupService.getByCompetition(competitionId)
+        call.respond(CommonModel<Any>().also { model ->
+            model.status = 1
+            model.result = result
+        })
+    }
+
+    get("/event/orienteering/participants/competition") {
+        val competitionId = call.request.queryParameters["competitionId"]?.toLongOrNull()
+            ?: return@get call.respond(
+                HttpStatusCode.BadRequest,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }
+            )
+        val result = participantService.getByCompetition(competitionId)
+        call.respond(CommonModel<Any>().also { model ->
+            model.status = 1
+            model.result = result
         })
     }
 
@@ -189,32 +216,6 @@ fun Route.orienteeringRoutes(
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }
             )
         val result = distanceService.getByCompetition(competitionId)
-        call.respond(CommonModel<Any>().also { model ->
-            model.status = 1
-            model.result = result
-        })
-    }
-
-    get("/event/orienteering/participantGroups") {
-        val competitionId = call.request.queryParameters["competitionId"]?.toLongOrNull()
-            ?: return@get call.respond(
-                HttpStatusCode.BadRequest,
-                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }
-            )
-        val result = groupService.getByCompetition(competitionId)
-        call.respond(CommonModel<Any>().also { model ->
-            model.status = 1
-            model.result = result
-        })
-    }
-
-    get("/event/orienteering/participants/competition") {
-        val competitionId = call.request.queryParameters["competitionId"]?.toLongOrNull()
-            ?: return@get call.respond(
-                HttpStatusCode.BadRequest,
-                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }
-            )
-        val result = participantService.getByCompetition(competitionId)
         call.respond(CommonModel<Any>().also { model ->
             model.status = 1
             model.result = result
