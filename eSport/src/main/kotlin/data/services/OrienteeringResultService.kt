@@ -83,6 +83,31 @@ class OrienteeringResultService {
         )
     }
 
+    suspend fun getByCompetition(competitionId: Long): List<OrienteeringResultResponse> = dbQuery {
+        OrienteeringResults.selectAll()
+            .where { OrienteeringResults.competitionId eq competitionId }
+            .map { row ->
+                val splits = SplitTimes.selectAll()
+                    .where { SplitTimes.resultId eq row[OrienteeringResults.id] }
+                    .map { SplitTimeResponse(it[SplitTimes.controlPoint], it[SplitTimes.timestamp]) }
+                OrienteeringResultResponse(
+                    id = row[OrienteeringResults.id],
+                    competitionId = row[OrienteeringResults.competitionId],
+                    groupId = row[OrienteeringResults.groupId],
+                    participantId = row[OrienteeringResults.participantId],
+                    startTime = row[OrienteeringResults.startTime],
+                    finishTime = row[OrienteeringResults.finishTime],
+                    totalTime = row[OrienteeringResults.totalTime],
+                    rank = row[OrienteeringResults.rank],
+                    status = row[OrienteeringResults.status],
+                    penaltyTime = row[OrienteeringResults.penaltyTime],
+                    splits = splits,
+                    isEditable = row[OrienteeringResults.isEditable],
+                    isEdited = row[OrienteeringResults.isEdited]
+                )
+            }
+    }
+
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
 }
