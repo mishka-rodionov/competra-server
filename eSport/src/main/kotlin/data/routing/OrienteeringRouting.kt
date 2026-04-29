@@ -129,10 +129,10 @@ fun Route.orienteeringRoutes(
     }
 
     get("/event/orienteering/competitions") {
-        val userId = call.parameters["userId"]
+        val userId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
             ?: return@get call.respond(
-                HttpStatusCode.BadRequest,
-                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "userId is required")) }
+                HttpStatusCode.Unauthorized,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(401, "Unauthorized")) }
             )
 
         val list = competitionService.getByUserId(userId)
