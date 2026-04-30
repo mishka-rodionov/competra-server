@@ -56,7 +56,7 @@ dependencies {
     // SMTP
     implementation("com.sun.mail:jakarta.mail:2.0.1")
 
-    // AWS SDK v2 — S3-клиент для Yandex Object Storage
-    implementation("software.amazon.awssdk:s3:2.25.0")
+    // AWS SDK v1 — совместим с Yandex Object Storage
+    implementation("com.amazonaws:aws-java-sdk-s3:1.12.600")
 
 }
