@@ -1,28 +1,20 @@
 package com.sportenth.data.services
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider
-import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.client.builder.AwsClientBuilder
-import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import com.amazonaws.services.s3.model.CannedAccessControlList
-import com.amazonaws.services.s3.model.ObjectMetadata
-import com.amazonaws.services.s3.model.PutObjectRequest
+import io.minio.MinioClient
+import io.minio.PutObjectArgs
 import java.io.ByteArrayInputStream
 import java.util.UUID
 
 class UploadService {
-    private val accessKey  = System.getenv("S3_ACCESS_KEY") ?: ""
-    private val secretKey  = System.getenv("S3_SECRET_KEY") ?: ""
-    private val bucket     = System.getenv("S3_BUCKET") ?: "esport"
-    private val endpoint   = System.getenv("S3_ENDPOINT") ?: "https://storage.yandexcloud.net"
-    private val region     = System.getenv("S3_REGION") ?: "ru-central1"
+    private val accessKey = System.getenv("S3_ACCESS_KEY") ?: ""
+    private val secretKey = System.getenv("S3_SECRET_KEY") ?: ""
+    private val bucket    = System.getenv("S3_BUCKET") ?: "esport"
+    private val endpoint  = System.getenv("S3_ENDPOINT") ?: "https://storage.yandexcloud.net"
 
-    private val s3: AmazonS3 by lazy {
-        AmazonS3ClientBuilder.standard()
-            .withEndpointConfiguration(AwsClientBuilder.EndpointConfiguration(endpoint, region))
-            .withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(accessKey, secretKey)))
-            .withPathStyleAccessEnabled(true)
+    private val minio: MinioClient by lazy {
+        MinioClient.builder()
+            .endpoint(endpoint)
+            .credentials(accessKey, secretKey)
             .build()
     }
 
@@ -30,14 +22,14 @@ class UploadService {
         val ext = fileName.substringAfterLast('.', "bin")
         val key = "$type/${UUID.randomUUID()}.$ext"
 
-        val metadata = ObjectMetadata().apply {
-            this.contentType = contentType
-            contentLength = fileBytes.size.toLong()
-        }
-
-        s3.putObject(
-            PutObjectRequest(bucket, key, ByteArrayInputStream(fileBytes), metadata)
-                .withCannedAcl(CannedAccessControlList.PublicRead)
+        minio.putObject(
+            PutObjectArgs.builder()
+                .bucket(bucket)
+                .`object`(key)
+                .stream(ByteArrayInputStream(fileBytes), fileBytes.size.toLong(), -1)
+                .contentType(contentType)
+                .headers(mapOf("x-amz-acl" to "public-read"))
+                .build()
         )
 
         return "https://$bucket.storage.yandexcloud.net/$key"
