@@ -3,6 +3,10 @@ package com.sportenth.data.database
 import com.rodionov.remote.request.user.UserRequest
 import com.sportenth.UserEntity
 import com.sportenth.UserService
+import com.sportenth.data.requests.UserProfileRequest
+import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.auth.authenticate
+import io.ktor.server.auth.principal
 import com.sportenth.data.database.entity.Competitions
 import com.sportenth.data.database.entity.Distances
 import com.sportenth.data.database.entity.OrienteeringCompetitions
@@ -216,7 +220,7 @@ fun Application.configureDatabases() {
                         middleName = user.middleName,
                         birthDate = user.birthDate,
                         gender = Gender.MALE,
-                        photo = user.photo,
+                        avatarUrl = user.photo,
                         phoneNumber = user.phoneNumber,
                         email = user.email,
                         qualification = emptyList()
@@ -229,6 +233,74 @@ fun Application.configureDatabases() {
 
 
             call.respond(response)
+        }
+
+        authenticate("auth-jwt") {
+            get("/user/profile") {
+                val userId = call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString()
+                val user = userService.read(userId)
+                if (user != null) {
+                    call.respond(CommonModel<UserResponse>().also {
+                        it.status = 1
+                        it.result = UserResponse(
+                            id = user.id,
+                            firstName = user.firstName,
+                            lastName = user.lastName,
+                            middleName = user.middleName,
+                            birthDate = user.birthDate,
+                            gender = Gender.MALE,
+                            avatarUrl = user.photo,
+                            phoneNumber = user.phoneNumber,
+                            email = user.email,
+                            qualification = emptyList()
+                        )
+                    })
+                } else {
+                    call.respond(CommonModel<Any>().also {
+                        it.status = 0
+                        it.errors = listOf(BaseError(404, "User not found"))
+                    })
+                }
+            }
+
+            patch("/user/profile") {
+                val userId = call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString()
+                val request = call.receive<UserProfileRequest>()
+                val current = userService.read(userId)
+                if (current == null) {
+                    call.respond(CommonModel<Any>().also {
+                        it.status = 0
+                        it.errors = listOf(BaseError(404, "User not found"))
+                    })
+                    return@patch
+                }
+                userService.update(userId, UserEntity(
+                    id = userId,
+                    firstName = request.firstName ?: current.firstName,
+                    lastName = request.lastName ?: current.lastName,
+                    middleName = request.middleName ?: current.middleName,
+                    birthDate = request.birthDate ?: current.birthDate,
+                    photo = request.avatarUrl ?: current.photo,
+                    phoneNumber = request.phoneNumber ?: current.phoneNumber,
+                    email = current.email
+                ))
+                val updated = userService.read(userId)!!
+                call.respond(CommonModel<UserResponse>().also {
+                    it.status = 1
+                    it.result = UserResponse(
+                        id = updated.id,
+                        firstName = updated.firstName,
+                        lastName = updated.lastName,
+                        middleName = updated.middleName,
+                        birthDate = updated.birthDate,
+                        gender = Gender.MALE,
+                        avatarUrl = updated.photo,
+                        phoneNumber = updated.phoneNumber,
+                        email = updated.email,
+                        qualification = emptyList()
+                    )
+                })
+            }
         }
 
         post("/refresh_token") {
@@ -286,7 +358,7 @@ fun Application.configureDatabases() {
                         middleName = user.middleName,
                         birthDate = user.birthDate,
                         gender = Gender.MALE,
-                        photo = user.photo,
+                        avatarUrl = user.photo,
                         phoneNumber = user.phoneNumber,
                         email = user.email,
                         qualification = emptyList()
