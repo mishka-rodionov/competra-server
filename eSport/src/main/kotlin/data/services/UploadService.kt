@@ -25,7 +25,12 @@ class UploadService {
             .credentialsProvider(
                 StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey))
             )
-            .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+            .serviceConfiguration(
+                S3Configuration.builder()
+                    .pathStyleAccessEnabled(true)
+                    .chunkedEncodingEnabled(false)
+                    .build()
+            )
             .build()
     }
 
