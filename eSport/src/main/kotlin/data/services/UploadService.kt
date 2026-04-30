@@ -1,8 +1,14 @@
 package com.sportenth.data.services
 
-import io.minio.MinioClient
-import io.minio.PutObjectArgs
-import java.io.ByteArrayInputStream
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
+import software.amazon.awssdk.core.sync.RequestBody
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.S3Configuration
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
+import software.amazon.awssdk.services.s3.model.PutObjectRequest
+import java.net.URI
 import java.util.UUID
 
 class UploadService {
@@ -10,11 +16,21 @@ class UploadService {
     private val secretKey = System.getenv("S3_SECRET_KEY") ?: ""
     private val bucket    = System.getenv("S3_BUCKET") ?: "esport"
     private val endpoint  = System.getenv("S3_ENDPOINT") ?: "https://storage.yandexcloud.net"
+    private val region    = System.getenv("S3_REGION") ?: "ru-central1"
 
-    private val minio: MinioClient by lazy {
-        MinioClient.builder()
-            .endpoint(endpoint)
-            .credentials(accessKey, secretKey)
+    private val s3: S3Client by lazy {
+        S3Client.builder()
+            .endpointOverride(URI.create(endpoint))
+            .region(Region.of(region))
+            .credentialsProvider(
+                StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey))
+            )
+            .serviceConfiguration(
+                S3Configuration.builder()
+                    .pathStyleAccessEnabled(true)
+                    .chunkedEncodingEnabled(false)
+                    .build()
+            )
             .build()
     }
 
@@ -22,14 +38,15 @@ class UploadService {
         val ext = fileName.substringAfterLast('.', "bin")
         val key = "$type/${UUID.randomUUID()}.$ext"
 
-        minio.putObject(
-            PutObjectArgs.builder()
+        s3.putObject(
+            PutObjectRequest.builder()
                 .bucket(bucket)
-                .`object`(key)
-                .stream(ByteArrayInputStream(fileBytes), fileBytes.size.toLong(), -1)
+                .key(key)
+                .acl(ObjectCannedACL.PUBLIC_READ)
                 .contentType(contentType)
-                .headers(mapOf("x-amz-acl" to "public-read"))
-                .build()
+                .contentLength(fileBytes.size.toLong())
+                .build(),
+            RequestBody.fromBytes(fileBytes)
         )
 
         return "https://$bucket.storage.yandexcloud.net/$key"

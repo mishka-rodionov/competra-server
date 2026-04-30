@@ -56,7 +56,7 @@ dependencies {
     // SMTP
     implementation("com.sun.mail:jakarta.mail:2.0.1")
 
-    // MinIO SDK — S3-совместимый клиент для Yandex Object Storage
-    implementation("io.minio:minio:8.5.9")
+    // AWS SDK v2 — S3-клиент для Yandex Object Storage
+    implementation("software.amazon.awssdk:s3:2.25.0")
 
 }
