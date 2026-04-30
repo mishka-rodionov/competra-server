@@ -16,6 +16,11 @@ services:
       LOKI_URL: ${LOKI_URL:-}
       LOKI_USER_ID: ${LOKI_USER_ID:-}
       LOKI_API_KEY: ${LOKI_API_KEY:-}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET:-esport}
+      S3_ENDPOINT: ${S3_ENDPOINT:-https://storage.yandexcloud.net}
+      S3_REGION: ${S3_REGION:-ru-central1}
     depends_on:
       postgres:
         condition: service_healthy
