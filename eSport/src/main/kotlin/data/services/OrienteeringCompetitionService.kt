@@ -221,6 +221,66 @@ class OrienteeringCompetitionService {
     }
 
     /**
+     * Возвращает список соревнований, на которые пользователь зарегистрирован как участник
+     * (через таблицу OrienteeringParticipants).
+     */
+    suspend fun getRegisteredByUserId(userId: String): List<OrienteeringCompetitionResponse> = dbQuery {
+        OrienteeringParticipants.selectAll()
+            .where { OrienteeringParticipants.userId eq userId }
+            .mapNotNull { participant ->
+                val competitionId = participant[OrienteeringParticipants.competitionId]
+                val orient = OrienteeringCompetitions.selectAll()
+                    .where { OrienteeringCompetitions.competitionId eq competitionId }
+                    .singleOrNull() ?: return@mapNotNull null
+                val comp = Competitions.selectAll()
+                    .where { Competitions.id eq competitionId }
+                    .singleOrNull() ?: return@mapNotNull null
+
+                OrienteeringCompetitionResponse(
+                    competitionId = orient[OrienteeringCompetitions.id],
+                    competition = CompetitionResponse(
+                        remoteId = comp[Competitions.id],
+                        title = comp[Competitions.title],
+                        startDate = comp[Competitions.startDate],
+                        endDate = comp[Competitions.endDate],
+                        kindOfSport = comp[Competitions.kindOfSport],
+                        description = comp[Competitions.description],
+                        address = comp[Competitions.address],
+                        mainOrganizerId = comp[Competitions.mainOrganizerId],
+                        coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
+                            CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
+                        else null,
+                        status = computeEffectiveStatus(
+                            storedStatus = comp[Competitions.status],
+                            registrationStart = comp[Competitions.registrationStart],
+                            registrationEnd = comp[Competitions.registrationEnd],
+                            startTime = orient[OrienteeringCompetitions.startTime]
+                        ),
+                        registrationStart = comp[Competitions.registrationStart],
+                        registrationEnd = comp[Competitions.registrationEnd],
+                        maxParticipants = comp[Competitions.maxParticipants],
+                        feeAmount = comp[Competitions.feeAmount],
+                        feeCurrency = comp[Competitions.feeCurrency],
+                        imageUrl = comp[Competitions.imageUrl],
+                        regulationUrl = comp[Competitions.regulationUrl],
+                        mapUrl = comp[Competitions.mapUrl],
+                        contactPhone = comp[Competitions.contactPhone],
+                        contactEmail = comp[Competitions.contactEmail],
+                        website = comp[Competitions.website],
+                        resultsStatus = comp[Competitions.resultsStatus]
+                    ),
+                    direction = orient[OrienteeringCompetitions.direction],
+                    punchingSystem = orient[OrienteeringCompetitions.punchingSystem],
+                    startTimeMode = orient[OrienteeringCompetitions.startTimeMode],
+                    countdownTimer = orient[OrienteeringCompetitions.countdownTimer],
+                    startTime = orient[OrienteeringCompetitions.startTime],
+                    startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds]
+                )
+            }
+            .distinctBy { it.competitionId }
+    }
+
+    /**
      * Возвращает список соревнований, отфильтрованных по видам спорта.
      * Если список видов спорта пустой — возвращает все соревнования.
      *
