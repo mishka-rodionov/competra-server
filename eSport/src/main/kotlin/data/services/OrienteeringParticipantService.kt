@@ -4,6 +4,7 @@ import com.sportenth.data.database.entity.Competitions
 import com.sportenth.data.database.entity.OrienteeringCompetitions
 import com.sportenth.data.database.entity.OrienteeringParticipants
 import com.sportenth.data.database.entity.ParticipantGroups
+import com.sportenth.data.exception.ConflictException
 import com.sportenth.data.requests.orienteering.OrienteeringParticipantRequest
 import com.sportenth.data.requests.orienteering.RegisterParticipantRequest
 import com.sportenth.data.response.orienteering.OrienteeringParticipantResponse
@@ -42,6 +43,12 @@ class OrienteeringParticipantService {
             val existing = OrienteeringParticipants.selectAll()
                 .where { OrienteeringParticipants.id eq req.id }
                 .singleOrNull()
+
+            if (existing != null && req.serverUpdatedAt != null &&
+                req.serverUpdatedAt < existing[OrienteeringParticipants.updatedAt]
+            ) {
+                throw ConflictException(existing.toResponse())
+            }
 
             if (existing == null) {
                 OrienteeringParticipants.insert {
@@ -90,6 +97,12 @@ class OrienteeringParticipantService {
         val existing = OrienteeringParticipants.selectAll()
             .where { OrienteeringParticipants.id eq req.id }
             .singleOrNull()
+
+        if (existing != null && req.serverUpdatedAt != null &&
+            req.serverUpdatedAt < existing[OrienteeringParticipants.updatedAt]
+        ) {
+            throw ConflictException(existing.toResponse())
+        }
 
         if (existing == null) {
             OrienteeringParticipants.insert {

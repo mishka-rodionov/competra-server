@@ -1,5 +1,6 @@
 package com.sportenth.data.routing
 
+import com.sportenth.data.exception.ConflictException
 import com.sportenth.data.requests.orienteering.DistanceRequest
 import com.sportenth.data.requests.orienteering.OrienteeringCompetitionRequest
 import com.sportenth.data.requests.orienteering.OrienteeringParticipantRequest
@@ -14,11 +15,31 @@ import com.sportenth.data.services.OrienteeringParticipantService
 import com.sportenth.data.services.OrienteeringResultService
 import com.sportenth.data.services.ParticipantGroupService
 import io.ktor.http.*
+import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+
+/**
+ * Выполняет [block] и при ConflictException отвечает HTTP 409 с актуальной серверной записью
+ * в теле — клиент применит server-wins и перезатрёт локалку.
+ */
+private suspend inline fun ApplicationCall.respondConflictAware(block: () -> Unit) {
+    try {
+        block()
+    } catch (e: ConflictException) {
+        respond(
+            HttpStatusCode.Conflict,
+            CommonModel<Any>().also {
+                it.status = 0
+                it.result = e.currentResponse
+                it.errors = listOf(BaseError(409, "Server record is newer"))
+            }
+        )
+    }
+}
 
 fun Route.orienteeringPublicRoutes(
     competitionService: OrienteeringCompetitionService,
@@ -121,11 +142,13 @@ fun Route.orienteeringRoutes(
             )
 
         val req = call.receive<OrienteeringCompetitionRequest>()
-        val result = competitionService.upsert(req, userId)
-        call.respond(CommonModel<Any>().also { model ->
-            model.status = 1
-            model.result = result
-        })
+        call.respondConflictAware {
+            val result = competitionService.upsert(req, userId)
+            call.respond(CommonModel<Any>().also { model ->
+                model.status = 1
+                model.result = result
+            })
+        }
     }
 
     get("/event/orienteering/competitions") {
@@ -158,47 +181,57 @@ fun Route.orienteeringRoutes(
 
     post("/event/orienteering/save/participantGroup") {
         val requests = call.receive<List<ParticipantGroupRequest>>()
-        val result = groupService.upsertAll(requests)
-        call.respond(CommonModel<Any>().also { model ->
-            model.status = 1
-            model.result = result
-        })
+        call.respondConflictAware {
+            val result = groupService.upsertAll(requests)
+            call.respond(CommonModel<Any>().also { model ->
+                model.status = 1
+                model.result = result
+            })
+        }
     }
 
     post("/event/orienteering/save/participant") {
         val req = call.receive<OrienteeringParticipantRequest>()
-        val result = participantService.upsert(req)
-        call.respond(CommonModel<Any>().also { model ->
-            model.status = 1
-            model.result = result
-        })
+        call.respondConflictAware {
+            val result = participantService.upsert(req)
+            call.respond(CommonModel<Any>().also { model ->
+                model.status = 1
+                model.result = result
+            })
+        }
     }
 
     post("/event/orienteering/save/participants") {
         val requests = call.receive<List<OrienteeringParticipantRequest>>()
-        val result = participantService.upsertAll(requests)
-        call.respond(CommonModel<Any>().also { model ->
-            model.status = 1
-            model.result = result
-        })
+        call.respondConflictAware {
+            val result = participantService.upsertAll(requests)
+            call.respond(CommonModel<Any>().also { model ->
+                model.status = 1
+                model.result = result
+            })
+        }
     }
 
     post("/event/orienteering/save/result") {
         val req = call.receive<OrienteeringResultRequest>()
-        val result = resultService.upsert(req)
-        call.respond(CommonModel<Any>().also { model ->
-            model.status = 1
-            model.result = result
-        })
+        call.respondConflictAware {
+            val result = resultService.upsert(req)
+            call.respond(CommonModel<Any>().also { model ->
+                model.status = 1
+                model.result = result
+            })
+        }
     }
 
     post("/event/orienteering/save/results") {
         val requests = call.receive<List<OrienteeringResultRequest>>()
-        val result = resultService.upsertAll(requests)
-        call.respond(CommonModel<Any>().also { model ->
-            model.status = 1
-            model.result = result
-        })
+        call.respondConflictAware {
+            val result = resultService.upsertAll(requests)
+            call.respond(CommonModel<Any>().also { model ->
+                model.status = 1
+                model.result = result
+            })
+        }
     }
 
     delete("/event/orienteering/competitions/{id}") {
@@ -275,11 +308,13 @@ fun Route.orienteeringRoutes(
 
     post("/event/orienteering/save/distances") {
         val requests = call.receive<List<DistanceRequest>>()
-        val result = distanceService.upsertAll(requests)
-        call.respond(CommonModel<Any>().also { model ->
-            model.status = 1
-            model.result = result
-        })
+        call.respondConflictAware {
+            val result = distanceService.upsertAll(requests)
+            call.respond(CommonModel<Any>().also { model ->
+                model.status = 1
+                model.result = result
+            })
+        }
     }
 
     get("/event/orienteering/distances") {

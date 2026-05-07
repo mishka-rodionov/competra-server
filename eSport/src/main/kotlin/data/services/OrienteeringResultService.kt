@@ -2,6 +2,7 @@ package com.sportenth.data.services
 
 import com.sportenth.data.database.entity.OrienteeringResults
 import com.sportenth.data.database.entity.SplitTimes
+import com.sportenth.data.exception.ConflictException
 import com.sportenth.data.requests.orienteering.OrienteeringResultRequest
 import com.sportenth.data.response.orienteering.OrienteeringResultResponse
 import com.sportenth.data.response.orienteering.SplitTimeResponse
@@ -48,6 +49,18 @@ class OrienteeringResultService {
         val existing = OrienteeringResults.selectAll()
             .where { OrienteeringResults.id eq req.id }
             .singleOrNull()
+
+        if (existing != null && req.serverUpdatedAt != null &&
+            req.serverUpdatedAt < existing[OrienteeringResults.updatedAt]
+        ) {
+            val splits = SplitTimes.selectAll()
+                .where { SplitTimes.resultId eq req.id }
+                .map { com.sportenth.data.response.orienteering.SplitTimeResponse(
+                    it[SplitTimes.controlPoint],
+                    it[SplitTimes.timestamp]
+                ) }
+            throw ConflictException(existing.toResponse(splits))
+        }
 
         if (existing == null) {
             OrienteeringResults.insert {

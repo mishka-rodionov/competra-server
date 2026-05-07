@@ -1,6 +1,7 @@
 package com.sportenth.data.services
 
 import com.sportenth.data.database.entity.ParticipantGroups
+import com.sportenth.data.exception.ConflictException
 import com.sportenth.data.requests.orienteering.ParticipantGroupRequest
 import com.sportenth.data.response.orienteering.ParticipantGroupResponse
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +38,12 @@ class ParticipantGroupService {
                 val existing = ParticipantGroups.selectAll()
                     .where { ParticipantGroups.id eq req.groupId }
                     .singleOrNull()
+
+                if (existing != null && req.serverUpdatedAt != null &&
+                    req.serverUpdatedAt < existing[ParticipantGroups.updatedAt]
+                ) {
+                    throw ConflictException(existing.toResponse())
+                }
 
                 if (existing == null) {
                     ParticipantGroups.insert {

@@ -3,6 +3,7 @@ package com.sportenth.data.services
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.sportenth.data.database.entity.Distances
+import com.sportenth.data.exception.ConflictException
 import com.sportenth.data.requests.orienteering.ControlPointRequest
 import com.sportenth.data.requests.orienteering.DistanceRequest
 import com.sportenth.data.response.orienteering.ControlPointResponse
@@ -37,6 +38,12 @@ class DistanceService {
                 val existing = Distances.selectAll()
                     .where { Distances.id eq req.distanceId }
                     .singleOrNull()
+
+                if (existing != null && req.serverUpdatedAt != null &&
+                    req.serverUpdatedAt < existing[Distances.updatedAt]
+                ) {
+                    throw ConflictException(existing.toResponse())
+                }
 
                 if (existing != null) {
                     Distances.update({ Distances.id eq req.distanceId }) {
