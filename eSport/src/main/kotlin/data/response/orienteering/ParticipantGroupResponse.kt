@@ -10,5 +10,6 @@ data class ParticipantGroupResponse(
     @SerializedName("minAge") val minAge: Int?,
     @SerializedName("maxAge") val maxAge: Int?,
     @SerializedName("distanceId") val distanceId: Long,
-    @SerializedName("maxParticipants") val maxParticipants: Int?
+    @SerializedName("maxParticipants") val maxParticipants: Int?,
+    @SerializedName("updatedAt") val updatedAt: Long = 0L
 )

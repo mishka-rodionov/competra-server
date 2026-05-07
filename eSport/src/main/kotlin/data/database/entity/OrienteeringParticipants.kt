@@ -16,6 +16,7 @@ object OrienteeringParticipants : Table("orienteering_participants") {
     val chipNumber = long("chip_number")
     val comment = varchar("comment", 500).nullable()
     val isChipGiven = bool("is_chip_given")
+    val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)
 }

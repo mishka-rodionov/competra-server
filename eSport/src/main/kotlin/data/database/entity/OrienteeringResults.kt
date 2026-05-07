@@ -15,6 +15,7 @@ object OrienteeringResults : Table("orienteering_results") {
     val penaltyTime = long("penalty_time")
     val isEditable = bool("is_editable")
     val isEdited = bool("is_edited")
+    val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)
 }

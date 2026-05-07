@@ -7,6 +7,7 @@ object SplitTimes : Table("split_times") {
     val resultId = varchar("result_id", 200)
     val controlPoint = integer("control_point")
     val timestamp = long("timestamp")
+    val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)
 }

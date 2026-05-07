@@ -12,6 +12,7 @@ object OrienteeringCompetitions : Table("orienteering_competitions") {
     val countdownTimer = long("countdown_timer").nullable()
     val startTime = long("start_time").nullable()
     val startIntervalSeconds = integer("start_interval_seconds").nullable()
+    val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)
 }

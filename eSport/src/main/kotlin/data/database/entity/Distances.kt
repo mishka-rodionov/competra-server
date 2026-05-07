@@ -11,6 +11,7 @@ object Distances : Table("distances") {
     val controlsCount = integer("controls_count")
     val description = varchar("description", 1000).nullable()
     val controlPoints = text("control_points").nullable()
+    val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)
 }

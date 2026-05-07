@@ -15,7 +15,8 @@ data class OrienteeringResultResponse(
     @SerializedName("penaltyTime") val penaltyTime: Long,
     @SerializedName("splits") val splits: List<SplitTimeResponse>?,
     @SerializedName("isEditable") val isEditable: Boolean,
-    @SerializedName("isEdited") val isEdited: Boolean
+    @SerializedName("isEdited") val isEdited: Boolean,
+    @SerializedName("updatedAt") val updatedAt: Long = 0L
 )
 
 data class SplitTimeResponse(

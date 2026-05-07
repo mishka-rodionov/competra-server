@@ -8,7 +8,9 @@ import com.sportenth.data.requests.orienteering.DistanceRequest
 import com.sportenth.data.response.orienteering.ControlPointResponse
 import com.sportenth.data.response.orienteering.DistanceResponse
 import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -27,6 +29,7 @@ class DistanceService {
         else gson.fromJson(json, cpListType) ?: emptyList()
 
     suspend fun upsertAll(requests: List<DistanceRequest>): List<DistanceResponse> = dbQuery {
+        val now = System.currentTimeMillis()
         requests.map { req ->
             val cpJson = serializeControlPoints(req.controlPoints)
 
@@ -44,18 +47,9 @@ class DistanceService {
                         it[controlsCount] = req.controlsCount
                         it[description] = req.description
                         it[controlPoints] = cpJson
+                        it[updatedAt] = now
                     }
-                    val row = Distances.selectAll().where { Distances.id eq req.distanceId }.single()
-                    return@map DistanceResponse(
-                        id = row[Distances.id],
-                        competitionId = row[Distances.competitionId],
-                        name = row[Distances.name],
-                        lengthMeters = row[Distances.lengthMeters],
-                        climbMeters = row[Distances.climbMeters],
-                        controlsCount = row[Distances.controlsCount],
-                        description = row[Distances.description],
-                        controlPoints = deserializeControlPoints(row[Distances.controlPoints])
-                    )
+                    return@map Distances.selectAll().where { Distances.id eq req.distanceId }.single().toResponse()
                 }
             }
 
@@ -67,38 +61,36 @@ class DistanceService {
                 it[controlsCount] = req.controlsCount
                 it[description] = req.description
                 it[controlPoints] = cpJson
+                it[updatedAt] = now
             } get Distances.id
 
-            val row = Distances.selectAll().where { Distances.id eq newId }.single()
-            DistanceResponse(
-                id = row[Distances.id],
-                competitionId = row[Distances.competitionId],
-                name = row[Distances.name],
-                lengthMeters = row[Distances.lengthMeters],
-                climbMeters = row[Distances.climbMeters],
-                controlsCount = row[Distances.controlsCount],
-                description = row[Distances.description],
-                controlPoints = deserializeControlPoints(row[Distances.controlPoints])
-            )
+            Distances.selectAll().where { Distances.id eq newId }.single().toResponse()
         }
     }
 
     suspend fun getByCompetition(competitionId: Long): List<DistanceResponse> = dbQuery {
         Distances.selectAll()
             .where { Distances.competitionId eq competitionId }
-            .map { row ->
-                DistanceResponse(
-                    id = row[Distances.id],
-                    competitionId = row[Distances.competitionId],
-                    name = row[Distances.name],
-                    lengthMeters = row[Distances.lengthMeters],
-                    climbMeters = row[Distances.climbMeters],
-                    controlsCount = row[Distances.controlsCount],
-                    description = row[Distances.description],
-                    controlPoints = deserializeControlPoints(row[Distances.controlPoints])
-                )
-            }
+            .map { it.toResponse() }
     }
+
+    @Suppress("UNUSED_PARAMETER")
+    suspend fun deleteById(id: Long): Boolean = dbQuery {
+        @Suppress("DEPRECATION")
+        Distances.deleteWhere { Distances.id eq id } > 0
+    }
+
+    private fun ResultRow.toResponse() = DistanceResponse(
+        id = this[Distances.id],
+        competitionId = this[Distances.competitionId],
+        name = this[Distances.name],
+        lengthMeters = this[Distances.lengthMeters],
+        climbMeters = this[Distances.climbMeters],
+        controlsCount = this[Distances.controlsCount],
+        description = this[Distances.description],
+        controlPoints = deserializeControlPoints(this[Distances.controlPoints]),
+        updatedAt = this[Distances.updatedAt]
+    )
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }

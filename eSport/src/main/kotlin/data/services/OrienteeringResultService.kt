@@ -6,6 +6,7 @@ import com.sportenth.data.requests.orienteering.OrienteeringResultRequest
 import com.sportenth.data.response.orienteering.OrienteeringResultResponse
 import com.sportenth.data.response.orienteering.SplitTimeResponse
 import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
@@ -17,6 +18,33 @@ import org.jetbrains.exposed.sql.update
 class OrienteeringResultService {
 
     suspend fun upsert(req: OrienteeringResultRequest): OrienteeringResultResponse = dbQuery {
+        upsertSingle(req)
+        recalculateRanksForGroup(req.competitionId, req.groupId)
+        loadResponse(req.id)
+    }
+
+    /**
+     * Batch-upsert с одним пересчётом мест на каждую уникальную пару (competitionId, groupId).
+     */
+    suspend fun upsertAll(requests: List<OrienteeringResultRequest>): List<OrienteeringResultResponse> = dbQuery {
+        if (requests.isEmpty()) return@dbQuery emptyList()
+        requests.forEach { upsertSingle(it) }
+        requests
+            .map { it.competitionId to it.groupId }
+            .distinct()
+            .forEach { (competitionId, groupId) -> recalculateRanksForGroup(competitionId, groupId) }
+        requests.map { loadResponse(it.id) }
+    }
+
+    suspend fun deleteById(id: String): Boolean = dbQuery {
+        @Suppress("DEPRECATION")
+        SplitTimes.deleteWhere { resultId eq id }
+        @Suppress("DEPRECATION")
+        OrienteeringResults.deleteWhere { OrienteeringResults.id eq id } > 0
+    }
+
+    private fun upsertSingle(req: OrienteeringResultRequest) {
+        val now = System.currentTimeMillis()
         val existing = OrienteeringResults.selectAll()
             .where { OrienteeringResults.id eq req.id }
             .singleOrNull()
@@ -35,6 +63,7 @@ class OrienteeringResultService {
                 it[penaltyTime] = req.penaltyTime
                 it[isEditable] = req.isEditable
                 it[isEdited] = req.isEdited
+                it[updatedAt] = now
             }
         } else {
             OrienteeringResults.update({ OrienteeringResults.id eq req.id }) {
@@ -49,47 +78,32 @@ class OrienteeringResultService {
                 it[penaltyTime] = req.penaltyTime
                 it[isEditable] = req.isEditable
                 it[isEdited] = req.isEdited
+                it[updatedAt] = now
             }
         }
 
-        // Replace splits: delete old, insert new
+        @Suppress("DEPRECATION")
         SplitTimes.deleteWhere { resultId eq req.id }
         req.splits?.forEach { split ->
             SplitTimes.insert {
                 it[resultId] = req.id
                 it[controlPoint] = split.controlPoint
                 it[timestamp] = split.timestamp
+                it[updatedAt] = now
             }
         }
+    }
 
-        // Пересчитываем места для всей группы внутри той же транзакции
-        recalculateRanksForGroup(req.competitionId, req.groupId)
-
-        val row = OrienteeringResults.selectAll().where { OrienteeringResults.id eq req.id }.single()
+    private fun loadResponse(resultId: String): OrienteeringResultResponse {
+        val row = OrienteeringResults.selectAll().where { OrienteeringResults.id eq resultId }.single()
         val splits = SplitTimes.selectAll()
-            .where { SplitTimes.resultId eq req.id }
+            .where { SplitTimes.resultId eq resultId }
             .map { SplitTimeResponse(it[SplitTimes.controlPoint], it[SplitTimes.timestamp]) }
-
-        OrienteeringResultResponse(
-            id = row[OrienteeringResults.id],
-            competitionId = row[OrienteeringResults.competitionId],
-            groupId = row[OrienteeringResults.groupId],
-            participantId = row[OrienteeringResults.participantId],
-            startTime = row[OrienteeringResults.startTime],
-            finishTime = row[OrienteeringResults.finishTime],
-            totalTime = row[OrienteeringResults.totalTime],
-            rank = row[OrienteeringResults.rank],
-            status = row[OrienteeringResults.status],
-            penaltyTime = row[OrienteeringResults.penaltyTime],
-            splits = splits,
-            isEditable = row[OrienteeringResults.isEditable],
-            isEdited = row[OrienteeringResults.isEdited]
-        )
+        return row.toResponse(splits)
     }
 
     /**
      * Пересчитывает места для всех FINISHED-результатов группы.
-     * Вызывается внутри транзакции сразу после upsert нового результата.
      */
     private fun recalculateRanksForGroup(competitionId: Long, groupId: Long) {
         val finishedRows = OrienteeringResults.selectAll()
@@ -128,23 +142,26 @@ class OrienteeringResultService {
                 val splits = SplitTimes.selectAll()
                     .where { SplitTimes.resultId eq row[OrienteeringResults.id] }
                     .map { SplitTimeResponse(it[SplitTimes.controlPoint], it[SplitTimes.timestamp]) }
-                OrienteeringResultResponse(
-                    id = row[OrienteeringResults.id],
-                    competitionId = row[OrienteeringResults.competitionId],
-                    groupId = row[OrienteeringResults.groupId],
-                    participantId = row[OrienteeringResults.participantId],
-                    startTime = row[OrienteeringResults.startTime],
-                    finishTime = row[OrienteeringResults.finishTime],
-                    totalTime = row[OrienteeringResults.totalTime],
-                    rank = row[OrienteeringResults.rank],
-                    status = row[OrienteeringResults.status],
-                    penaltyTime = row[OrienteeringResults.penaltyTime],
-                    splits = splits,
-                    isEditable = row[OrienteeringResults.isEditable],
-                    isEdited = row[OrienteeringResults.isEdited]
-                )
+                row.toResponse(splits)
             }
     }
+
+    private fun ResultRow.toResponse(splits: List<SplitTimeResponse>) = OrienteeringResultResponse(
+        id = this[OrienteeringResults.id],
+        competitionId = this[OrienteeringResults.competitionId],
+        groupId = this[OrienteeringResults.groupId],
+        participantId = this[OrienteeringResults.participantId],
+        startTime = this[OrienteeringResults.startTime],
+        finishTime = this[OrienteeringResults.finishTime],
+        totalTime = this[OrienteeringResults.totalTime],
+        rank = this[OrienteeringResults.rank],
+        status = this[OrienteeringResults.status],
+        penaltyTime = this[OrienteeringResults.penaltyTime],
+        splits = splits,
+        isEditable = this[OrienteeringResults.isEditable],
+        isEdited = this[OrienteeringResults.isEdited],
+        updatedAt = this[OrienteeringResults.updatedAt]
+    )
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }

@@ -14,9 +14,9 @@ import org.jetbrains.exposed.sql.update
 class ParticipantGroupService {
 
     suspend fun upsertAll(requests: List<ParticipantGroupRequest>): List<ParticipantGroupResponse> = dbQuery {
+        val now = System.currentTimeMillis()
         requests.map { req ->
             if (req.groupId == null) {
-                // Новая группа — id генерируется автоматически
                 val generatedId = ParticipantGroups.insert {
                     it[competitionId] = req.competitionId
                     it[title] = req.title
@@ -25,6 +25,7 @@ class ParticipantGroupService {
                     it[maxAge] = req.maxAge
                     it[distanceId] = req.distanceId
                     it[maxParticipants] = req.maxParticipants
+                    it[updatedAt] = now
                 } get ParticipantGroups.id
 
                 ParticipantGroups.selectAll()
@@ -46,6 +47,7 @@ class ParticipantGroupService {
                         it[maxAge] = req.maxAge
                         it[distanceId] = req.distanceId
                         it[maxParticipants] = req.maxParticipants
+                        it[updatedAt] = now
                     }
                 } else {
                     ParticipantGroups.update({ ParticipantGroups.id eq req.groupId }) {
@@ -56,6 +58,7 @@ class ParticipantGroupService {
                         it[maxAge] = req.maxAge
                         it[distanceId] = req.distanceId
                         it[maxParticipants] = req.maxParticipants
+                        it[updatedAt] = now
                     }
                 }
 
@@ -81,7 +84,8 @@ class ParticipantGroupService {
         minAge = this[ParticipantGroups.minAge],
         maxAge = this[ParticipantGroups.maxAge],
         distanceId = this[ParticipantGroups.distanceId],
-        maxParticipants = this[ParticipantGroups.maxParticipants]
+        maxParticipants = this[ParticipantGroups.maxParticipants],
+        updatedAt = this[ParticipantGroups.updatedAt]
     )
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =

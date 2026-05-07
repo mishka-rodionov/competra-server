@@ -44,6 +44,7 @@ class OrienteeringCompetitionService {
     }
 
     suspend fun upsert(req: OrienteeringCompetitionRequest, userId: String): OrienteeringCompetitionResponse = dbQuery {
+        val now = System.currentTimeMillis()
         val competitionId: Long = if (req.competition.remoteId != null) {
             Competitions.update({ Competitions.id eq req.competition.remoteId }) {
                 it[title] = req.competition.title
@@ -68,6 +69,7 @@ class OrienteeringCompetitionService {
                 it[contactEmail] = req.competition.contactEmail
                 it[website] = req.competition.website
                 it[resultsStatus] = req.competition.resultsStatus
+                it[updatedAt] = now
             }
             req.competition.remoteId
         } else {
@@ -94,6 +96,7 @@ class OrienteeringCompetitionService {
                 it[contactEmail] = req.competition.contactEmail
                 it[website] = req.competition.website
                 it[resultsStatus] = req.competition.resultsStatus
+                it[updatedAt] = now
             } get Competitions.id
         }
 
@@ -112,6 +115,7 @@ class OrienteeringCompetitionService {
                 it[countdownTimer] = req.countdownTimer
                 it[startTime] = null
                 it[startIntervalSeconds] = req.startIntervalSeconds
+                it[updatedAt] = now
             }
         } else {
             OrienteeringCompetitions.update({ OrienteeringCompetitions.id eq req.competitionId }) {
@@ -121,6 +125,7 @@ class OrienteeringCompetitionService {
                 it[startTimeMode] = req.startTimeMode
                 it[countdownTimer] = req.countdownTimer
                 it[startIntervalSeconds] = req.startIntervalSeconds
+                it[updatedAt] = now
             }
         }
 
@@ -158,14 +163,16 @@ class OrienteeringCompetitionService {
                 contactPhone = comp[Competitions.contactPhone],
                 contactEmail = comp[Competitions.contactEmail],
                 website = comp[Competitions.website],
-                resultsStatus = comp[Competitions.resultsStatus]
+                resultsStatus = comp[Competitions.resultsStatus],
+                updatedAt = comp[Competitions.updatedAt]
             ),
             direction = orient[OrienteeringCompetitions.direction],
             punchingSystem = orient[OrienteeringCompetitions.punchingSystem],
             startTimeMode = orient[OrienteeringCompetitions.startTimeMode],
             countdownTimer = orient[OrienteeringCompetitions.countdownTimer],
             startTime = orient[OrienteeringCompetitions.startTime],
-            startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds]
+            startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds],
+            updatedAt = orient[OrienteeringCompetitions.updatedAt]
         )
     }
 
@@ -208,14 +215,16 @@ class OrienteeringCompetitionService {
                         contactPhone = comp[Competitions.contactPhone],
                         contactEmail = comp[Competitions.contactEmail],
                         website = comp[Competitions.website],
-                        resultsStatus = comp[Competitions.resultsStatus]
+                        resultsStatus = comp[Competitions.resultsStatus],
+                        updatedAt = comp[Competitions.updatedAt]
                     ),
                     direction = orient[OrienteeringCompetitions.direction],
                     punchingSystem = orient[OrienteeringCompetitions.punchingSystem],
                     startTimeMode = orient[OrienteeringCompetitions.startTimeMode],
                     countdownTimer = orient[OrienteeringCompetitions.countdownTimer],
                     startTime = orient[OrienteeringCompetitions.startTime],
-                    startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds]
+                    startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds],
+                    updatedAt = orient[OrienteeringCompetitions.updatedAt]
                 )
             }
     }
@@ -267,14 +276,16 @@ class OrienteeringCompetitionService {
                         contactPhone = comp[Competitions.contactPhone],
                         contactEmail = comp[Competitions.contactEmail],
                         website = comp[Competitions.website],
-                        resultsStatus = comp[Competitions.resultsStatus]
+                        resultsStatus = comp[Competitions.resultsStatus],
+                        updatedAt = comp[Competitions.updatedAt]
                     ),
                     direction = orient[OrienteeringCompetitions.direction],
                     punchingSystem = orient[OrienteeringCompetitions.punchingSystem],
                     startTimeMode = orient[OrienteeringCompetitions.startTimeMode],
                     countdownTimer = orient[OrienteeringCompetitions.countdownTimer],
                     startTime = orient[OrienteeringCompetitions.startTime],
-                    startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds]
+                    startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds],
+                    updatedAt = orient[OrienteeringCompetitions.updatedAt]
                 )
             }
             .distinctBy { it.competitionId }
@@ -324,7 +335,8 @@ class OrienteeringCompetitionService {
                 contactPhone = comp[Competitions.contactPhone],
                 contactEmail = comp[Competitions.contactEmail],
                 website = comp[Competitions.website],
-                resultsStatus = comp[Competitions.resultsStatus]
+                resultsStatus = comp[Competitions.resultsStatus],
+                updatedAt = comp[Competitions.updatedAt]
             )
         }
     }
@@ -392,7 +404,8 @@ class OrienteeringCompetitionService {
             website = comp[Competitions.website],
             resultsStatus = comp[Competitions.resultsStatus],
             participantGroups = groups,
-            isUserRegistered = isUserRegistered
+            isUserRegistered = isUserRegistered,
+            updatedAt = comp[Competitions.updatedAt]
         )
     }
 

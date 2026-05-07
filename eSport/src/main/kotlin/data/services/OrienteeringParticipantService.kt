@@ -37,6 +37,7 @@ class OrienteeringParticipantService {
     }
 
     suspend fun upsertAll(requests: List<OrienteeringParticipantRequest>): List<OrienteeringParticipantResponse> = dbQuery {
+        val now = System.currentTimeMillis()
         requests.map { req ->
             val existing = OrienteeringParticipants.selectAll()
                 .where { OrienteeringParticipants.id eq req.id }
@@ -57,6 +58,7 @@ class OrienteeringParticipantService {
                     it[chipNumber] = req.chipNumber
                     it[comment] = req.comment
                     it[isChipGiven] = req.isChipGiven
+                    it[updatedAt] = now
                 }
             } else {
                 OrienteeringParticipants.update({ OrienteeringParticipants.id eq req.id }) {
@@ -72,6 +74,7 @@ class OrienteeringParticipantService {
                     it[chipNumber] = req.chipNumber
                     it[comment] = req.comment
                     it[isChipGiven] = req.isChipGiven
+                    it[updatedAt] = now
                 }
             }
 
@@ -83,6 +86,7 @@ class OrienteeringParticipantService {
     }
 
     suspend fun upsert(req: OrienteeringParticipantRequest): OrienteeringParticipantResponse = dbQuery {
+        val now = System.currentTimeMillis()
         val existing = OrienteeringParticipants.selectAll()
             .where { OrienteeringParticipants.id eq req.id }
             .singleOrNull()
@@ -102,6 +106,7 @@ class OrienteeringParticipantService {
                 it[chipNumber] = req.chipNumber
                 it[comment] = req.comment
                 it[isChipGiven] = req.isChipGiven
+                it[updatedAt] = now
             }
         } else {
             OrienteeringParticipants.update({ OrienteeringParticipants.id eq req.id }) {
@@ -117,25 +122,11 @@ class OrienteeringParticipantService {
                 it[chipNumber] = req.chipNumber
                 it[comment] = req.comment
                 it[isChipGiven] = req.isChipGiven
+                it[updatedAt] = now
             }
         }
 
-        val row = OrienteeringParticipants.selectAll().where { OrienteeringParticipants.id eq req.id }.single()
-        OrienteeringParticipantResponse(
-            id = row[OrienteeringParticipants.id],
-            userId = row[OrienteeringParticipants.userId],
-            firstName = row[OrienteeringParticipants.firstName],
-            lastName = row[OrienteeringParticipants.lastName],
-            groupId = row[OrienteeringParticipants.groupId],
-            groupName = row[OrienteeringParticipants.groupName],
-            competitionId = row[OrienteeringParticipants.competitionId],
-            commandName = row[OrienteeringParticipants.commandName],
-            startNumber = row[OrienteeringParticipants.startNumber],
-            startTime = row[OrienteeringParticipants.startTime],
-            chipNumber = row[OrienteeringParticipants.chipNumber],
-            comment = row[OrienteeringParticipants.comment],
-            isChipGiven = row[OrienteeringParticipants.isChipGiven]
-        )
+        OrienteeringParticipants.selectAll().where { OrienteeringParticipants.id eq req.id }.single().toResponse()
     }
 
     /**
@@ -195,26 +186,13 @@ class OrienteeringParticipantService {
             it[chipNumber] = 0L
             it[comment] = null
             it[isChipGiven] = false
+            it[updatedAt] = System.currentTimeMillis()
         }
 
-        val row = OrienteeringParticipants.selectAll()
+        OrienteeringParticipants.selectAll()
             .where { OrienteeringParticipants.id eq participantId }
             .single()
-        OrienteeringParticipantResponse(
-            id = row[OrienteeringParticipants.id],
-            userId = row[OrienteeringParticipants.userId],
-            firstName = row[OrienteeringParticipants.firstName],
-            lastName = row[OrienteeringParticipants.lastName],
-            groupId = row[OrienteeringParticipants.groupId],
-            groupName = row[OrienteeringParticipants.groupName],
-            competitionId = row[OrienteeringParticipants.competitionId],
-            commandName = row[OrienteeringParticipants.commandName],
-            startNumber = row[OrienteeringParticipants.startNumber],
-            startTime = row[OrienteeringParticipants.startTime],
-            chipNumber = row[OrienteeringParticipants.chipNumber],
-            comment = row[OrienteeringParticipants.comment],
-            isChipGiven = row[OrienteeringParticipants.isChipGiven]
-        )
+            .toResponse()
     }
 
     /**
@@ -264,7 +242,8 @@ class OrienteeringParticipantService {
         startTime = this[OrienteeringParticipants.startTime],
         chipNumber = this[OrienteeringParticipants.chipNumber],
         comment = this[OrienteeringParticipants.comment],
-        isChipGiven = this[OrienteeringParticipants.isChipGiven]
+        isChipGiven = this[OrienteeringParticipants.isChipGiven],
+        updatedAt = this[OrienteeringParticipants.updatedAt]
     )
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =

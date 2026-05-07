@@ -11,6 +11,7 @@ object ParticipantGroups : Table("participant_groups") {
     val maxAge = integer("max_age").nullable()
     val distanceId = long("distance_id")
     val maxParticipants = integer("max_participants").nullable()
+    val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)
 }

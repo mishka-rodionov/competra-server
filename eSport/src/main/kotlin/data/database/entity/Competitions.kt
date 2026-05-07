@@ -26,6 +26,7 @@ object Competitions : Table("competitions") {
     val contactEmail = varchar("contact_email", 200).nullable()
     val website = varchar("website", 500).nullable()
     val resultsStatus = varchar("results_status", 100).default("NOT_PUBLISHED")
+    val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)
 }
