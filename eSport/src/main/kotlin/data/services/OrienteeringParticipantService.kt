@@ -229,6 +229,11 @@ class OrienteeringParticipantService {
             .map { it.toResponse() }
     }
 
+    suspend fun deleteById(id: String): Boolean = dbQuery {
+        @Suppress("DEPRECATION")
+        OrienteeringParticipants.deleteWhere { OrienteeringParticipants.id eq id } > 0
+    }
+
     private fun ResultRow.toResponse() = OrienteeringParticipantResponse(
         id = this[OrienteeringParticipants.id],
         userId = this[OrienteeringParticipants.userId],

@@ -15,5 +15,6 @@ data class OrienteeringParticipantRequest(
     @SerializedName("startTime") val startTime: Long,
     @SerializedName("chipNumber") val chipNumber: Long,
     @SerializedName("comment") val comment: String?,
-    @SerializedName("isChipGiven") val isChipGiven: Boolean
+    @SerializedName("isChipGiven") val isChipGiven: Boolean,
+    @SerializedName("serverUpdatedAt") val serverUpdatedAt: Long? = null
 )

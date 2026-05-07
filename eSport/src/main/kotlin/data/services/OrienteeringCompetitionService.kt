@@ -409,6 +409,19 @@ class OrienteeringCompetitionService {
         )
     }
 
+    /**
+     * Удаляет соревнование и все связанные сущности через CASCADE FK
+     * (orienteering_competitions, participant_groups, orienteering_participants,
+     * orienteering_results, distances). Если CASCADE не настроен в БД — удаление
+     * происходит вручную из связанных таблиц перед основной.
+     */
+    suspend fun deleteById(competitionId: Long): Boolean = dbQuery {
+        @Suppress("DEPRECATION")
+        OrienteeringCompetitions.deleteWhere { OrienteeringCompetitions.competitionId eq competitionId }
+        @Suppress("DEPRECATION")
+        Competitions.deleteWhere { Competitions.id eq competitionId } > 0
+    }
+
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
 }

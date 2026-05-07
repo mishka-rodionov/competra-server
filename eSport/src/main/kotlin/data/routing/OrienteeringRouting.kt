@@ -192,6 +192,65 @@ fun Route.orienteeringRoutes(
         })
     }
 
+    post("/event/orienteering/save/results") {
+        val requests = call.receive<List<OrienteeringResultRequest>>()
+        val result = resultService.upsertAll(requests)
+        call.respond(CommonModel<Any>().also { model ->
+            model.status = 1
+            model.result = result
+        })
+    }
+
+    delete("/event/orienteering/competitions/{id}") {
+        val id = call.parameters["id"]?.toLongOrNull()
+            ?: return@delete call.respond(
+                HttpStatusCode.BadRequest,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "id is required")) }
+            )
+        val deleted = competitionService.deleteById(id)
+        call.respond(CommonModel<Any>().also { it.status = if (deleted) 1 else 0 })
+    }
+
+    delete("/event/orienteering/participantGroups/{id}") {
+        val id = call.parameters["id"]?.toLongOrNull()
+            ?: return@delete call.respond(
+                HttpStatusCode.BadRequest,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "id is required")) }
+            )
+        val deleted = groupService.deleteById(id)
+        call.respond(CommonModel<Any>().also { it.status = if (deleted) 1 else 0 })
+    }
+
+    delete("/event/orienteering/participants/{id}") {
+        val id = call.parameters["id"]
+            ?: return@delete call.respond(
+                HttpStatusCode.BadRequest,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "id is required")) }
+            )
+        val deleted = participantService.deleteById(id)
+        call.respond(CommonModel<Any>().also { it.status = if (deleted) 1 else 0 })
+    }
+
+    delete("/event/orienteering/results/{id}") {
+        val id = call.parameters["id"]
+            ?: return@delete call.respond(
+                HttpStatusCode.BadRequest,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "id is required")) }
+            )
+        val deleted = resultService.deleteById(id)
+        call.respond(CommonModel<Any>().also { it.status = if (deleted) 1 else 0 })
+    }
+
+    delete("/event/orienteering/distances/{id}") {
+        val id = call.parameters["id"]?.toLongOrNull()
+            ?: return@delete call.respond(
+                HttpStatusCode.BadRequest,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "id is required")) }
+            )
+        val deleted = distanceService.deleteById(id)
+        call.respond(CommonModel<Any>().also { it.status = if (deleted) 1 else 0 })
+    }
+
     post("/event/orienteering/register") {
         val userId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
             ?: return@post call.respond(

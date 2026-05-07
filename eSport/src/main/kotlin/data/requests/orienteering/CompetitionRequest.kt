@@ -24,7 +24,8 @@ data class CompetitionRequest(
     @SerializedName("contactPhone") val contactPhone: String?,
     @SerializedName("contactEmail") val contactEmail: String?,
     @SerializedName("website") val website: String?,
-    @SerializedName("resultsStatus") val resultsStatus: String
+    @SerializedName("resultsStatus") val resultsStatus: String,
+    @SerializedName("serverUpdatedAt") val serverUpdatedAt: Long? = null
 )
 
 data class CoordinatesRequest(

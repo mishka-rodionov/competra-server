@@ -6,6 +6,7 @@ import com.sportenth.data.response.orienteering.ParticipantGroupResponse
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -74,6 +75,11 @@ class ParticipantGroupService {
         ParticipantGroups.selectAll()
             .where { ParticipantGroups.competitionId eq competitionId }
             .map { it.toResponse() }
+    }
+
+    suspend fun deleteById(id: Long): Boolean = dbQuery {
+        @Suppress("DEPRECATION")
+        ParticipantGroups.deleteWhere { ParticipantGroups.id eq id } > 0
     }
 
     private fun ResultRow.toResponse() = ParticipantGroupResponse(
