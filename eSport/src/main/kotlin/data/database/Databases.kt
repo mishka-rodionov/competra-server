@@ -90,6 +90,16 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS contact_email VARCHAR(200)")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS website VARCHAR(500)")
         exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS control_points TEXT")
+        // updated_at — серверная сторона serverUpdatedAt в Android-клиенте.
+        // Колонка объявлена в Exposed Table-объектах (default(0L)), но в существующих
+        // PostgreSQL-таблицах её нет — нужны идемпотентные ALTER'ы для каждой таблицы.
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
+        exec("ALTER TABLE orienteering_competitions ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
+        exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
+        exec("ALTER TABLE participant_groups ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
+        exec("ALTER TABLE orienteering_participants ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
+        exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
+        exec("ALTER TABLE split_times ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
     }
     routing {
         // Create user
