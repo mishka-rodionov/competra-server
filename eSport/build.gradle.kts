@@ -28,7 +28,9 @@ dependencies {
     implementation("io.ktor:ktor-server-auth-jwt")
     implementation("io.ktor:ktor-server-auto-head-response")
     implementation("io.ktor:ktor-server-call-logging")
-    implementation("io.ktor:ktor-server-metrics")
+    implementation("io.ktor:ktor-server-call-id")
+    implementation("io.ktor:ktor-server-status-pages")
+    implementation("io.ktor:ktor-server-double-receive")
     implementation("io.ktor:ktor-server-content-negotiation")
     implementation("io.ktor:ktor-serialization-gson")
     implementation("io.ktor:ktor-serialization-kotlinx-json")
@@ -44,6 +46,7 @@ dependencies {
 
     implementation("ch.qos.logback:logback-classic:${logback_version}")
     implementation("com.github.loki4j:loki-logback-appender:1.5.2")
+    implementation("net.logstash.logback:logstash-logback-encoder:7.4")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 
     // Exposed + PostgreSQL

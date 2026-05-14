@@ -1,14 +1,17 @@
 <configuration>
 
-    <!-- Консоль (для локальной разработки) -->
+    <!-- Консоль: человекочитаемый формат для локальной разработки -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%mdc{call_id:-no-call}] %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
     <!--
-        Grafana Cloud Loki appender.
+        Grafana Cloud Loki appender. Сообщения уходят как JSON, чтобы все MDC-поля
+        (call_id, http_method, http_path, http_status, duration_ms, user_id, ...) и stack_trace
+        были индексируемыми в LogQL через `| json field="value"`.
+
         Требует переменных окружения:
           LOKI_URL      — хост без пути, напр. https://logs-prod-eu-west-0.grafana.net
           LOKI_USER_ID  — числовой User ID из раздела Loki в Grafana Cloud
@@ -26,20 +29,35 @@
         </http>
         <format>
             <label>
-                <!-- Лейблы — по ним фильтруешь в Grafana (LogQL: {app="esport"}) -->
                 <pattern>app=esport,level=%level,host=${HOSTNAME:-local}</pattern>
                 <readMarker>true</readMarker>
             </label>
-            <message>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <message class="net.logstash.logback.encoder.LogstashEncoder">
+                <!-- Включаем все MDC ключи как структурированные JSON-поля -->
+                <includeMdcKeyName>call_id</includeMdcKeyName>
+                <includeMdcKeyName>http_method</includeMdcKeyName>
+                <includeMdcKeyName>http_path</includeMdcKeyName>
+                <includeMdcKeyName>http_status</includeMdcKeyName>
+                <includeMdcKeyName>duration_ms</includeMdcKeyName>
+                <includeMdcKeyName>user_id</includeMdcKeyName>
+                <includeMdcKeyName>remote_host</includeMdcKeyName>
+                <includeMdcKeyName>user_agent</includeMdcKeyName>
+                <includeMdcKeyName>query</includeMdcKeyName>
+                <fieldNames>
+                    <timestamp>ts</timestamp>
+                    <message>msg</message>
+                    <thread>thread</thread>
+                    <levelValue>[ignore]</levelValue>
+                    <logger>logger</logger>
+                    <stackTrace>stack_trace</stackTrace>
+                </fieldNames>
             </message>
             <sortByTime>true</sortByTime>
         </format>
-<!--        <verbose>true</verbose>-->
     </appender>
 
-    <!-- SQL запросы Exposed (уровень DEBUG, видны только если включить ниже) -->
-    <logger name="Exposed" level="DEBUG" additivity="false">
+    <!-- SQL запросы Exposed (включить, если нужно отлаживать запросы) -->
+    <logger name="Exposed" level="INFO" additivity="false">
         <appender-ref ref="STDOUT"/>
         <appender-ref ref="LOKI"/>
     </logger>

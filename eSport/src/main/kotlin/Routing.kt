@@ -38,6 +38,7 @@ fun Application.configureRouting() {
             call.respondText("Hello World!")
         }
 
+        healthRoutes()
         orienteeringPublicRoutes(competitionService, participantService, resultService, groupService)
 
         authenticate("auth-jwt") {

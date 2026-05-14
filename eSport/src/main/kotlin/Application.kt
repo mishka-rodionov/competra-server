@@ -16,5 +16,6 @@ fun Application.module() {
     configureDatabases()
     configureFrameworks()
     configureSockets()
+    configureStatusPages()
     configureRouting()
 }
