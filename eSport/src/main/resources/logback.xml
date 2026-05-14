@@ -18,6 +18,9 @@
           LOKI_API_KEY  — API Key (пароль) из Grafana Cloud
     -->
     <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <!-- Диагностика доставки в Loki: видно в STDOUT "Sending N events", статусы ответа.
+             Отключить, когда убедишься, что логи доходят. -->
+        <verbose>true</verbose>
         <http>
             <url>${LOKI_URL:-http://localhost:3100}/loki/api/v1/push</url>
             <auth>
