@@ -22,6 +22,7 @@ import io.ktor.server.request.receiveText
 import io.ktor.server.request.userAgent
 import io.ktor.util.AttributeKey
 import java.util.UUID
+import org.slf4j.MDC
 import org.slf4j.event.Level
 
 private val StartTimeKey = AttributeKey<Long>("RequestStartNanos")
@@ -34,54 +35,63 @@ fun Application.configureMonitoring() {
         replyToHeader("X-Request-Id")
     }
 
-    // Кэширует тело запроса — нужен, чтобы перечитать body для логирования при 4xx/5xx.
     install(DoubleReceive)
 
+    // CallLogging оставлен ради MDC-обогащения дочерних логов (call_id, http_path, ...)
+    // во всех log.info внутри обработчиков. Уровень TRACE отключает его финальную строку
+    // в logback (root = INFO), чтобы не дублировать наш собственный итоговый лог.
+    // Здесь намеренно нет mdc("duration_ms") и mdc("http_status") — они вычисляются
+    // CallLogging один раз в начале запроса, когда статус ещё пуст, а duration ≈ 0.
     install(CallLogging) {
-        level = Level.INFO
+        level = Level.TRACE
         filter { it.request.path().startsWith("/") }
         callIdMdc("call_id")
-
-        format { call ->
-            val status = call.response.status()
-            val method = call.request.httpMethod.value
-            val path = call.request.path()
-            val duration = call.attributes.getOrNull(StartTimeKey)?.let {
-                "${(System.nanoTime() - it) / 1_000_000}ms"
-            } ?: "?"
-            "HTTP $method $path → ${status?.value ?: "?"} in $duration"
-        }
-
         mdc("http_method") { it.request.httpMethod.value }
         mdc("http_path") { it.request.path() }
-        mdc("http_status") { it.response.status()?.value?.toString() }
-        mdc("duration_ms") { call ->
-            call.attributes.getOrNull(StartTimeKey)?.let { ((System.nanoTime() - it) / 1_000_000).toString() }
-        }
         mdc("user_id") { it.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString() }
         mdc("remote_host") { it.request.local.remoteHost }
         mdc("user_agent") { it.request.userAgent() }
         mdc("query") { it.request.queryString().takeIf { q -> q.isNotBlank() } }
     }
 
-    // Засекаем старт запроса для duration_ms.
     intercept(ApplicationCallPipeline.Setup) {
         call.attributes.put(StartTimeKey, System.nanoTime())
     }
 
-    // При ответе 4xx/5xx — дологируем тело запроса (с маскировкой) для воспроизведения бага.
     intercept(ApplicationCallPipeline.Monitoring) {
         try {
             proceed()
         } finally {
+            val durationMs = call.attributes.getOrNull(StartTimeKey)
+                ?.let { (System.nanoTime() - it) / 1_000_000 } ?: 0
             val status = call.response.status()?.value ?: 0
+            val method = call.request.httpMethod.value
+            val path = call.request.path()
+
+            // Финальная строка пишется здесь, после proceed() — на этот момент status
+            // и duration реальные. MDC.put/remove делает их JSON-полями ровно для этой записи,
+            // не задевая дочерние логи внутри запроса.
+            MDC.put("http_status", status.toString())
+            MDC.put("duration_ms", durationMs.toString())
+            try {
+                call.application.log.info("HTTP $method $path → $status in ${durationMs}ms")
+            } finally {
+                MDC.remove("http_status")
+                MDC.remove("duration_ms")
+            }
+
             if (status >= 400 && shouldLogBody(call.request.httpMethod, call.request.contentType())) {
                 runCatching {
                     val body = call.receiveText()
                     if (body.isNotEmpty()) {
-                        call.application.log.warn(
-                            "Error body for ${call.request.httpMethod.value} ${call.request.path()}: ${maskSensitive(body)}"
-                        )
+                        MDC.put("http_status", status.toString())
+                        try {
+                            call.application.log.warn(
+                                "Error body for $method $path: ${maskSensitive(body)}"
+                            )
+                        } finally {
+                            MDC.remove("http_status")
+                        }
                     }
                 }
             }
