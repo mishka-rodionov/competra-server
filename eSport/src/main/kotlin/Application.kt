@@ -1,6 +1,6 @@
-package com.sportenth
+package com.competra
 
-import com.sportenth.data.database.configureDatabases
+import com.competra.data.database.configureDatabases
 import io.ktor.server.application.*
 
 fun main(args: Array<String>) {

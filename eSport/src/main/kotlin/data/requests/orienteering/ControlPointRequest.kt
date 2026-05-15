@@ -1,4 +1,4 @@
-package com.sportenth.data.requests.orienteering
+package com.competra.data.requests.orienteering
 
 import com.google.gson.annotations.SerializedName
 

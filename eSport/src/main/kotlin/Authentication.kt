@@ -1,10 +1,10 @@
-package com.sportenth
+package com.competra
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import com.sportenth.data.services.smtp.tokens.jwtAudience
-import com.sportenth.data.services.smtp.tokens.jwtIssuer
-import com.sportenth.data.services.smtp.tokens.jwtSecret
+import com.competra.data.services.smtp.tokens.jwtAudience
+import com.competra.data.services.smtp.tokens.jwtIssuer
+import com.competra.data.services.smtp.tokens.jwtSecret
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication

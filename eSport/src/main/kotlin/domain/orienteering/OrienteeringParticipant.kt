@@ -1,6 +1,6 @@
 package com.rodionov.domain.models.orienteering
 
-import com.sportenth.domain.Participant
+import com.competra.domain.Participant
 
 data class OrienteeringParticipant(
     override val id: String,

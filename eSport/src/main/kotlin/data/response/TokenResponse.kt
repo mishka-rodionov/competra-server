@@ -1,4 +1,4 @@
-package com.sportenth.data.response
+package com.competra.data.response
 
 import kotlinx.serialization.Serializable
 

@@ -1,20 +1,20 @@
 # Шпаргалка по эксплуатации сервера
 
-Сервер: `/opt/esport`. Деплой через `docker compose` (новый CLI plugin, **без** дефиса) с двумя файлами:
+Сервер: `/opt/competra`. Деплой через `docker compose` (новый CLI plugin, **без** дефиса) с двумя файлами:
 - `docker-compose.yml` — базовый (используется локально, содержит `build: .`)
 - `docker-compose.prod.yml` — override для прода (подменяет `build` на готовый `image: ghcr.io/...`)
 
 Поэтому **на сервере всегда** запускай compose с обоими файлами:
 
 ```bash
-cd /opt/esport
+cd /opt/competra
 docker compose -f docker-compose.yml -f docker-compose.prod.yml <command>
 ```
 
 Чтобы не писать длинное каждый раз, можно один раз в сессии задать алиас:
 
 ```bash
-alias dc='docker compose -f /opt/esport/docker-compose.yml -f /opt/esport/docker-compose.prod.yml'
+alias dc='docker compose -f /opt/competra/docker-compose.yml -f /opt/competra/docker-compose.prod.yml'
 ```
 
 Дальше в шпаргалке использую `dc` для краткости. У тебя на сервере подставляй полную команду либо заведи постоянный алиас в `~/.bashrc`.
@@ -83,7 +83,7 @@ dc up -d
 ```bash
 dc exec app sh                     # shell внутри работающего контейнера app
 dc exec app sh -c 'env | grep LOKI'   # одна команда без интерактива
-dc exec postgres psql -U esport -d esport     # сразу в psql
+dc exec postgres psql -U competra -d competra     # сразу в psql
 
 # Если контейнер не запускается — посмотреть, что внутри образа, ничего не запуская
 docker run --rm -it ghcr.io/<твой-репо>:latest sh
@@ -95,7 +95,7 @@ docker run --rm -it ghcr.io/<твой-репо>:latest sh
 
 ```bash
 # Подключиться к psql
-dc exec postgres psql -U esport -d esport
+dc exec postgres psql -U competra -d competra
 
 # Внутри psql полезное:
 #   \dt          — список таблиц
@@ -103,13 +103,13 @@ dc exec postgres psql -U esport -d esport
 #   \q           — выход
 
 # Дамп БД на диск сервера
-dc exec -T postgres pg_dump -U esport esport > /opt/esport/backup-$(date +%F).sql
+dc exec -T postgres pg_dump -U competra competra > /opt/competra/backup-$(date +%F).sql
 
 # Восстановить из дампа (ОСТОРОЖНО — затирает текущие данные)
-cat backup-2026-05-14.sql | dc exec -T postgres psql -U esport -d esport
+cat backup-2026-05-14.sql | dc exec -T postgres psql -U competra -d competra
 
 # Скачать дамп с сервера себе на ноут (запустить на ноуте)
-scp root@<server>:/opt/esport/backup-2026-05-14.sql ~/Downloads/
+scp root@<server>:/opt/competra/backup-2026-05-14.sql ~/Downloads/
 ```
 
 ---
@@ -141,13 +141,13 @@ curl -i http://localhost:8080/health/ready
 dc exec app sh -c 'wget -qO- http://localhost:8080/health'
 
 # Что слушает контейнер
-docker inspect esport-app-1 --format '{{json .NetworkSettings.Ports}}' | python3 -m json.tool
+docker inspect competra-app-1 --format '{{json .NetworkSettings.Ports}}' | python3 -m json.tool
 
 # Текущий образ, на котором поднят контейнер (полезно после деплоя)
-docker inspect esport-app-1 --format '{{.Config.Image}}'
+docker inspect competra-app-1 --format '{{.Config.Image}}'
 
 # Когда контейнер был последний раз запущен
-docker inspect esport-app-1 --format '{{.State.StartedAt}}'
+docker inspect competra-app-1 --format '{{.State.StartedAt}}'
 ```
 
 ---
@@ -171,7 +171,7 @@ docker system prune -a             # ОСТОРОЖНО: удалит образ
 docker builder prune
 
 # Логи контейнера сильно разрастаются? Truncate (контейнер должен быть запущен)
-truncate -s 0 $(docker inspect --format='{{.LogPath}}' esport-app-1)
+truncate -s 0 $(docker inspect --format='{{.LogPath}}' competra-app-1)
 ```
 
 **На что НЕ делать `prune`:** на volumes (`docker volume prune`) — там хранятся данные Postgres и RabbitMQ. Удалишь — потеряешь всё.
@@ -196,11 +196,11 @@ dc logs -f app                     # убедиться, что стартану
 
 ```bash
 # Не запускается? Посмотреть EXIT-код и причину
-docker inspect esport-app-1 --format '{{.State.Status}} / {{.State.ExitCode}} / {{.State.Error}}'
+docker inspect competra-app-1 --format '{{.State.Status}} / {{.State.ExitCode}} / {{.State.Error}}'
 dc logs --tail=200 app
 
 # Зависло, не отвечает на ctrl+c?
-docker kill esport-app-1           # SIGKILL контейнеру
+docker kill competra-app-1           # SIGKILL контейнеру
 dc up -d app
 
 # Полный сброс к чистому состоянию (БД и RabbitMQ ОСТАЮТСЯ — volumes именные)
@@ -222,7 +222,7 @@ ss -tlnp | grep 8080               # конкретно 8080
 
 # Внутренняя docker-сеть проекта
 docker network ls
-docker network inspect esport_default
+docker network inspect competra_default
 
 # DNS внутри docker-сети: app может обращаться к postgres по имени `postgres`
 dc exec app sh -c 'nslookup postgres 2>/dev/null || getent hosts postgres'
@@ -255,7 +255,7 @@ ps aux --sort=-%mem | head -10
 | `dc restart`, `dc up -d` | `docker volume rm <name>` |
 | `dc pull`, `dc up -d --force-recreate` | `docker system prune -a --volumes` |
 | `docker stats`, `docker inspect` | `docker exec -it postgres psql -c "DROP DATABASE ..."` |
-| `dc exec app sh` (читать) | `> /opt/esport/.env` (перезапись без копии) |
+| `dc exec app sh` (читать) | `> /opt/competra/.env` (перезапись без копии) |
 
 Перед любой командой с `rm`, `prune -a`, `down -v` сделай бэкап БД (`pg_dump`) и `cp .env .env.bak`.
 
@@ -264,14 +264,14 @@ ps aux --sort=-%mem | head -10
 ## Где что лежит на сервере
 
 ```
-/opt/esport/
+/opt/competra/
 ├── docker-compose.yml          # база (со старого build: .)
 ├── docker-compose.prod.yml     # override с image из GHCR
 └── .env                        # секреты: DB_PASSWORD, JWT_SECRET, LOKI_*, S3_*, и т.д.
 
 /var/lib/docker/
 ├── containers/<id>/<id>-json.log   # сырые логи контейнера (то, что показывает `docker logs`)
-└── volumes/esport_postgres_data/   # данные Postgres
+└── volumes/competra_postgres_data/   # данные Postgres
 ```
 
 Бэкапить регулярно: **`.env`** (вручную, в защищённое место) и **дамп БД** (`pg_dump` по cron'у).

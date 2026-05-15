@@ -1,16 +1,16 @@
-package com.sportenth
+package com.competra
 
-import com.sportenth.data.response.base.BaseError
-import com.sportenth.data.response.base.CommonModel
-import com.sportenth.data.response.upload.UploadResponse
-import com.sportenth.data.routing.orienteeringPublicRoutes
-import com.sportenth.data.routing.orienteeringRoutes
-import com.sportenth.data.services.DistanceService
-import com.sportenth.data.services.OrienteeringCompetitionService
-import com.sportenth.data.services.OrienteeringParticipantService
-import com.sportenth.data.services.OrienteeringResultService
-import com.sportenth.data.services.ParticipantGroupService
-import com.sportenth.data.services.UploadService
+import com.competra.data.response.base.BaseError
+import com.competra.data.response.base.CommonModel
+import com.competra.data.response.upload.UploadResponse
+import com.competra.data.routing.orienteeringPublicRoutes
+import com.competra.data.routing.orienteeringRoutes
+import com.competra.data.services.DistanceService
+import com.competra.data.services.OrienteeringCompetitionService
+import com.competra.data.services.OrienteeringParticipantService
+import com.competra.data.services.OrienteeringResultService
+import com.competra.data.services.ParticipantGroupService
+import com.competra.data.services.UploadService
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
 import io.ktor.utils.io.toByteArray
@@ -34,57 +34,57 @@ fun Application.configureRouting() {
     val uploadService = UploadService()
 
     routing {
-        get("/info") {
-            call.respondText("Hello World!")
-        }
-
+        // /health, /health/ready остаются на корне для внешних мониторингов (UptimeRobot и т.д.)
         healthRoutes()
-        orienteeringPublicRoutes(competitionService, participantService, resultService, groupService)
 
-        authenticate("auth-jwt") {
-            post("/upload/file") {
-                val multipart = call.receiveMultipart()
-                var fileBytes: ByteArray? = null
-                var fileName = "upload"
-                var type = "avatar"
-                var contentType = "application/octet-stream"
+        route("/api") {
+            orienteeringPublicRoutes(competitionService, participantService, resultService, groupService)
 
-                multipart.forEachPart { part ->
-                    when (part) {
-                        is PartData.FileItem -> {
-                            fileName = part.originalFileName ?: "upload"
-                            contentType = part.contentType?.toString() ?: "application/octet-stream"
-                            fileBytes = part.provider().toByteArray()
+            authenticate("auth-jwt") {
+                post("/upload/file") {
+                    val multipart = call.receiveMultipart()
+                    var fileBytes: ByteArray? = null
+                    var fileName = "upload"
+                    var type = "avatar"
+                    var contentType = "application/octet-stream"
+
+                    multipart.forEachPart { part ->
+                        when (part) {
+                            is PartData.FileItem -> {
+                                fileName = part.originalFileName ?: "upload"
+                                contentType = part.contentType?.toString() ?: "application/octet-stream"
+                                fileBytes = part.provider().toByteArray()
+                            }
+                            is PartData.FormItem -> {
+                                if (part.name == "type") type = part.value
+                            }
+                            else -> {}
                         }
-                        is PartData.FormItem -> {
-                            if (part.name == "type") type = part.value
-                        }
-                        else -> {}
+                        part.dispose()
                     }
-                    part.dispose()
-                }
 
-                val bytes = fileBytes
-                if (bytes == null) {
+                    val bytes = fileBytes
+                    if (bytes == null) {
+                        call.respond(
+                            CommonModel<Any>().also {
+                                it.status = 0
+                                it.errors = listOf(BaseError(400, "No file provided"))
+                            }
+                        )
+                        return@post
+                    }
+
+                    val url = withContext(Dispatchers.IO) {
+                        uploadService.upload(bytes, fileName, type, contentType)
+                    }
+
                     call.respond(
-                        CommonModel<Any>().also {
-                            it.status = 0
-                            it.errors = listOf(BaseError(400, "No file provided"))
-                        }
+                        CommonModel<UploadResponse>().also { it.status = 1; it.result = UploadResponse(url) }
                     )
-                    return@post
                 }
 
-                val url = withContext(Dispatchers.IO) {
-                    uploadService.upload(bytes, fileName, type, contentType)
-                }
-
-                call.respond(
-                    CommonModel<UploadResponse>().also { it.status = 1; it.result = UploadResponse(url) }
-                )
+                orienteeringRoutes(competitionService, groupService, participantService, resultService, distanceService)
             }
-
-            orienteeringRoutes(competitionService, groupService, participantService, resultService, distanceService)
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.sportenth
+package com.competra
 
 import io.github.damir.denis.tudor.ktor.server.rabbitmq.RabbitMQ
 import io.github.damir.denis.tudor.ktor.server.rabbitmq.dsl.*

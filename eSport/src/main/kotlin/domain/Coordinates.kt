@@ -1,4 +1,4 @@
-package com.sportenth.domain
+package com.competra.domain
 
 data class Coordinates(
     val latitude: Double,

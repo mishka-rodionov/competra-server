@@ -32,7 +32,7 @@
         </http>
         <format>
             <label>
-                <pattern>app=esport,level=%level,host=${HOSTNAME:-local}</pattern>
+                <pattern>app=competra,level=%level,host=${HOSTNAME:-local}</pattern>
                 <readMarker>true</readMarker>
             </label>
             <!-- Layout, а не Encoder: loki4j ожидает именно Layout. -->

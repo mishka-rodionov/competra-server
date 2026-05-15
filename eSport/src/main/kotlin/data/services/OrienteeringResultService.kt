@@ -1,11 +1,11 @@
-package com.sportenth.data.services
+package com.competra.data.services
 
-import com.sportenth.data.database.entity.OrienteeringResults
-import com.sportenth.data.database.entity.SplitTimes
-import com.sportenth.data.exception.ConflictException
-import com.sportenth.data.requests.orienteering.OrienteeringResultRequest
-import com.sportenth.data.response.orienteering.OrienteeringResultResponse
-import com.sportenth.data.response.orienteering.SplitTimeResponse
+import com.competra.data.database.entity.OrienteeringResults
+import com.competra.data.database.entity.SplitTimes
+import com.competra.data.exception.ConflictException
+import com.competra.data.requests.orienteering.OrienteeringResultRequest
+import com.competra.data.response.orienteering.OrienteeringResultResponse
+import com.competra.data.response.orienteering.SplitTimeResponse
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -55,7 +55,7 @@ class OrienteeringResultService {
         ) {
             val splits = SplitTimes.selectAll()
                 .where { SplitTimes.resultId eq req.id }
-                .map { com.sportenth.data.response.orienteering.SplitTimeResponse(
+                .map { com.competra.data.response.orienteering.SplitTimeResponse(
                     it[SplitTimes.controlPoint],
                     it[SplitTimes.timestamp]
                 ) }

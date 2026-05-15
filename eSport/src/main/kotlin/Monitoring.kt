@@ -1,6 +1,6 @@
-package com.sportenth
+package com.competra
 
-import com.sportenth.data.util.maskSensitive
+import com.competra.data.util.maskSensitive
 import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.server.application.Application

@@ -1,4 +1,4 @@
-package com.sportenth.data.response.orienteering
+package com.competra.data.response.orienteering
 
 data class ParticipantGroupDetailResponse(
     val groupId: Long,

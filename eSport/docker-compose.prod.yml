@@ -2,8 +2,10 @@ services:
   app:
     image: ghcr.io/${GITHUB_REPOSITORY}:latest
     build: !reset null
+    # Снаружи 8080 закрыт — все запросы идут через nginx (порт 443).
+    # Оставлен биндинг на localhost для отладочных curl'ов с самого сервера.
     ports:
-      - "0.0.0.0:8080:8080"
+      - "127.0.0.1:8080:8080"
     restart: unless-stopped
 
   postgres:

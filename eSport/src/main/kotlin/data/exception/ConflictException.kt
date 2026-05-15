@@ -1,4 +1,4 @@
-package com.sportenth.data.exception
+package com.competra.data.exception
 
 /**
  * Бросается из сервисов upsert, когда клиентский serverUpdatedAt отстал от сервера.

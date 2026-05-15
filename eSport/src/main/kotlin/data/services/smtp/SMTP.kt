@@ -1,4 +1,4 @@
-package com.sportenth.data.services.smtp
+package com.competra.data.services.smtp
 
 import jakarta.mail.*
 import jakarta.mail.internet.InternetAddress

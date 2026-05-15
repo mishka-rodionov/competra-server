@@ -1,13 +1,13 @@
-package com.sportenth.data.services
+package com.competra.data.services
 
-import com.sportenth.data.database.entity.Competitions
-import com.sportenth.data.database.entity.OrienteeringCompetitions
-import com.sportenth.data.database.entity.OrienteeringParticipants
-import com.sportenth.data.database.entity.ParticipantGroups
-import com.sportenth.data.exception.ConflictException
-import com.sportenth.data.requests.orienteering.OrienteeringParticipantRequest
-import com.sportenth.data.requests.orienteering.RegisterParticipantRequest
-import com.sportenth.data.response.orienteering.OrienteeringParticipantResponse
+import com.competra.data.database.entity.Competitions
+import com.competra.data.database.entity.OrienteeringCompetitions
+import com.competra.data.database.entity.OrienteeringParticipants
+import com.competra.data.database.entity.ParticipantGroups
+import com.competra.data.exception.ConflictException
+import com.competra.data.requests.orienteering.OrienteeringParticipantRequest
+import com.competra.data.requests.orienteering.RegisterParticipantRequest
+import com.competra.data.response.orienteering.OrienteeringParticipantResponse
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq

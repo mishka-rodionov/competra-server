@@ -12,3 +12,9 @@ build/
 # Logs
 *.log
 logs/
+
+# nginx basic-auth credentials — генерится htpasswd, копируется на сервер вручную
+nginx/htpasswd
+
+# Let's Encrypt runtime state (живые сертификаты и приватные ключи)
+certbot/

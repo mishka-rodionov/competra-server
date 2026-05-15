@@ -1,36 +1,36 @@
-package com.sportenth.data.database
+package com.competra.data.database
 
 import com.rodionov.remote.request.user.UserRequest
-import com.sportenth.UserEntity
-import com.sportenth.UserService
-import com.sportenth.data.requests.UserProfileRequest
+import com.competra.UserEntity
+import com.competra.UserService
+import com.competra.data.requests.UserProfileRequest
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
-import com.sportenth.data.database.entity.Competitions
-import com.sportenth.data.database.entity.Distances
-import com.sportenth.data.database.entity.OrienteeringCompetitions
-import com.sportenth.data.database.entity.OrienteeringParticipants
-import com.sportenth.data.database.entity.OrienteeringResults
-import com.sportenth.data.database.entity.ParticipantGroups
-import com.sportenth.data.database.entity.RefreshTokens
-import com.sportenth.data.database.entity.SplitTimes
-import com.sportenth.data.database.entity.VerificationCodes
-import com.sportenth.data.requests.CodeVerificationRequest
-import com.sportenth.data.requests.EmailRequest
-import com.sportenth.data.requests.RefreshRequest
-import com.sportenth.data.response.AuthResponse
-import com.sportenth.data.response.TokenResponse
-import com.sportenth.data.response.base.BaseError
-import com.sportenth.data.response.base.CommonModel
-import com.sportenth.data.response.user.UserResponse
-import com.sportenth.data.services.smtp.sendVerificationCode
-import com.sportenth.data.services.smtp.tokens.generateAccessToken
-import com.sportenth.data.services.smtp.tokens.generateRefreshToken
-import com.sportenth.data.services.smtp.tokens.jwtAudience
-import com.sportenth.data.services.smtp.tokens.jwtIssuer
-import com.sportenth.data.services.smtp.tokens.jwtSecret
-import com.sportenth.domain.user.Gender
+import com.competra.data.database.entity.Competitions
+import com.competra.data.database.entity.Distances
+import com.competra.data.database.entity.OrienteeringCompetitions
+import com.competra.data.database.entity.OrienteeringParticipants
+import com.competra.data.database.entity.OrienteeringResults
+import com.competra.data.database.entity.ParticipantGroups
+import com.competra.data.database.entity.RefreshTokens
+import com.competra.data.database.entity.SplitTimes
+import com.competra.data.database.entity.VerificationCodes
+import com.competra.data.requests.CodeVerificationRequest
+import com.competra.data.requests.EmailRequest
+import com.competra.data.requests.RefreshRequest
+import com.competra.data.response.AuthResponse
+import com.competra.data.response.TokenResponse
+import com.competra.data.response.base.BaseError
+import com.competra.data.response.base.CommonModel
+import com.competra.data.response.user.UserResponse
+import com.competra.data.services.smtp.sendVerificationCode
+import com.competra.data.services.smtp.tokens.generateAccessToken
+import com.competra.data.services.smtp.tokens.generateRefreshToken
+import com.competra.data.services.smtp.tokens.jwtAudience
+import com.competra.data.services.smtp.tokens.jwtIssuer
+import com.competra.data.services.smtp.tokens.jwtSecret
+import com.competra.domain.user.Gender
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.http.*
@@ -102,6 +102,7 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE split_times ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
     }
     routing {
+        route("/api") {
         // Create user
         post("/users") {
             val user = call.receive<UserEntity>()
@@ -379,6 +380,7 @@ fun Application.configureDatabases() {
                 response.errors = listOf(BaseError(code = 500, message = "Internal Server Error: User is Null"))
             }
             call.respond(response)
+        }
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.sportenth.data.requests.orienteering
+package com.competra.data.requests.orienteering
 
 data class RegisterParticipantRequest(
     val competitionId: Long,

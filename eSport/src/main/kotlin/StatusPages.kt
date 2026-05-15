@@ -1,8 +1,8 @@
-package com.sportenth
+package com.competra
 
-import com.sportenth.data.exception.ConflictException
-import com.sportenth.data.response.base.BaseError
-import com.sportenth.data.response.base.CommonModel
+import com.competra.data.exception.ConflictException
+import com.competra.data.response.base.BaseError
+import com.competra.data.response.base.CommonModel
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install

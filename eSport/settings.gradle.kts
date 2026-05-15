@@ -1,4 +1,4 @@
-rootProject.name = "sportenth"
+rootProject.name = "competra"
 
 dependencyResolutionManagement {
     repositories {

@@ -1,7 +1,7 @@
-package com.sportenth.data.response
+package com.competra.data.response
 
 import com.google.gson.annotations.SerializedName
-import com.sportenth.data.response.user.UserResponse
+import com.competra.data.response.user.UserResponse
 
 data class AuthResponse(
     @SerializedName("user")

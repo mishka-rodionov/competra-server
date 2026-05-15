@@ -1,4 +1,4 @@
-package com.sportenth.domain
+package com.competra.domain
 
 
 sealed class KindOfSport(val name: String) {

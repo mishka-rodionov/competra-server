@@ -1,4 +1,4 @@
-package com.sportenth
+package com.competra
 
 fun interface HelloService {
     fun sayHello()

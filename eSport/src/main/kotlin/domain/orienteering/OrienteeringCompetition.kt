@@ -1,6 +1,6 @@
-package com.sportenth.domain.orienteering
+package com.competra.domain.orienteering
 
-import com.sportenth.domain.Competition
+import com.competra.domain.Competition
 
 data class OrienteeringCompetition(
     val competitionId: Long,

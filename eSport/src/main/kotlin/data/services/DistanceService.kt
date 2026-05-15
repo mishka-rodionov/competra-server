@@ -1,13 +1,13 @@
-package com.sportenth.data.services
+package com.competra.data.services
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.sportenth.data.database.entity.Distances
-import com.sportenth.data.exception.ConflictException
-import com.sportenth.data.requests.orienteering.ControlPointRequest
-import com.sportenth.data.requests.orienteering.DistanceRequest
-import com.sportenth.data.response.orienteering.ControlPointResponse
-import com.sportenth.data.response.orienteering.DistanceResponse
+import com.competra.data.database.entity.Distances
+import com.competra.data.exception.ConflictException
+import com.competra.data.requests.orienteering.ControlPointRequest
+import com.competra.data.requests.orienteering.DistanceRequest
+import com.competra.data.response.orienteering.ControlPointResponse
+import com.competra.data.response.orienteering.DistanceResponse
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq

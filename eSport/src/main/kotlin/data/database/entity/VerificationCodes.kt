@@ -1,4 +1,4 @@
-package com.sportenth.data.database.entity
+package com.competra.data.database.entity
 
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.javatime.datetime

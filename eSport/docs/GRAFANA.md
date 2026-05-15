@@ -12,7 +12,7 @@
 
 | Label | Значение |
 |---|---|
-| `app` | `esport` |
+| `app` | `competra` |
 | `level` | `INFO`, `WARN`, `ERROR` |
 | `host` | hostname контейнера |
 
@@ -60,57 +60,57 @@
 ### Всё подряд
 
 ```logql
-{app="esport"}
+{app="competra"}
 ```
 
 ### Только ошибки
 
 ```logql
-{app="esport", level="ERROR"}
+{app="competra", level="ERROR"}
 ```
 
 ### Один запрос по call_id
 
 ```logql
-{app="esport"} | json | call_id="bd546327-57a3-4110-80d0-c412f7286dc3"
+{app="competra"} | json | call_id="bd546327-57a3-4110-80d0-c412f7286dc3"
 ```
 
 ### Все 5xx
 
 ```logql
-{app="esport"} | json | http_status >= 500
+{app="competra"} | json | http_status >= 500
 ```
 
 ### Конкретный эндпоинт
 
 ```logql
-{app="esport"} | json | http_path="/event/orienteering/save/competitions"
+{app="competra"} | json | http_path="/event/orienteering/save/competitions"
 ```
 
 ### Медленные запросы (>500 мс)
 
 ```logql
-{app="esport"} | json | duration_ms > 500
+{app="competra"} | json | duration_ms > 500
 ```
 
 ### Что делал пользователь
 
 ```logql
-{app="esport"} | json | user_id="<uuid>"
+{app="competra"} | json | user_id="<uuid>"
 ```
 
 ### Тело ошибочного запроса (от нашего interceptor'а)
 
 ```logql
-{app="esport"} |= "Error body for"
+{app="competra"} |= "Error body for"
 ```
 
 ### Свободный поиск
 
 ```logql
-{app="esport"} |= "ConflictException"
-{app="esport"} |~ "(?i)timeout"        # regex case-insensitive
-{app="esport"} != "/health"            # исключить
+{app="competra"} |= "ConflictException"
+{app="competra"} |~ "(?i)timeout"        # regex case-insensitive
+{app="competra"} != "/health"            # исключить
 ```
 
 ### Операторы фильтрации
@@ -142,7 +142,7 @@
 #### Панель 1: «Поток ошибок» — тип `Logs`
 
 ```logql
-{app="esport", level="ERROR"} | json
+{app="competra", level="ERROR"} | json
 ```
 В правой панели визуализации:
 - `Wrap lines` = on
@@ -154,7 +154,7 @@
 #### Панель 2: «Запросов в минуту по статусу» — тип `Time series`
 
 ```logql
-sum by (http_status) (rate({app="esport"} | json | __error__="" [1m]))
+sum by (http_status) (rate({app="competra"} | json | __error__="" [1m]))
 ```
 
 - `__error__=""` отфильтровывает строки, которые не распарсились в JSON.
@@ -165,7 +165,7 @@ sum by (http_status) (rate({app="esport"} | json | __error__="" [1m]))
 
 ```logql
 topk(10, sum by (http_path) (
-  count_over_time({app="esport"} | json | http_status >= 400 [$__range])
+  count_over_time({app="competra"} | json | http_status >= 400 [$__range])
 ))
 ```
 
@@ -175,7 +175,7 @@ topk(10, sum by (http_path) (
 
 ```logql
 quantile_over_time(0.95,
-  {app="esport"} | json | unwrap duration_ms [5m]
+  {app="competra"} | json | unwrap duration_ms [5m]
 ) by (http_path)
 ```
 
@@ -184,7 +184,7 @@ quantile_over_time(0.95,
 #### Панель 5: «Heartbeat — приложение живо» — тип `Stat`
 
 ```logql
-sum(count_over_time({app="esport"}[5m]))
+sum(count_over_time({app="competra"}[5m]))
 ```
 
 Настройки:
@@ -196,7 +196,7 @@ sum(count_over_time({app="esport"}[5m]))
 
 ```logql
 sum by (http_status) (
-  count_over_time({app="esport"} | json | http_path="/health/ready" [5m])
+  count_over_time({app="competra"} | json | http_path="/health/ready" [5m])
 )
 ```
 
@@ -206,7 +206,7 @@ sum by (http_status) (
 
 ```logql
 topk(10, sum by (user_id) (
-  count_over_time({app="esport"} | json | user_id!="" [$__range])
+  count_over_time({app="competra"} | json | user_id!="" [$__range])
 ))
 ```
 
@@ -219,7 +219,7 @@ topk(10, sum by (user_id) (
 3. **Name** = `path`, **Label** = `Path`.
 4. **Query**:
    ```
-   label_values({app="esport"} | json, http_path)
+   label_values({app="competra"} | json, http_path)
    ```
 5. `Include All option` = on.
 
@@ -236,21 +236,21 @@ topk(10, sum by (user_id) (
 ### Алерт 1: приложение пропало
 
 ```logql
-sum(count_over_time({app="esport"}[5m]))
+sum(count_over_time({app="competra"}[5m]))
 ```
 Условие: `Last → Is below 1`. Evaluate every 1m for 5m.
 
 ### Алерт 2: всплеск ошибок
 
 ```logql
-sum(count_over_time({app="esport", level="ERROR"}[5m]))
+sum(count_over_time({app="competra", level="ERROR"}[5m]))
 ```
 Условие: `Is above 5`.
 
 ### Алерт 3: упала БД
 
 ```logql
-sum(count_over_time({app="esport"} | json | http_path="/health/ready", http_status="503" [5m]))
+sum(count_over_time({app="competra"} | json | http_path="/health/ready", http_status="503" [5m]))
 ```
 Условие: `Is above 0`.
 
@@ -264,21 +264,21 @@ sum(count_over_time({app="esport"} | json | http_path="/health/ready", http_stat
 
 ### Клиент прислал traceId
 
-1. Explore → `{app="esport"} | json | call_id="<traceId>"`.
+1. Explore → `{app="competra"} | json | call_id="<traceId>"`.
 2. Видишь связку: HTTP-запрос, exception со stack_trace, тело запроса (`Error body for ...`).
 3. Воспроизводишь локально по этим данным.
 
 ### Медленный эндпоинт
 
 ```logql
-{app="esport"} | json | http_path="/event/orienteering/competitions" | duration_ms > 1000
+{app="competra"} | json | http_path="/event/orienteering/competitions" | duration_ms > 1000
 ```
 
 По `query` и `user_id` находишь конкретные кейсы.
 
 ### Инцидент в конкретное время
 
-Установить time range вокруг момента инцидента, `{app="esport"}`. Кликом по строке добавлять фильтры (path, status, user_id) и сужать выборку.
+Установить time range вокруг момента инцидента, `{app="competra"}`. Кликом по строке добавлять фильтры (path, status, user_id) и сужать выборку.
 
 ---
 
@@ -286,12 +286,12 @@ sum(count_over_time({app="esport"} | json | http_path="/health/ready", http_stat
 
 ### «No data» в большинстве панелей, но Heartbeat работает
 
-Симптом: панели с `| json | ...` пустые, а простой `count_over_time({app="esport"}[5m])` отдаёт цифру.
+Симптом: панели с `| json | ...` пустые, а простой `count_over_time({app="competra"}[5m])` отдаёт цифру.
 
 Причина: тело логов **не парсится как JSON**. То есть Loki получает plain-text сообщения, и `| json` не может распаковать поля.
 
 Диагностика:
-- В Explore выполни `{app="esport"}`, открой одну строку. Если видно одну длинную строку с временем, уровнем и текстом — это plain text, `| json` не сработает.
+- В Explore выполни `{app="competra"}`, открой одну строку. Если видно одну длинную строку с временем, уровнем и текстом — это plain text, `| json` не сработает.
 - В логах приложения при старте было предупреждение `No message layout specified in the config. Using PatternLayout with default settings`.
 
 Решение: в `src/main/resources/logback.xml` в блоке `<message>` использовать `net.logstash.logback.layout.LogstashLayout` (а не `LogstashEncoder` — это разные классы; loki4j ожидает Layout). После правки — пересобрать и задеплоить.
@@ -344,7 +344,7 @@ Body-logging при ошибках можно ограничить только 
 ## 9. С чего начать прямо сейчас
 
 1. `curl /health` пару раз, чтобы было что показывать.
-2. Explore → `{app="esport"} | json` за `Last 15 minutes`. Раскрой строку — убедись, что поля `call_id`, `http_status`, `duration_ms` извлекаются.
+2. Explore → `{app="competra"} | json` за `Last 15 minutes`. Раскрой строку — убедись, что поля `call_id`, `http_status`, `duration_ms` извлекаются.
 3. Если поля пустые — см. раздел Troubleshooting (нужен `LogstashLayout`).
 4. Создай минимальный дашборд: `Logs (ERROR)`, `Time series (rps по статусу)`, `Stat (heartbeat)`.
 5. Настрой алерт «приложение пропало» — это самое важное.

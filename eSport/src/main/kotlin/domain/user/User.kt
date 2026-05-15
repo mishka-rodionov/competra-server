@@ -1,6 +1,6 @@
-package com.sportenth.domain.user
+package com.competra.domain.user
 
-import com.sportenth.domain.Qualification
+import com.competra.domain.Qualification
 import java.util.Date
 
 data class User(

@@ -44,7 +44,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "docker-compose.yml,docker-compose.prod.yml"
-          target: "/opt/esport"
+          target: "/opt/competra"
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
@@ -58,7 +58,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           envs: GITHUB_REPOSITORY,LOKI_URL,LOKI_USER_ID,LOKI_API_KEY
           script: |
-            cd /opt/esport
+            cd /opt/competra
             echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY" >> .env
             echo "LOKI_URL=$LOKI_URL" >> .env
             echo "LOKI_USER_ID=$LOKI_USER_ID" >> .env

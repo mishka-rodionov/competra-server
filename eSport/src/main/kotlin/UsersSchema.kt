@@ -1,7 +1,7 @@
-package com.sportenth
+package com.competra
 
-import com.sportenth.data.database.entity.VerificationCodes
-import com.sportenth.domain.user.Gender
+import com.competra.data.database.entity.VerificationCodes
+import com.competra.domain.user.Gender
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.*

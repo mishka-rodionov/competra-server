@@ -1,4 +1,4 @@
-package com.sportenth.data.services
+package com.competra.data.services
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider

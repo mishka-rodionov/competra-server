@@ -1,4 +1,4 @@
-package com.sportenth.data.response.base
+package com.competra.data.response.base
 
 import com.google.gson.annotations.SerializedName
 

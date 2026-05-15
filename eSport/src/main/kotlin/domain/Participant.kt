@@ -1,4 +1,4 @@
-package com.sportenth.domain
+package com.competra.domain
 
 interface Participant {
     val id: String

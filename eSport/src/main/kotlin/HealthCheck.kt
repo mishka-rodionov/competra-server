@@ -1,4 +1,4 @@
-package com.sportenth
+package com.competra
 
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call

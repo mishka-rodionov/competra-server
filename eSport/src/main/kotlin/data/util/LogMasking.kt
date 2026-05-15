@@ -1,4 +1,4 @@
-package com.sportenth.data.util
+package com.competra.data.util
 
 private val SENSITIVE_FIELDS = Regex(
     """"(password|token|secret|apiKey|api_key|code|refreshToken|refresh_token|accessToken|access_token)"\s*:\s*"[^"]*"""",

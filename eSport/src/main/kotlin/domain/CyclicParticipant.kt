@@ -1,4 +1,4 @@
-package com.sportenth.domain
+package com.competra.domain
 
 data class CyclicParticipant(
     override val id: String,

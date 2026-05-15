@@ -1,4 +1,4 @@
-package com.sportenth
+package com.competra
 
 import io.ktor.client.request.*
 import io.ktor.http.*

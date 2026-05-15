@@ -1,4 +1,4 @@
-package com.sportenth.data.services.smtp.tokens
+package com.competra.data.services.smtp.tokens
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm

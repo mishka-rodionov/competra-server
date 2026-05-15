@@ -1,4 +1,4 @@
-package com.sportenth.domain
+package com.competra.domain
 
 import com.google.gson.annotations.SerializedName
 

@@ -10,7 +10,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "2.1.10"
 }
 
-group = "com.sportenth"
+group = "com.competra"
 version = "0.0.1"
 
 application {

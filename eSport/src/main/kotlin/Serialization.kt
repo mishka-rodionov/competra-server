@@ -1,4 +1,4 @@
-package com.sportenth
+package com.competra
 
 import io.github.damir.denis.tudor.ktor.server.rabbitmq.RabbitMQ
 import io.github.damir.denis.tudor.ktor.server.rabbitmq.dsl.*
@@ -32,14 +32,6 @@ import org.slf4j.event.*
 fun Application.configureSerialization() {
     install(ContentNegotiation) {
         gson {
-        }
-    }
-    routing {
-        get("/json/gson") {
-            call.respond(mapOf("hello" to "world"))
-        }
-        get("/json/kotlinx-serialization") {
-            call.respond(mapOf("hello" to "world"))
         }
     }
 }
