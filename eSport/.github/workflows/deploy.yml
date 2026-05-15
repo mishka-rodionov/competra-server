@@ -43,7 +43,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "docker-compose.yml,docker-compose.prod.yml"
+          source: "docker-compose.yml,docker-compose.prod.yml,nginx/**"
           target: "/opt/competra"
 
       - name: Deploy via SSH
