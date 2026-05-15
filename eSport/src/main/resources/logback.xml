@@ -35,8 +35,8 @@
                 <pattern>app=esport,level=%level,host=${HOSTNAME:-local}</pattern>
                 <readMarker>true</readMarker>
             </label>
-            <message class="net.logstash.logback.encoder.LogstashEncoder">
-                <!-- Включаем все MDC ключи как структурированные JSON-поля -->
+            <!-- Layout, а не Encoder: loki4j ожидает именно Layout. -->
+            <message class="net.logstash.logback.layout.LogstashLayout">
                 <includeMdcKeyName>call_id</includeMdcKeyName>
                 <includeMdcKeyName>http_method</includeMdcKeyName>
                 <includeMdcKeyName>http_path</includeMdcKeyName>
