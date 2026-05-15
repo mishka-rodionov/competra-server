@@ -2,10 +2,10 @@ services:
   app:
     image: ghcr.io/${GITHUB_REPOSITORY}:latest
     build: !reset null
-    # Снаружи 8080 закрыт — все запросы идут через nginx (порт 443).
-    # Оставлен биндинг на localhost для отладочных curl'ов с самого сервера.
-    ports:
-      - "127.0.0.1:8080:8080"
+    # Снаружи 8080 закрыт. nginx ходит к app по docker-сети как app:8080.
+    # Если нужен отладочный curl с хоста — выполнить:
+    #   docker compose exec app sh -c 'wget -qO- http://localhost:8080/health'
+    ports: !reset null
     restart: unless-stopped
 
   postgres:
