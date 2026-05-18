@@ -90,6 +90,7 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS contact_email VARCHAR(200)")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS website VARCHAR(500)")
         exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS control_points TEXT")
+        exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS finish_control_point INTEGER")
         // updated_at — серверная сторона serverUpdatedAt в Android-клиенте.
         // Колонка объявлена в Exposed Table-объектах (default(0L)), но в существующих
         // PostgreSQL-таблицах её нет — нужны идемпотентные ALTER'ы для каждой таблицы.
