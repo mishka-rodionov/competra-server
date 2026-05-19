@@ -13,17 +13,25 @@ import com.competra.data.response.orienteering.OrienteeringCompetitionResponse
 import com.competra.data.response.orienteering.ParticipantGroupDetailResponse
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.greater
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.andWhere
 import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.innerJoin
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
 
 class OrienteeringCompetitionService {
+
+    private companion object {
+        /** Статусы, которые НЕ должны переопределяться автоматическим пересчётом. */
+        val MANUAL_STATUSES = listOf("IN_PROGRESS", "FINISHED", "DRAFT", "ARCHIVED")
+    }
 
     /**
      * Вычисляет эффективный статус соревнования на основе сохранённого статуса и текущего времени.
@@ -91,6 +99,63 @@ class OrienteeringCompetitionService {
             registrationStart == null || now >= registrationStart -> "REGISTRATION_OPEN"
             else -> "CREATED"
         }
+    }
+
+    /**
+     * Точечно обновляет [Competitions.status] для соревнований, у которых наступило
+     * новое временное состояние. Не трогает ручные/терминальные статусы
+     * (`IN_PROGRESS`, `FINISHED`, `DRAFT`, `ARCHIVED`).
+     *
+     * Логика отражает [computeEffectiveStatus]:
+     *   - startTime <= now → IN_PROGRESS
+     *   - registrationEnd <= now → REGISTRATION_CLOSED
+     *   - окно регистрации открыто и ещё не закрыто → REGISTRATION_OPEN
+     *
+     * Используется фоновым шедулером раз в 5 минут.
+     *
+     * @return суммарное число обновлённых строк за этот тик.
+     */
+    suspend fun recalculateAllStatuses(): Int = dbQuery {
+        val now = System.currentTimeMillis()
+        var total = 0
+
+        // 1) → IN_PROGRESS: наступил OrienteeringCompetitions.startTime
+        val toInProgressIds: List<Long> = (Competitions innerJoin OrienteeringCompetitions)
+            .selectAll()
+            .where {
+                (Competitions.status notInList MANUAL_STATUSES) and
+                OrienteeringCompetitions.startTime.isNotNull() and
+                (OrienteeringCompetitions.startTime lessEq now)
+            }
+            .map { it[Competitions.id] }
+        if (toInProgressIds.isNotEmpty()) {
+            total += Competitions.update({ Competitions.id inList toInProgressIds }) {
+                it[status] = "IN_PROGRESS"
+                it[updatedAt] = now
+            }
+        }
+
+        // 2) → REGISTRATION_CLOSED: окно регистрации закрылось
+        total += Competitions.update({
+            (Competitions.status inList listOf("CREATED", "REGISTRATION_OPEN")) and
+                Competitions.registrationEnd.isNotNull() and
+                (Competitions.registrationEnd lessEq now)
+        }) {
+            it[status] = "REGISTRATION_CLOSED"
+            it[updatedAt] = now
+        }
+
+        // 3) → REGISTRATION_OPEN: окно регистрации открыто, ещё не закрыто
+        total += Competitions.update({
+            (Competitions.status eq "CREATED") and
+                (Competitions.registrationStart.isNull() or (Competitions.registrationStart lessEq now)) and
+                (Competitions.registrationEnd.isNull() or (Competitions.registrationEnd greater now))
+        }) {
+            it[status] = "REGISTRATION_OPEN"
+            it[updatedAt] = now
+        }
+
+        total
     }
 
     suspend fun upsert(req: OrienteeringCompetitionRequest, userId: String): OrienteeringCompetitionResponse = dbQuery {

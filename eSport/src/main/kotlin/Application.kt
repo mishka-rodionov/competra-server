@@ -1,6 +1,7 @@
 package com.competra
 
 import com.competra.data.database.configureDatabases
+import com.competra.data.scheduler.configureStatusScheduler
 import io.ktor.server.application.*
 
 fun main(args: Array<String>) {
@@ -18,4 +19,5 @@ fun Application.module() {
     configureSockets()
     configureStatusPages()
     configureRouting()
+    configureStatusScheduler()
 }
