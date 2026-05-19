@@ -32,7 +32,15 @@ fun Route.orienteeringPublicRoutes(
 ) {
     get("/event/orienteering/competitions/public") {
         val kindOfSports = call.request.queryParameters.getAll("kind_of_sports") ?: emptyList()
-        val list = competitionService.getByKindOfSports(kindOfSports)
+        val statuses = call.request.queryParameters.getAll("statuses") ?: emptyList()
+        val dateFrom = call.request.queryParameters["date_from"]?.toLongOrNull()
+        val dateTo = call.request.queryParameters["date_to"]?.toLongOrNull()
+        val list = competitionService.getPublicCompetitions(
+            kindOfSports = kindOfSports,
+            statuses = statuses,
+            dateFrom = dateFrom,
+            dateTo = dateTo
+        )
         call.respond(CommonModel<Any>().also { model ->
             model.status = 1
             model.result = list

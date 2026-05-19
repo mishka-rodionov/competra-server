@@ -13,7 +13,10 @@ import com.competra.data.response.orienteering.OrienteeringCompetitionResponse
 import com.competra.data.response.orienteering.ParticipantGroupDetailResponse
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.andWhere
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
@@ -354,19 +357,35 @@ class OrienteeringCompetitionService {
     }
 
     /**
-     * Возвращает список соревнований, отфильтрованных по видам спорта.
-     * Если список видов спорта пустой — возвращает все соревнования.
+     * Возвращает список публичных соревнований с применением фильтров.
      *
-     * @param kindOfSports список строковых наименований видов спорта (например, ["Orienteering"])
+     * SQL-фильтры (виды спорта, диапазон дат старта) применяются на уровне БД.
+     * Фильтр по статусу применяется в коде, потому что эффективный статус
+     * вычисляется из дат через [computeEffectiveStatus] и не хранится напрямую.
+     *
+     * @param kindOfSports список наименований видов спорта (например, ["Orienteering"]). Пустой — без ограничения.
+     * @param statuses список эффективных статусов (REGISTRATION_OPEN / IN_PROGRESS / FINISHED и др.). Комбинируется через OR. Пустой — без ограничения.
+     * @param dateFrom нижняя граница [Competitions.startDate], inclusive. null — без ограничения.
+     * @param dateTo верхняя граница [Competitions.startDate], inclusive. null — без ограничения.
      */
-    suspend fun getByKindOfSports(kindOfSports: List<String>): List<CompetitionResponse> = dbQuery {
-        val query = if (kindOfSports.isEmpty()) {
-            Competitions.selectAll()
-        } else {
-            Competitions.selectAll().where { Competitions.kindOfSport inList kindOfSports }
+    suspend fun getPublicCompetitions(
+        kindOfSports: List<String>,
+        statuses: List<String>,
+        dateFrom: Long?,
+        dateTo: Long?
+    ): List<CompetitionResponse> = dbQuery {
+        val query = Competitions.selectAll()
+        if (kindOfSports.isNotEmpty()) {
+            query.andWhere { Competitions.kindOfSport inList kindOfSports }
+        }
+        if (dateFrom != null) {
+            query.andWhere { Competitions.startDate greaterEq dateFrom }
+        }
+        if (dateTo != null) {
+            query.andWhere { Competitions.startDate lessEq dateTo }
         }
 
-        query.map { comp ->
+        val items = query.map { comp ->
             CompetitionResponse(
                 remoteId = comp[Competitions.id],
                 title = comp[Competitions.title],
@@ -401,6 +420,8 @@ class OrienteeringCompetitionService {
                 updatedAt = comp[Competitions.updatedAt]
             )
         }
+
+        if (statuses.isEmpty()) items else items.filter { it.status in statuses }
     }
 
     suspend fun getById(competitionId: Long, userId: String? = null): CompetitionDetailResponse? = dbQuery {
