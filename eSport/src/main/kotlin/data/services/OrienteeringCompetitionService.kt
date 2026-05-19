@@ -19,7 +19,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.andWhere
 import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.innerJoin
+import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
@@ -119,8 +119,16 @@ class OrienteeringCompetitionService {
         val now = System.currentTimeMillis()
         var total = 0
 
-        // 1) → IN_PROGRESS: наступил OrienteeringCompetitions.startTime
-        val toInProgressIds: List<Long> = (Competitions innerJoin OrienteeringCompetitions)
+        // 1) → IN_PROGRESS: наступил OrienteeringCompetitions.startTime.
+        // Join указан явно: FK на competition_id в схеме не объявлен,
+        // поэтому неявный innerJoin падает с "no matching primary/foreign key pair".
+        val toInProgressIds: List<Long> = Competitions
+            .join(
+                otherTable = OrienteeringCompetitions,
+                joinType = JoinType.INNER,
+                onColumn = Competitions.id,
+                otherColumn = OrienteeringCompetitions.competitionId
+            )
             .selectAll()
             .where {
                 (Competitions.status notInList MANUAL_STATUSES) and
