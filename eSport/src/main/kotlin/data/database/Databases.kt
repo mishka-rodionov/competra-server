@@ -8,6 +8,7 @@ import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
 import com.competra.data.database.entity.Competitions
+import com.competra.data.database.entity.DeviceTokens
 import com.competra.data.database.entity.Distances
 import com.competra.data.database.entity.OrienteeringCompetitions
 import com.competra.data.database.entity.OrienteeringParticipants
@@ -72,7 +73,8 @@ fun Application.configureDatabases() {
             OrienteeringParticipants,
             OrienteeringResults,
             SplitTimes,
-            RefreshTokens
+            RefreshTokens,
+            DeviceTokens
         )
         // Добавляем колонки, которых может не быть в уже существующей таблице
         exec("ALTER TABLE participant_groups ALTER COLUMN distance_id TYPE BIGINT USING distance_id::BIGINT")
@@ -101,6 +103,7 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE orienteering_participants ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
         exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
         exec("ALTER TABLE split_times ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS start_notification_sent BOOLEAN NOT NULL DEFAULT FALSE")
     }
     routing {
         route("/api") {

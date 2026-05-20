@@ -1,6 +1,7 @@
 package com.competra
 
 import com.competra.data.database.configureDatabases
+import com.competra.data.scheduler.configureStartNotificationScheduler
 import com.competra.data.scheduler.configureStatusScheduler
 import io.ktor.server.application.*
 
@@ -20,4 +21,5 @@ fun Application.module() {
     configureStatusPages()
     configureRouting()
     configureStatusScheduler()
+    configureStartNotificationScheduler(attributes[FcmServiceKey])
 }

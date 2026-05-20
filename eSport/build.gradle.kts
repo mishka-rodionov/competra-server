@@ -62,4 +62,9 @@ dependencies {
     // AWS SDK v2 — S3-клиент для Yandex Object Storage
     implementation("software.amazon.awssdk:s3:2.25.0")
 
+    // Firebase Cloud Messaging — HTTP v1 API через Ktor client + google-auth для OAuth2
+    implementation("io.ktor:ktor-client-core")
+    implementation("io.ktor:ktor-client-cio")
+    implementation("io.ktor:ktor-client-content-negotiation")
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.27.0")
 }

@@ -3,9 +3,12 @@ package com.competra
 import com.competra.data.response.base.BaseError
 import com.competra.data.response.base.CommonModel
 import com.competra.data.response.upload.UploadResponse
+import com.competra.data.routing.deviceRoutes
 import com.competra.data.routing.orienteeringPublicRoutes
 import com.competra.data.routing.orienteeringRoutes
+import com.competra.data.services.DeviceTokenService
 import com.competra.data.services.DistanceService
+import com.competra.data.services.FcmService
 import com.competra.data.services.OrienteeringCompetitionService
 import com.competra.data.services.OrienteeringParticipantService
 import com.competra.data.services.OrienteeringResultService
@@ -15,6 +18,7 @@ import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
 import io.ktor.utils.io.toByteArray
 import io.ktor.server.application.*
+import io.ktor.util.AttributeKey
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.autohead.*
 import io.ktor.server.request.*
@@ -22,6 +26,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+val FcmServiceKey = AttributeKey<FcmService>("FcmService")
 
 fun Application.configureRouting() {
     install(AutoHeadResponse)
@@ -32,6 +38,9 @@ fun Application.configureRouting() {
     val resultService = OrienteeringResultService()
     val distanceService = DistanceService()
     val uploadService = UploadService()
+    val deviceTokenService = DeviceTokenService()
+    val fcmService = FcmService(deviceTokenService)
+    attributes.put(FcmServiceKey, fcmService)
 
     routing {
         // /health, /health/ready остаются на корне для внешних мониторингов (UptimeRobot и т.д.)
@@ -84,6 +93,7 @@ fun Application.configureRouting() {
                 }
 
                 orienteeringRoutes(competitionService, groupService, participantService, resultService, distanceService)
+                deviceRoutes(deviceTokenService)
             }
         }
     }
