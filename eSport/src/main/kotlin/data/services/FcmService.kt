@@ -24,21 +24,37 @@ import org.slf4j.LoggerFactory
  *
  * Авторизация — OAuth2 access_token, получается из service-account JSON через
  * [GoogleCredentials]; библиотека сама кеширует токен и обновляет его перед истечением.
+ *
+ * Если переменные окружения `FCM_PROJECT_ID` или `FCM_SERVICE_ACCOUNT_JSON` не заданы
+ * (или содержимое битое) — сервис стартует в **disabled-режиме**: попытки отправки
+ * логируются как warning и тихо завершаются без сетевого вызова. Это намеренно:
+ * push — вспомогательная фича, её недоконфигурированность не должна валить весь backend.
  */
 class FcmService(
     private val deviceTokenService: DeviceTokenService,
-    private val projectId: String = System.getenv("FCM_PROJECT_ID")
-        ?: error("FCM_PROJECT_ID env var is not set"),
-    serviceAccountJson: String = System.getenv("FCM_SERVICE_ACCOUNT_JSON")
-        ?: error("FCM_SERVICE_ACCOUNT_JSON env var is not set"),
+    private val projectId: String? = System.getenv("FCM_PROJECT_ID").takeUnless { it.isNullOrBlank() },
+    serviceAccountJson: String? = System.getenv("FCM_SERVICE_ACCOUNT_JSON").takeUnless { it.isNullOrBlank() },
 ) {
     private val log = LoggerFactory.getLogger(FcmService::class.java)
 
-    private val credentials: GoogleCredentials = GoogleCredentials
-        .fromStream(serviceAccountJson.byteInputStream())
-        .createScoped(FCM_SCOPE)
+    private val credentials: GoogleCredentials? = initCredentials(serviceAccountJson)
 
     private val httpClient = HttpClient(CIO)
+
+    private val isEnabled: Boolean get() = credentials != null && !projectId.isNullOrBlank()
+
+    init {
+        if (isEnabled) {
+            log.info("FCM enabled, projectId=$projectId")
+        } else {
+            log.warn(
+                "FCM is DISABLED: " +
+                    "projectIdSet=${!projectId.isNullOrBlank()}, " +
+                    "credentialsLoaded=${credentials != null}. " +
+                    "Set FCM_PROJECT_ID and FCM_SERVICE_ACCOUNT_JSON to enable push."
+            )
+        }
+    }
 
     suspend fun sendToUser(
         userId: String,
@@ -46,6 +62,10 @@ class FcmService(
         body: String,
         data: Map<String, String> = emptyMap(),
     ) {
+        if (!isEnabled) {
+            log.debug("FCM disabled, skipping push to userId=$userId")
+            return
+        }
         val tokens = deviceTokenService.listByUser(userId)
         if (tokens.isEmpty()) {
             log.info("No device tokens for userId=$userId, skipping push")
@@ -60,9 +80,13 @@ class FcmService(
         body: String,
         data: Map<String, String> = emptyMap(),
     ) {
+        val creds = credentials ?: run {
+            log.debug("FCM disabled, skipping push to token=${token.take(12)}…")
+            return
+        }
         val accessToken = withContext(Dispatchers.IO) {
-            credentials.refreshIfExpired()
-            credentials.accessToken.tokenValue
+            creds.refreshIfExpired()
+            creds.accessToken.tokenValue
         }
         val payload = buildMessagePayload(token, title, body, data)
         val url = "https://fcm.googleapis.com/v1/projects/$projectId/messages:send"
@@ -82,6 +106,17 @@ class FcmService(
             }
             else -> log.error("FCM push failed: ${response.status} body=${response.bodyAsText()}")
         }
+    }
+
+    private fun initCredentials(serviceAccountJson: String?): GoogleCredentials? {
+        if (serviceAccountJson.isNullOrBlank()) return null
+        return runCatching {
+            GoogleCredentials.fromStream(serviceAccountJson.byteInputStream())
+                .createScoped(FCM_SCOPE)
+        }.onFailure {
+            LoggerFactory.getLogger(FcmService::class.java)
+                .error("Failed to initialize GoogleCredentials from FCM_SERVICE_ACCOUNT_JSON, FCM disabled", it)
+        }.getOrNull()
     }
 
     private fun buildMessagePayload(
