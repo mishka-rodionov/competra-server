@@ -93,7 +93,7 @@ fun Application.configureRouting() {
                 }
 
                 orienteeringRoutes(competitionService, groupService, participantService, resultService, distanceService)
-                deviceRoutes(deviceTokenService)
+                deviceRoutes(deviceTokenService, fcmService)
             }
         }
     }
