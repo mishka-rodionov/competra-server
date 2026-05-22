@@ -65,5 +65,9 @@ jobs:
             echo "LOKI_API_KEY=$LOKI_API_KEY" >> .env
             docker login ghcr.io -u ${{ github.actor }} --password-stdin <<< "${{ secrets.GITHUB_TOKEN }}"
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull app
+            # --force-recreate гарантирует, что контейнер app поднимется с новым образом
+            # и отработает Application init (в т.ч. идемпотентные ALTER TABLE в configureDatabases).
+            # Без него compose иногда не пересоздаёт контейнер с тегом :latest и крутится старый процесс.
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate --no-deps app
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
             docker image prune -f
