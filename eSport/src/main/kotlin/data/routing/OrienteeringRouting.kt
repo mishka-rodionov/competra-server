@@ -20,6 +20,8 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import java.time.DateTimeException
+import java.time.ZoneId
 
 // ConflictException теперь ловится глобально в StatusPages.kt c идентичным ответом
 // (HTTP 409 + CommonModel { status=0, result=currentResponse, errors=[BaseError(409, "Server record is newer")] }).
@@ -139,6 +141,19 @@ fun Route.orienteeringRoutes(
             )
 
         val req = call.receive<OrienteeringCompetitionRequest>()
+
+        try {
+            ZoneId.of(req.competition.timeZoneId)
+        } catch (e: DateTimeException) {
+            return@post call.respond(
+                HttpStatusCode.BadRequest,
+                CommonModel<Any>().also {
+                    it.status = 0
+                    it.errors = listOf(BaseError(400, "Invalid timeZoneId: ${req.competition.timeZoneId}"))
+                }
+            )
+        }
+
         val result = competitionService.upsert(req, userId)
         call.respond(CommonModel<Any>().also { model ->
             model.status = 1

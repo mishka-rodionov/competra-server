@@ -30,6 +30,7 @@ data class CompetitionDetailResponse(
     val contactEmail: String?,
     val website: String?,
     val resultsStatus: String,
+    val timeZoneId: String,
     val participantGroups: List<ParticipantGroupDetailResponse>,
     val isUserRegistered: Boolean = false,
     val updatedAt: Long = 0L

@@ -28,6 +28,7 @@ object Competitions : Table("competitions") {
     val resultsStatus = varchar("results_status", 100).default("NOT_PUBLISHED")
     val updatedAt = long("updated_at").default(0L)
     val startNotificationSent = bool("start_notification_sent").default(false)
+    val timeZoneId = varchar("time_zone_id", 64).default("UTC")
 
     override val primaryKey = PrimaryKey(id)
 }

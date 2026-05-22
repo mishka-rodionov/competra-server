@@ -25,6 +25,7 @@ data class CompetitionResponse(
     @SerializedName("contactEmail") val contactEmail: String?,
     @SerializedName("website") val website: String?,
     @SerializedName("resultsStatus") val resultsStatus: String,
+    @SerializedName("timeZoneId") val timeZoneId: String,
     @SerializedName("updatedAt") val updatedAt: Long = 0L
 )
 

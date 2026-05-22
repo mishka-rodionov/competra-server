@@ -104,6 +104,7 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
         exec("ALTER TABLE split_times ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS start_notification_sent BOOLEAN NOT NULL DEFAULT FALSE")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS time_zone_id VARCHAR(64) NOT NULL DEFAULT 'UTC'")
     }
     routing {
         route("/api") {

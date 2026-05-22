@@ -74,6 +74,7 @@ class OrienteeringCompetitionService {
             contactEmail = comp[Competitions.contactEmail],
             website = comp[Competitions.website],
             resultsStatus = comp[Competitions.resultsStatus],
+            timeZoneId = comp[Competitions.timeZoneId],
             updatedAt = comp[Competitions.updatedAt]
         ),
         direction = orient[OrienteeringCompetitions.direction],
@@ -207,6 +208,7 @@ class OrienteeringCompetitionService {
                 it[contactEmail] = req.competition.contactEmail
                 it[website] = req.competition.website
                 it[resultsStatus] = req.competition.resultsStatus
+                it[timeZoneId] = req.competition.timeZoneId
                 it[updatedAt] = now
             }
             req.competition.remoteId
@@ -234,6 +236,7 @@ class OrienteeringCompetitionService {
                 it[contactEmail] = req.competition.contactEmail
                 it[website] = req.competition.website
                 it[resultsStatus] = req.competition.resultsStatus
+                it[timeZoneId] = req.competition.timeZoneId
                 it[updatedAt] = now
             } get Competitions.id
         }
@@ -302,6 +305,7 @@ class OrienteeringCompetitionService {
                 contactEmail = comp[Competitions.contactEmail],
                 website = comp[Competitions.website],
                 resultsStatus = comp[Competitions.resultsStatus],
+                timeZoneId = comp[Competitions.timeZoneId],
                 updatedAt = comp[Competitions.updatedAt]
             ),
             direction = orient[OrienteeringCompetitions.direction],
@@ -354,6 +358,7 @@ class OrienteeringCompetitionService {
                         contactEmail = comp[Competitions.contactEmail],
                         website = comp[Competitions.website],
                         resultsStatus = comp[Competitions.resultsStatus],
+                        timeZoneId = comp[Competitions.timeZoneId],
                         updatedAt = comp[Competitions.updatedAt]
                     ),
                     direction = orient[OrienteeringCompetitions.direction],
@@ -415,6 +420,7 @@ class OrienteeringCompetitionService {
                         contactEmail = comp[Competitions.contactEmail],
                         website = comp[Competitions.website],
                         resultsStatus = comp[Competitions.resultsStatus],
+                        timeZoneId = comp[Competitions.timeZoneId],
                         updatedAt = comp[Competitions.updatedAt]
                     ),
                     direction = orient[OrienteeringCompetitions.direction],
@@ -490,6 +496,7 @@ class OrienteeringCompetitionService {
                 contactEmail = comp[Competitions.contactEmail],
                 website = comp[Competitions.website],
                 resultsStatus = comp[Competitions.resultsStatus],
+                timeZoneId = comp[Competitions.timeZoneId],
                 updatedAt = comp[Competitions.updatedAt]
             )
         }
@@ -559,6 +566,7 @@ class OrienteeringCompetitionService {
             contactEmail = comp[Competitions.contactEmail],
             website = comp[Competitions.website],
             resultsStatus = comp[Competitions.resultsStatus],
+            timeZoneId = comp[Competitions.timeZoneId],
             participantGroups = groups,
             isUserRegistered = isUserRegistered,
             updatedAt = comp[Competitions.updatedAt]
