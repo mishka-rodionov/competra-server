@@ -102,15 +102,88 @@ dc exec postgres psql -U competra -d competra
 #   \d users     — структура таблицы
 #   \q           — выход
 
+# Размер БД на диске (полезно, чтобы прикинуть, насколько большим будет дамп)
+dc exec -T postgres psql -U competra -d competra -c \
+  "SELECT pg_size_pretty(pg_database_size('competra'));"
+
 # Дамп БД на диск сервера
+# Файл создаётся в текущей директории на ХОСТЕ (а не в контейнере) — потому что > обрабатывает shell.
+# Текстовый дамп обычно ≈ 30–60% от размера БД на диске.
 dc exec -T postgres pg_dump -U competra competra > /opt/competra/backup-$(date +%F).sql
+
+# То же, но сразу сжать gzip'ом (-75…-85% места)
+dc exec -T postgres pg_dump -U competra competra | gzip > /opt/competra/backup-$(date +%F).sql.gz
 
 # Восстановить из дампа (ОСТОРОЖНО — затирает текущие данные)
 cat backup-2026-05-14.sql | dc exec -T postgres psql -U competra -d competra
 
+# Восстановить из .sql.gz
+gunzip -c backup-2026-05-14.sql.gz | dc exec -T postgres psql -U competra -d competra
+
 # Скачать дамп с сервера себе на ноут (запустить на ноуте)
 scp root@<server>:/opt/competra/backup-2026-05-14.sql ~/Downloads/
 ```
+
+---
+
+## Удаление соревнований и связанных данных
+
+Связанные таблицы (по `competition_id`): `orienteering_competitions`, `distances`, `participant_groups`,
+`orienteering_participants`, `orienteering_results`. Плюс `split_times` цепляется к результатам через
+`result_id`. Внешних ключей в схеме нет — удалять нужно вручную, от листьев к корню.
+
+**Всегда перед удалением — дамп!** См. раздел «Работа с базой» выше.
+
+```bash
+# Посмотреть, какие соревнования есть в БД (id / название / дата старта)
+dc exec -T postgres psql -U competra -d competra -c \
+  "SELECT id, title, start_date FROM competitions ORDER BY id;"
+```
+
+### Удалить ВСЕ соревнования (зачистка тестовых данных)
+
+`TRUNCATE ... RESTART IDENTITY` мгновенно чистит таблицы и сбрасывает auto-increment счётчики `id`
+(чтобы новые соревнования снова начинались с 1). Пользователи, refresh-токены, device-токены,
+verification-коды — **не трогаются**.
+
+```bash
+dc exec -T postgres psql -U competra -d competra -v ON_ERROR_STOP=1 <<'SQL'
+TRUNCATE TABLE
+    split_times,
+    orienteering_results,
+    orienteering_participants,
+    participant_groups,
+    distances,
+    orienteering_competitions,
+    competitions
+RESTART IDENTITY;
+SQL
+```
+
+### Удалить одно соревнование по ID
+
+Подставь свой ID вместо `42`. Всё выполняется в одной транзакции — либо удалится целиком, либо
+ничего (если на любом шаге будет ошибка). `split_times` чистится подзапросом, т.к. там нет колонки
+`competition_id`.
+
+```bash
+dc exec -T postgres psql -U competra -d competra -v ON_ERROR_STOP=1 -v cid=42 <<'SQL'
+BEGIN;
+DELETE FROM split_times WHERE result_id IN (
+    SELECT id FROM orienteering_results WHERE competition_id = :cid
+);
+DELETE FROM orienteering_results      WHERE competition_id = :cid;
+DELETE FROM orienteering_participants WHERE competition_id = :cid;
+DELETE FROM participant_groups        WHERE competition_id = :cid;
+DELETE FROM distances                 WHERE competition_id = :cid;
+DELETE FROM orienteering_competitions WHERE competition_id = :cid;
+DELETE FROM competitions              WHERE id = :cid;
+COMMIT;
+SQL
+```
+
+Эти же SQL-запросы обёрнуты в bash-скрипты в `scripts/delete_all_competitions.sh` и
+`scripts/delete_competition.sh` — их можно использовать локально или скопировать на VPS через `scp`.
 
 ---
 
