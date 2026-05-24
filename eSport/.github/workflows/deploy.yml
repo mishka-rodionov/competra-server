@@ -45,6 +45,9 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "docker-compose.yml,docker-compose.prod.yml,nginx/**"
           target: "/opt/competra"
+          # Без overwrite scp-action молча пропускает уже существующие файлы — поэтому
+          # правки nginx-конфигов раньше не доезжали до VPS и приходилось копировать руками.
+          overwrite: true
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
