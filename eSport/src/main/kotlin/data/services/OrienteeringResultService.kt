@@ -50,8 +50,9 @@ class OrienteeringResultService {
             .where { OrienteeringResults.id eq req.id }
             .singleOrNull()
 
-        if (existing != null && req.serverUpdatedAt != null &&
-            req.serverUpdatedAt < existing[OrienteeringResults.updatedAt]
+        val serverTs = existing?.get(OrienteeringResults.updatedAt) ?: 0L
+        if (existing != null && req.serverUpdatedAt != null && req.serverUpdatedAt > 0L &&
+            req.serverUpdatedAt < serverTs
         ) {
             val splits = SplitTimes.selectAll()
                 .where { SplitTimes.resultId eq req.id }
@@ -59,7 +60,7 @@ class OrienteeringResultService {
                     it[SplitTimes.controlPoint],
                     it[SplitTimes.timestamp]
                 ) }
-            throw ConflictException(existing.toResponse(splits))
+            throw ConflictException(existing.toResponse(splits), req.serverUpdatedAt, serverTs)
         }
 
         if (existing == null) {

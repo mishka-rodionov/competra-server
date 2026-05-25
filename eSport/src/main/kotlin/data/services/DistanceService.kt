@@ -39,10 +39,11 @@ class DistanceService {
                     .where { Distances.id eq req.distanceId }
                     .singleOrNull()
 
-                if (existing != null && req.serverUpdatedAt != null &&
-                    req.serverUpdatedAt < existing[Distances.updatedAt]
+                val serverTs = existing?.get(Distances.updatedAt) ?: 0L
+                if (existing != null && req.serverUpdatedAt != null && req.serverUpdatedAt > 0L &&
+                    req.serverUpdatedAt < serverTs
                 ) {
-                    throw ConflictException(existing.toResponse())
+                    throw ConflictException(existing.toResponse(), req.serverUpdatedAt, serverTs)
                 }
 
                 if (existing != null) {

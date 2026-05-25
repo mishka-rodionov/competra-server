@@ -21,6 +21,10 @@ fun Application.configureStatusPages() {
         // Контракт идентичен прежнему respondConflictAware из OrienteeringRouting.kt:
         // клиент читает result как актуальную серверную запись и перезатирает локалку.
         exception<ConflictException> { call, cause ->
+            call.application.log.warn(
+                "CONFLICT method=${call.request.httpMethod.value} path=${call.request.path()} " +
+                "clientUpdatedAt=${cause.clientUpdatedAt} serverUpdatedAt=${cause.serverUpdatedAt}"
+            )
             call.respond(
                 HttpStatusCode.Conflict,
                 CommonModel<Any>().also {

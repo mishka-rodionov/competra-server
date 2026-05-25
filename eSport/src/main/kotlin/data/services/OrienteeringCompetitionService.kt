@@ -170,18 +170,25 @@ class OrienteeringCompetitionService {
     suspend fun upsert(req: OrienteeringCompetitionRequest, userId: String): OrienteeringCompetitionResponse = dbQuery {
         val now = System.currentTimeMillis()
 
-        // Server-wins: проверяем, что серверная запись не свежее, чем последняя
-        // успешная синхронизация на клиенте. Иначе бросаем 409.
+        // Server-wins: если клиент знает запись старее серверной — бросаем 409 с текущими данными сервера,
+        // чтобы клиент перезаписал локальное состояние и повторил запрос.
+        //
+        // Важно: сравниваем req.serverUpdatedAt с OrienteeringCompetitions.updatedAt (orient-таблица),
+        // а НЕ с Competitions.updatedAt (comp-таблица). CompetitionStatusScheduler каждые 5 минут
+        // автоматически обновляет comp.updatedAt при смене статуса, не трогая orient.updatedAt.
+        // Если бы мы сравнивали с comp.updatedAt, любое плановое обновление статуса делало бы
+        // клиента «устаревшим» и порождало ложные 409.
         val existingOrient = OrienteeringCompetitions.selectAll()
             .where { OrienteeringCompetitions.id eq req.competitionId }
             .singleOrNull()
-        if (existingOrient != null && req.serverUpdatedAt != null &&
-            req.serverUpdatedAt < existingOrient[OrienteeringCompetitions.updatedAt]
+        val serverTs = existingOrient?.get(OrienteeringCompetitions.updatedAt) ?: 0L
+        if (existingOrient != null && req.serverUpdatedAt != null && req.serverUpdatedAt > 0L &&
+            req.serverUpdatedAt < serverTs
         ) {
             val existingComp = Competitions.selectAll()
                 .where { Competitions.id eq existingOrient[OrienteeringCompetitions.competitionId] }
                 .single()
-            throw ConflictException(buildOrienteeringResponse(existingComp, existingOrient))
+            throw ConflictException(buildOrienteeringResponse(existingComp, existingOrient), req.serverUpdatedAt, serverTs)
         }
 
         val competitionId: Long = if (req.competition.remoteId != null) {
@@ -569,7 +576,7 @@ class OrienteeringCompetitionService {
             timeZoneId = comp[Competitions.timeZoneId],
             participantGroups = groups,
             isUserRegistered = isUserRegistered,
-            updatedAt = comp[Competitions.updatedAt]
+            updatedAt = orient?.get(OrienteeringCompetitions.updatedAt) ?: comp[Competitions.updatedAt]
         )
     }
 

@@ -44,10 +44,11 @@ class OrienteeringParticipantService {
                 .where { OrienteeringParticipants.id eq req.id }
                 .singleOrNull()
 
-            if (existing != null && req.serverUpdatedAt != null &&
-                req.serverUpdatedAt < existing[OrienteeringParticipants.updatedAt]
+            val serverTs = existing?.get(OrienteeringParticipants.updatedAt) ?: 0L
+            if (existing != null && req.serverUpdatedAt != null && req.serverUpdatedAt > 0L &&
+                req.serverUpdatedAt < serverTs
             ) {
-                throw ConflictException(existing.toResponse())
+                throw ConflictException(existing.toResponse(), req.serverUpdatedAt, serverTs)
             }
 
             if (existing == null) {
@@ -98,10 +99,11 @@ class OrienteeringParticipantService {
             .where { OrienteeringParticipants.id eq req.id }
             .singleOrNull()
 
-        if (existing != null && req.serverUpdatedAt != null &&
-            req.serverUpdatedAt < existing[OrienteeringParticipants.updatedAt]
+        val serverTs = existing?.get(OrienteeringParticipants.updatedAt) ?: 0L
+        if (existing != null && req.serverUpdatedAt != null && req.serverUpdatedAt > 0L &&
+            req.serverUpdatedAt < serverTs
         ) {
-            throw ConflictException(existing.toResponse())
+            throw ConflictException(existing.toResponse(), req.serverUpdatedAt, serverTs)
         }
 
         if (existing == null) {

@@ -48,3 +48,14 @@ SMTP_USER, SMTP_PASSWORD  # Yandex Mail
 - **DB transactions**: Suspended with `Dispatchers.IO`
 - **RabbitMQ**: `test-queue → test-exchange` (direct), `dlq → dlx` (dead-letter)
 - **OpenAPI**: Served at `/openapi`
+
+## Conflict Detection (Server-Wins)
+
+При upsert сервис сравнивает `req.serverUpdatedAt` (timestamp последней известной клиенту версии) с текущим серверным значением. Если сервер новее → HTTP 409 с телом текущей серверной записи; клиент перезаписывает локальные данные и повторяет запрос.
+
+**Какой `updatedAt` использовать для сравнения:**
+
+Соревнование хранится в двух таблицах: `Competitions` (comp) и `OrienteeringCompetitions` (orient). У каждой своя колонка `updatedAt`. `CompetitionStatusScheduler` каждые 5 минут автоматически обновляет `comp.updatedAt` при смене статуса, **не трогая** `orient.updatedAt`.
+
+- Conflict-check для `OrienteeringCompetitionRequest` сравнивает с **`orient.updatedAt`** — иначе плановые обновления статуса порождали бы ложные 409.
+- Android хранит `orient.updatedAt` в отдельном поле `OrienteeringCompetition.serverUpdatedAt` (`orient_server_updated_at` в Room), отдельно от `Competition.serverUpdatedAt` (`comp.updatedAt`). Оба поля нужны: они ссылаются на разные таблицы с разной семантикой.
