@@ -4,7 +4,12 @@ data class ParticipantGroupDetailResponse(
     val groupId: Long,
     val title: String,
     val maxParticipants: Int?,
-    val registeredCount: Int
+    val registeredCount: Int,
+    val distanceName: String? = null,
+    val distanceLengthMeters: Int? = null,
+    val distanceClimbMeters: Int? = null,
+    val distanceControlsCount: Int? = null,
+    val distanceDescription: String? = null
 )
 
 data class CompetitionDetailResponse(

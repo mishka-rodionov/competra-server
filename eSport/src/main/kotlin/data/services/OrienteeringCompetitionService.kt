@@ -1,6 +1,7 @@
 package com.competra.data.services
 
 import com.competra.data.database.entity.Competitions
+import com.competra.data.database.entity.Distances
 import com.competra.data.database.entity.OrienteeringCompetitions
 import com.competra.data.database.entity.OrienteeringParticipants
 import com.competra.data.database.entity.ParticipantGroups
@@ -520,17 +521,24 @@ class OrienteeringCompetitionService {
             .where { OrienteeringCompetitions.competitionId eq competitionId }
             .singleOrNull()
 
-        val groups = ParticipantGroups.selectAll()
+        val groups = ParticipantGroups
+            .join(Distances, JoinType.LEFT, ParticipantGroups.distanceId, Distances.id)
+            .selectAll()
             .where { ParticipantGroups.competitionId eq competitionId }
-            .map { group ->
+            .map { row ->
                 val registeredCount = OrienteeringParticipants.selectAll()
-                    .where { OrienteeringParticipants.groupId eq group[ParticipantGroups.id] }
+                    .where { OrienteeringParticipants.groupId eq row[ParticipantGroups.id] }
                     .count().toInt()
                 ParticipantGroupDetailResponse(
-                    groupId = group[ParticipantGroups.id],
-                    title = group[ParticipantGroups.title],
-                    maxParticipants = group[ParticipantGroups.maxParticipants],
-                    registeredCount = registeredCount
+                    groupId = row[ParticipantGroups.id],
+                    title = row[ParticipantGroups.title],
+                    maxParticipants = row[ParticipantGroups.maxParticipants],
+                    registeredCount = registeredCount,
+                    distanceName = row[Distances.name],
+                    distanceLengthMeters = row[Distances.lengthMeters],
+                    distanceClimbMeters = row[Distances.climbMeters],
+                    distanceControlsCount = row[Distances.controlsCount],
+                    distanceDescription = row[Distances.description]
                 )
             }
 
