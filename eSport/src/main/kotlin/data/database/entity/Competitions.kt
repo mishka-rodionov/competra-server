@@ -22,6 +22,7 @@ object Competitions : Table("competitions") {
     val imageUrl = varchar("image_url", 500).nullable()
     val regulationUrl = varchar("regulation_url", 500).nullable()
     val mapUrl = varchar("map_url", 500).nullable()
+    val resultsUrl = varchar("results_url", 1000).nullable()
     val contactPhone = varchar("contact_phone", 50).nullable()
     val contactEmail = varchar("contact_email", 200).nullable()
     val website = varchar("website", 500).nullable()

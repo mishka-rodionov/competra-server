@@ -88,6 +88,7 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS image_url VARCHAR(500)")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS regulation_url VARCHAR(500)")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS map_url VARCHAR(500)")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS results_url VARCHAR(1000)")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50)")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS contact_email VARCHAR(200)")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS website VARCHAR(500)")

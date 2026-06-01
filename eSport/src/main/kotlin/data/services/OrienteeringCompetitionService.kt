@@ -71,6 +71,7 @@ class OrienteeringCompetitionService {
             imageUrl = comp[Competitions.imageUrl],
             regulationUrl = comp[Competitions.regulationUrl],
             mapUrl = comp[Competitions.mapUrl],
+            resultsUrl = comp[Competitions.resultsUrl],
             contactPhone = comp[Competitions.contactPhone],
             contactEmail = comp[Competitions.contactEmail],
             website = comp[Competitions.website],
@@ -212,6 +213,7 @@ class OrienteeringCompetitionService {
                 it[imageUrl] = req.competition.imageUrl
                 it[regulationUrl] = req.competition.regulationUrl
                 it[mapUrl] = req.competition.mapUrl
+                it[resultsUrl] = req.competition.resultsUrl
                 it[contactPhone] = req.competition.contactPhone
                 it[contactEmail] = req.competition.contactEmail
                 it[website] = req.competition.website
@@ -240,6 +242,7 @@ class OrienteeringCompetitionService {
                 it[imageUrl] = req.competition.imageUrl
                 it[regulationUrl] = req.competition.regulationUrl
                 it[mapUrl] = req.competition.mapUrl
+                it[resultsUrl] = req.competition.resultsUrl
                 it[contactPhone] = req.competition.contactPhone
                 it[contactEmail] = req.competition.contactEmail
                 it[website] = req.competition.website
@@ -577,6 +580,7 @@ class OrienteeringCompetitionService {
             imageUrl = comp[Competitions.imageUrl],
             regulationUrl = comp[Competitions.regulationUrl],
             mapUrl = comp[Competitions.mapUrl],
+            resultsUrl = comp[Competitions.resultsUrl],
             contactPhone = comp[Competitions.contactPhone],
             contactEmail = comp[Competitions.contactEmail],
             website = comp[Competitions.website],

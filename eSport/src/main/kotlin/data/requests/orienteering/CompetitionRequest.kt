@@ -21,6 +21,7 @@ data class CompetitionRequest(
     @SerializedName("imageUrl") val imageUrl: String? = null,
     @SerializedName("regulationUrl") val regulationUrl: String?,
     @SerializedName("mapUrl") val mapUrl: String?,
+    @SerializedName("resultsUrl") val resultsUrl: String? = null,
     @SerializedName("contactPhone") val contactPhone: String?,
     @SerializedName("contactEmail") val contactEmail: String?,
     @SerializedName("website") val website: String?,

@@ -31,6 +31,7 @@ data class CompetitionDetailResponse(
     val imageUrl: String? = null,
     val regulationUrl: String?,
     val mapUrl: String?,
+    val resultsUrl: String? = null,
     val contactPhone: String?,
     val contactEmail: String?,
     val website: String?,
