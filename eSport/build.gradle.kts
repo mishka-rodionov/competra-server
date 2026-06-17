@@ -26,6 +26,7 @@ dependencies {
     implementation("io.ktor:ktor-server-openapi")
     implementation("io.ktor:ktor-server-auth")
     implementation("io.ktor:ktor-server-auth-jwt")
+    implementation("io.ktor:ktor-server-cors")
     implementation("io.ktor:ktor-server-auto-head-response")
     implementation("io.ktor:ktor-server-call-logging")
     implementation("io.ktor:ktor-server-call-id")

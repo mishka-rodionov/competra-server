@@ -10,6 +10,7 @@ import io.ktor.server.application.*
 import io.ktor.server.plugins.autohead.*
 import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.openapi.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -30,6 +31,19 @@ import org.koin.logger.slf4jLogger
 import org.slf4j.event.*
 
 fun Application.configureHTTP() {
+    install(CORS) {
+        allowHost("mishka-rodionov.github.io", schemes = listOf("https"))
+        allowHost("localhost:8080", schemes = listOf("http"))
+        allowHost("localhost:3000", schemes = listOf("http"))
+        allowHeader(HttpHeaders.ContentType)
+        allowHeader(HttpHeaders.Authorization)
+        allowMethod(HttpMethod.Get)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Put)
+        allowMethod(HttpMethod.Delete)
+        allowMethod(HttpMethod.Patch)
+        allowMethod(HttpMethod.Options)
+    }
     routing {
         openAPI(path = "openapi")
     }

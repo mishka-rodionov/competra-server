@@ -2,6 +2,10 @@ package com.competra.data.routing
 
 import com.competra.data.requests.orienteering.DistanceRequest
 import com.competra.data.requests.orienteering.OrienteeringCompetitionRequest
+import com.competra.data.util.IOFXmlParser
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
+import io.ktor.utils.io.toByteArray
 import com.competra.data.requests.orienteering.OrienteeringParticipantRequest
 import com.competra.data.requests.orienteering.OrienteeringResultRequest
 import com.competra.data.requests.orienteering.ParticipantGroupRequest
@@ -313,6 +317,34 @@ fun Route.orienteeringRoutes(
             model.status = 1
             model.result = result
         })
+    }
+
+    post("/event/orienteering/import/courses") {
+        val multipart = call.receiveMultipart()
+        var xmlBytes: ByteArray? = null
+        var competitionId: Long? = null
+
+        multipart.forEachPart { part ->
+            when (part) {
+                is PartData.FileItem -> xmlBytes = part.provider().toByteArray()
+                is PartData.FormItem -> if (part.name == "competitionId") competitionId = part.value.toLongOrNull()
+                else -> {}
+            }
+            part.dispose()
+        }
+
+        if (xmlBytes == null || competitionId == null)
+            return@post call.respond(
+                HttpStatusCode.BadRequest,
+                CommonModel<Any>().also {
+                    it.status = 0
+                    it.errors = listOf(BaseError(400, "xmlFile and competitionId are required"))
+                }
+            )
+
+        val requests = IOFXmlParser.parse(xmlBytes!!, competitionId!!)
+        val result = distanceService.upsertAll(requests)
+        call.respond(CommonModel<Any>().also { it.status = 1; it.result = result })
     }
 
     get("/event/orienteering/distances") {
