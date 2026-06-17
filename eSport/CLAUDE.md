@@ -60,6 +60,9 @@ SMTP_USER, SMTP_PASSWORD  # Yandex Mail
 - Conflict-check для `OrienteeringCompetitionRequest` сравнивает с **`orient.updatedAt`** — иначе плановые обновления статуса порождали бы ложные 409.
 - Android хранит `orient.updatedAt` в отдельном поле `OrienteeringCompetition.serverUpdatedAt` (`orient_server_updated_at` в Room), отдельно от `Competition.serverUpdatedAt` (`comp.updatedAt`). Оба поля нужны: они ссылаются на разные таблицы с разной семантикой.
 
+## Commands
+- Always use rtk for commands (rtk grep, rtk find, rtk git, and etc.)
+
 ## Межпроектные связи
 
 Этот проект — центральный сервер экосистемы из четырёх репозиториев:
