@@ -155,7 +155,7 @@ class OrienteeringParticipantService {
             .singleOrNull() ?: throw IllegalStateException("Соревнование не найдено")
 
         val orient = OrienteeringCompetitions.selectAll()
-            .where { OrienteeringCompetitions.competitionId eq req.competitionId }
+            .where { OrienteeringCompetitions.id eq req.competitionId }
             .singleOrNull()
 
         val effectiveStatus = computeEffectiveStatus(
@@ -213,7 +213,7 @@ class OrienteeringParticipantService {
     /**
      * Отменяет регистрацию пользователя на соревнование.
      */
-    suspend fun cancelRegistration(competitionId: Long, userId: String) = dbQuery {
+    suspend fun cancelRegistration(competitionId: String, userId: String) = dbQuery {
         OrienteeringParticipants.deleteWhere {
             (OrienteeringParticipants.userId eq userId) and
             (OrienteeringParticipants.competitionId eq competitionId)
@@ -223,7 +223,7 @@ class OrienteeringParticipantService {
     /**
      * Проверяет, зарегистрирован ли пользователь на данное соревнование.
      */
-    suspend fun isRegistered(competitionId: Long, userId: String): Boolean = dbQuery {
+    suspend fun isRegistered(competitionId: String, userId: String): Boolean = dbQuery {
         OrienteeringParticipants.selectAll()
             .where {
                 (OrienteeringParticipants.userId eq userId) and
@@ -232,7 +232,7 @@ class OrienteeringParticipantService {
             .singleOrNull() != null
     }
 
-    suspend fun getByCompetition(competitionId: Long): List<OrienteeringParticipantResponse> = dbQuery {
+    suspend fun getByCompetition(competitionId: String): List<OrienteeringParticipantResponse> = dbQuery {
         OrienteeringParticipants.selectAll()
             .where { OrienteeringParticipants.competitionId eq competitionId }
             .map { row -> row.toResponse() }

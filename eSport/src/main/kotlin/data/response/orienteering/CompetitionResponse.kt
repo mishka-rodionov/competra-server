@@ -3,7 +3,9 @@ package com.competra.data.response.orienteering
 import com.google.gson.annotations.SerializedName
 
 data class CompetitionResponse(
-    @SerializedName("remoteId") val remoteId: Long,
+    @SerializedName("id") val id: String,
+    /** Прежний BIGINT-идентификатор — для миграции существующих клиентов на UUID. */
+    @SerializedName("legacyId") val legacyId: Long? = null,
     @SerializedName("title") val title: String,
     @SerializedName("startDate") val startDate: Long,
     @SerializedName("endDate") val endDate: Long?,

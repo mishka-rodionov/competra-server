@@ -13,6 +13,7 @@ import com.competra.data.response.orienteering.CoordinatesResponse
 import com.competra.data.response.orienteering.OrienteeringCompetitionResponse
 import com.competra.data.response.orienteering.ParticipantGroupDetailResponse
 import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greater
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
@@ -34,51 +35,50 @@ class OrienteeringCompetitionService {
         val MANUAL_STATUSES = listOf("IN_PROGRESS", "FINISHED", "DRAFT", "ARCHIVED")
     }
 
-    /**
-     * Вычисляет эффективный статус соревнования на основе сохранённого статуса и текущего времени.
-     *
-     * Статусы IN_PROGRESS и FINISHED задаются организатором вручную и не переопределяются.
-     * Остальные статусы вычисляются динамически по датам регистрации и времени старта.
-     */
-    private fun buildOrienteeringResponse(
-        comp: org.jetbrains.exposed.sql.ResultRow,
-        orient: org.jetbrains.exposed.sql.ResultRow
-    ): OrienteeringCompetitionResponse = OrienteeringCompetitionResponse(
-        competitionId = orient[OrienteeringCompetitions.id],
-        competition = CompetitionResponse(
-            remoteId = comp[Competitions.id],
-            title = comp[Competitions.title],
-            startDate = comp[Competitions.startDate],
-            endDate = comp[Competitions.endDate],
-            kindOfSport = comp[Competitions.kindOfSport],
-            description = comp[Competitions.description],
-            address = comp[Competitions.address],
-            mainOrganizerId = comp[Competitions.mainOrganizerId],
-            coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
-                CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
-            else null,
-            status = computeEffectiveStatus(
-                storedStatus = comp[Competitions.status],
-                registrationStart = comp[Competitions.registrationStart],
-                registrationEnd = comp[Competitions.registrationEnd],
-                startTime = orient[OrienteeringCompetitions.startTime]
-            ),
+    /** Маппинг строки ядра в [CompetitionResponse]. startTime берётся из расширения (если есть). */
+    private fun compToResponse(comp: ResultRow, startTime: Long?): CompetitionResponse = CompetitionResponse(
+        id = comp[Competitions.id],
+        legacyId = comp[Competitions.legacyId],
+        title = comp[Competitions.title],
+        startDate = comp[Competitions.startDate],
+        endDate = comp[Competitions.endDate],
+        kindOfSport = comp[Competitions.kindOfSport],
+        description = comp[Competitions.description],
+        address = comp[Competitions.address],
+        mainOrganizerId = comp[Competitions.mainOrganizerId],
+        coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
+            CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
+        else null,
+        status = computeEffectiveStatus(
+            storedStatus = comp[Competitions.status],
             registrationStart = comp[Competitions.registrationStart],
             registrationEnd = comp[Competitions.registrationEnd],
-            maxParticipants = comp[Competitions.maxParticipants],
-            feeAmount = comp[Competitions.feeAmount],
-            feeCurrency = comp[Competitions.feeCurrency],
-            imageUrl = comp[Competitions.imageUrl],
-            regulationUrl = comp[Competitions.regulationUrl],
-            mapUrl = comp[Competitions.mapUrl],
-            resultsUrl = comp[Competitions.resultsUrl],
-            contactPhone = comp[Competitions.contactPhone],
-            contactEmail = comp[Competitions.contactEmail],
-            website = comp[Competitions.website],
-            resultsStatus = comp[Competitions.resultsStatus],
-            timeZoneId = comp[Competitions.timeZoneId],
-            updatedAt = comp[Competitions.updatedAt]
+            startTime = startTime
         ),
+        registrationStart = comp[Competitions.registrationStart],
+        registrationEnd = comp[Competitions.registrationEnd],
+        maxParticipants = comp[Competitions.maxParticipants],
+        feeAmount = comp[Competitions.feeAmount],
+        feeCurrency = comp[Competitions.feeCurrency],
+        imageUrl = comp[Competitions.imageUrl],
+        regulationUrl = comp[Competitions.regulationUrl],
+        mapUrl = comp[Competitions.mapUrl],
+        resultsUrl = comp[Competitions.resultsUrl],
+        contactPhone = comp[Competitions.contactPhone],
+        contactEmail = comp[Competitions.contactEmail],
+        website = comp[Competitions.website],
+        resultsStatus = comp[Competitions.resultsStatus],
+        timeZoneId = comp[Competitions.timeZoneId],
+        updatedAt = comp[Competitions.updatedAt]
+    )
+
+    /** Маппинг пары (ядро, расширение) в [OrienteeringCompetitionResponse]. */
+    private fun buildOrienteeringResponse(
+        comp: ResultRow,
+        orient: ResultRow
+    ): OrienteeringCompetitionResponse = OrienteeringCompetitionResponse(
+        competitionId = comp[Competitions.id],
+        competition = compToResponse(comp, orient[OrienteeringCompetitions.startTime]),
         direction = orient[OrienteeringCompetitions.direction],
         punchingSystem = orient[OrienteeringCompetitions.punchingSystem],
         startTimeMode = orient[OrienteeringCompetitions.startTimeMode],
@@ -109,11 +109,6 @@ class OrienteeringCompetitionService {
      * новое временное состояние. Не трогает ручные/терминальные статусы
      * (`IN_PROGRESS`, `FINISHED`, `DRAFT`, `ARCHIVED`).
      *
-     * Логика отражает [computeEffectiveStatus]:
-     *   - startTime <= now → IN_PROGRESS
-     *   - registrationEnd <= now → REGISTRATION_CLOSED
-     *   - окно регистрации открыто и ещё не закрыто → REGISTRATION_OPEN
-     *
      * Используется фоновым шедулером раз в 5 минут.
      *
      * @return суммарное число обновлённых строк за этот тик.
@@ -123,14 +118,13 @@ class OrienteeringCompetitionService {
         var total = 0
 
         // 1) → IN_PROGRESS: наступил OrienteeringCompetitions.startTime.
-        // Join указан явно: FK на competition_id в схеме не объявлен,
-        // поэтому неявный innerJoin падает с "no matching primary/foreign key pair".
-        val toInProgressIds: List<Long> = Competitions
+        // Связь 1:1 по общему UUID: Competitions.id == OrienteeringCompetitions.id.
+        val toInProgressIds: List<String> = Competitions
             .join(
                 otherTable = OrienteeringCompetitions,
                 joinType = JoinType.INNER,
                 onColumn = Competitions.id,
-                otherColumn = OrienteeringCompetitions.competitionId
+                otherColumn = OrienteeringCompetitions.id
             )
             .selectAll()
             .where {
@@ -171,30 +165,31 @@ class OrienteeringCompetitionService {
 
     suspend fun upsert(req: OrienteeringCompetitionRequest, userId: String): OrienteeringCompetitionResponse = dbQuery {
         val now = System.currentTimeMillis()
+        val competitionId = req.competitionId
 
-        // Server-wins: если клиент знает запись старее серверной — бросаем 409 с текущими данными сервера,
-        // чтобы клиент перезаписал локальное состояние и повторил запрос.
-        //
-        // Важно: сравниваем req.serverUpdatedAt с OrienteeringCompetitions.updatedAt (orient-таблица),
-        // а НЕ с Competitions.updatedAt (comp-таблица). CompetitionStatusScheduler каждые 5 минут
-        // автоматически обновляет comp.updatedAt при смене статуса, не трогая orient.updatedAt.
-        // Если бы мы сравнивали с comp.updatedAt, любое плановое обновление статуса делало бы
-        // клиента «устаревшим» и порождало ложные 409.
+        // Server-wins: если клиент знает запись старее серверной — бросаем 409 с текущими данными сервера.
+        // Сравниваем с OrienteeringCompetitions.updatedAt (расширение), а НЕ с Competitions.updatedAt:
+        // CompetitionStatusScheduler автоматически обновляет comp.updatedAt при смене статуса, не трогая
+        // orient.updatedAt. Иначе любое плановое обновление статуса порождало бы ложные 409.
         val existingOrient = OrienteeringCompetitions.selectAll()
-            .where { OrienteeringCompetitions.id eq req.competitionId }
+            .where { OrienteeringCompetitions.id eq competitionId }
             .singleOrNull()
         val serverTs = existingOrient?.get(OrienteeringCompetitions.updatedAt) ?: 0L
         if (existingOrient != null && req.serverUpdatedAt != null && req.serverUpdatedAt > 0L &&
             req.serverUpdatedAt < serverTs
         ) {
             val existingComp = Competitions.selectAll()
-                .where { Competitions.id eq existingOrient[OrienteeringCompetitions.competitionId] }
+                .where { Competitions.id eq competitionId }
                 .single()
             throw ConflictException(buildOrienteeringResponse(existingComp, existingOrient), req.serverUpdatedAt, serverTs)
         }
 
-        val competitionId: Long = if (req.competition.remoteId != null) {
-            Competitions.update({ Competitions.id eq req.competition.remoteId }) {
+        val existingComp = Competitions.selectAll()
+            .where { Competitions.id eq competitionId }
+            .singleOrNull()
+
+        if (existingComp != null) {
+            Competitions.update({ Competitions.id eq competitionId }) {
                 it[title] = req.competition.title
                 it[startDate] = req.competition.startDate
                 it[endDate] = req.competition.endDate
@@ -221,9 +216,10 @@ class OrienteeringCompetitionService {
                 it[timeZoneId] = req.competition.timeZoneId
                 it[updatedAt] = now
             }
-            req.competition.remoteId
         } else {
             Competitions.insert {
+                it[id] = competitionId
+                it[ownerId] = userId
                 it[title] = req.competition.title
                 it[startDate] = req.competition.startDate
                 it[endDate] = req.competition.endDate
@@ -249,18 +245,12 @@ class OrienteeringCompetitionService {
                 it[resultsStatus] = req.competition.resultsStatus
                 it[timeZoneId] = req.competition.timeZoneId
                 it[updatedAt] = now
-            } get Competitions.id
+            }
         }
 
-        val existingOrienteering = OrienteeringCompetitions.selectAll()
-            .where { OrienteeringCompetitions.id eq req.competitionId }
-            .singleOrNull()
-
-        if (existingOrienteering == null) {
+        if (existingOrient == null) {
             OrienteeringCompetitions.insert {
-                it[id] = req.competitionId
-                it[OrienteeringCompetitions.competitionId] = competitionId
-                it[OrienteeringCompetitions.userId] = userId
+                it[id] = competitionId
                 it[direction] = req.direction
                 it[punchingSystem] = req.punchingSystem
                 it[startTimeMode] = req.startTimeMode
@@ -270,8 +260,7 @@ class OrienteeringCompetitionService {
                 it[updatedAt] = now
             }
         } else {
-            OrienteeringCompetitions.update({ OrienteeringCompetitions.id eq req.competitionId }) {
-                it[OrienteeringCompetitions.competitionId] = competitionId
+            OrienteeringCompetitions.update({ OrienteeringCompetitions.id eq competitionId }) {
                 it[direction] = req.direction
                 it[punchingSystem] = req.punchingSystem
                 it[startTimeMode] = req.startTimeMode
@@ -282,104 +271,18 @@ class OrienteeringCompetitionService {
         }
 
         val comp = Competitions.selectAll().where { Competitions.id eq competitionId }.single()
-        val orient = OrienteeringCompetitions.selectAll().where { OrienteeringCompetitions.id eq req.competitionId }.single()
-
-        OrienteeringCompetitionResponse(
-            competitionId = orient[OrienteeringCompetitions.id],
-            competition = CompetitionResponse(
-                remoteId = comp[Competitions.id],
-                title = comp[Competitions.title],
-                startDate = comp[Competitions.startDate],
-                endDate = comp[Competitions.endDate],
-                kindOfSport = comp[Competitions.kindOfSport],
-                description = comp[Competitions.description],
-                address = comp[Competitions.address],
-                mainOrganizerId = comp[Competitions.mainOrganizerId],
-                coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
-                    CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
-                else null,
-                status = computeEffectiveStatus(
-                    storedStatus = comp[Competitions.status],
-                    registrationStart = comp[Competitions.registrationStart],
-                    registrationEnd = comp[Competitions.registrationEnd],
-                    startTime = orient[OrienteeringCompetitions.startTime]
-                ),
-                registrationStart = comp[Competitions.registrationStart],
-                registrationEnd = comp[Competitions.registrationEnd],
-                maxParticipants = comp[Competitions.maxParticipants],
-                feeAmount = comp[Competitions.feeAmount],
-                feeCurrency = comp[Competitions.feeCurrency],
-                imageUrl = comp[Competitions.imageUrl],
-                regulationUrl = comp[Competitions.regulationUrl],
-                mapUrl = comp[Competitions.mapUrl],
-                contactPhone = comp[Competitions.contactPhone],
-                contactEmail = comp[Competitions.contactEmail],
-                website = comp[Competitions.website],
-                resultsStatus = comp[Competitions.resultsStatus],
-                timeZoneId = comp[Competitions.timeZoneId],
-                updatedAt = comp[Competitions.updatedAt]
-            ),
-            direction = orient[OrienteeringCompetitions.direction],
-            punchingSystem = orient[OrienteeringCompetitions.punchingSystem],
-            startTimeMode = orient[OrienteeringCompetitions.startTimeMode],
-            countdownTimer = orient[OrienteeringCompetitions.countdownTimer],
-            startTime = orient[OrienteeringCompetitions.startTime],
-            startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds],
-            updatedAt = orient[OrienteeringCompetitions.updatedAt]
-        )
+        val orient = OrienteeringCompetitions.selectAll().where { OrienteeringCompetitions.id eq competitionId }.single()
+        buildOrienteeringResponse(comp, orient)
     }
 
     suspend fun getByUserId(userId: String): List<OrienteeringCompetitionResponse> = dbQuery {
-        OrienteeringCompetitions.selectAll()
-            .where { OrienteeringCompetitions.userId eq userId }
-            .mapNotNull { orient ->
-                val comp = Competitions.selectAll()
-                    .where { Competitions.id eq orient[OrienteeringCompetitions.competitionId] }
+        Competitions.selectAll()
+            .where { Competitions.ownerId eq userId }
+            .mapNotNull { comp ->
+                val orient = OrienteeringCompetitions.selectAll()
+                    .where { OrienteeringCompetitions.id eq comp[Competitions.id] }
                     .singleOrNull() ?: return@mapNotNull null
-
-                OrienteeringCompetitionResponse(
-                    competitionId = orient[OrienteeringCompetitions.id],
-                    competition = CompetitionResponse(
-                        remoteId = comp[Competitions.id],
-                        title = comp[Competitions.title],
-                        startDate = comp[Competitions.startDate],
-                        endDate = comp[Competitions.endDate],
-                        kindOfSport = comp[Competitions.kindOfSport],
-                        description = comp[Competitions.description],
-                        address = comp[Competitions.address],
-                        mainOrganizerId = comp[Competitions.mainOrganizerId],
-                        coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
-                            CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
-                        else null,
-                        status = computeEffectiveStatus(
-                            storedStatus = comp[Competitions.status],
-                            registrationStart = comp[Competitions.registrationStart],
-                            registrationEnd = comp[Competitions.registrationEnd],
-                            startTime = orient[OrienteeringCompetitions.startTime]
-                        ),
-                        registrationStart = comp[Competitions.registrationStart],
-                        registrationEnd = comp[Competitions.registrationEnd],
-                        maxParticipants = comp[Competitions.maxParticipants],
-                        feeAmount = comp[Competitions.feeAmount],
-                        feeCurrency = comp[Competitions.feeCurrency],
-                        imageUrl = comp[Competitions.imageUrl],
-                        regulationUrl = comp[Competitions.regulationUrl],
-                        mapUrl = comp[Competitions.mapUrl],
-                        contactPhone = comp[Competitions.contactPhone],
-                        contactEmail = comp[Competitions.contactEmail],
-                        website = comp[Competitions.website],
-                        resultsStatus = comp[Competitions.resultsStatus],
-                        timeZoneId = comp[Competitions.timeZoneId],
-                        updatedAt = comp[Competitions.updatedAt]
-                    ),
-                    direction = orient[OrienteeringCompetitions.direction],
-                    punchingSystem = orient[OrienteeringCompetitions.punchingSystem],
-                    startTimeMode = orient[OrienteeringCompetitions.startTimeMode],
-                    countdownTimer = orient[OrienteeringCompetitions.countdownTimer],
-                    startTime = orient[OrienteeringCompetitions.startTime],
-                    startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds],
-                    updatedAt = orient[OrienteeringCompetitions.updatedAt]
-                )
+                buildOrienteeringResponse(comp, orient)
             }
     }
 
@@ -393,55 +296,12 @@ class OrienteeringCompetitionService {
             .mapNotNull { participant ->
                 val competitionId = participant[OrienteeringParticipants.competitionId]
                 val orient = OrienteeringCompetitions.selectAll()
-                    .where { OrienteeringCompetitions.competitionId eq competitionId }
+                    .where { OrienteeringCompetitions.id eq competitionId }
                     .singleOrNull() ?: return@mapNotNull null
                 val comp = Competitions.selectAll()
                     .where { Competitions.id eq competitionId }
                     .singleOrNull() ?: return@mapNotNull null
-
-                OrienteeringCompetitionResponse(
-                    competitionId = orient[OrienteeringCompetitions.id],
-                    competition = CompetitionResponse(
-                        remoteId = comp[Competitions.id],
-                        title = comp[Competitions.title],
-                        startDate = comp[Competitions.startDate],
-                        endDate = comp[Competitions.endDate],
-                        kindOfSport = comp[Competitions.kindOfSport],
-                        description = comp[Competitions.description],
-                        address = comp[Competitions.address],
-                        mainOrganizerId = comp[Competitions.mainOrganizerId],
-                        coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
-                            CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
-                        else null,
-                        status = computeEffectiveStatus(
-                            storedStatus = comp[Competitions.status],
-                            registrationStart = comp[Competitions.registrationStart],
-                            registrationEnd = comp[Competitions.registrationEnd],
-                            startTime = orient[OrienteeringCompetitions.startTime]
-                        ),
-                        registrationStart = comp[Competitions.registrationStart],
-                        registrationEnd = comp[Competitions.registrationEnd],
-                        maxParticipants = comp[Competitions.maxParticipants],
-                        feeAmount = comp[Competitions.feeAmount],
-                        feeCurrency = comp[Competitions.feeCurrency],
-                        imageUrl = comp[Competitions.imageUrl],
-                        regulationUrl = comp[Competitions.regulationUrl],
-                        mapUrl = comp[Competitions.mapUrl],
-                        contactPhone = comp[Competitions.contactPhone],
-                        contactEmail = comp[Competitions.contactEmail],
-                        website = comp[Competitions.website],
-                        resultsStatus = comp[Competitions.resultsStatus],
-                        timeZoneId = comp[Competitions.timeZoneId],
-                        updatedAt = comp[Competitions.updatedAt]
-                    ),
-                    direction = orient[OrienteeringCompetitions.direction],
-                    punchingSystem = orient[OrienteeringCompetitions.punchingSystem],
-                    startTimeMode = orient[OrienteeringCompetitions.startTimeMode],
-                    countdownTimer = orient[OrienteeringCompetitions.countdownTimer],
-                    startTime = orient[OrienteeringCompetitions.startTime],
-                    startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds],
-                    updatedAt = orient[OrienteeringCompetitions.updatedAt]
-                )
+                buildOrienteeringResponse(comp, orient)
             }
             .distinctBy { it.competitionId }
     }
@@ -452,11 +312,6 @@ class OrienteeringCompetitionService {
      * SQL-фильтры (виды спорта, диапазон дат старта) применяются на уровне БД.
      * Фильтр по статусу применяется в коде, потому что эффективный статус
      * вычисляется из дат через [computeEffectiveStatus] и не хранится напрямую.
-     *
-     * @param kindOfSports список наименований видов спорта (например, ["Orienteering"]). Пустой — без ограничения.
-     * @param statuses список эффективных статусов (REGISTRATION_OPEN / IN_PROGRESS / FINISHED и др.). Комбинируется через OR. Пустой — без ограничения.
-     * @param dateFrom нижняя граница [Competitions.startDate], inclusive. null — без ограничения.
-     * @param dateTo верхняя граница [Competitions.startDate], inclusive. null — без ограничения.
      */
     suspend fun getPublicCompetitions(
         kindOfSports: List<String>,
@@ -475,53 +330,19 @@ class OrienteeringCompetitionService {
             query.andWhere { Competitions.startDate lessEq dateTo }
         }
 
-        val items = query.map { comp ->
-            CompetitionResponse(
-                remoteId = comp[Competitions.id],
-                title = comp[Competitions.title],
-                startDate = comp[Competitions.startDate],
-                endDate = comp[Competitions.endDate],
-                kindOfSport = comp[Competitions.kindOfSport],
-                description = comp[Competitions.description],
-                address = comp[Competitions.address],
-                mainOrganizerId = comp[Competitions.mainOrganizerId],
-                coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
-                    CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
-                else null,
-                // Для публичного списка startTime недоступен без джойна — используем даты регистрации
-                status = computeEffectiveStatus(
-                    storedStatus = comp[Competitions.status],
-                    registrationStart = comp[Competitions.registrationStart],
-                    registrationEnd = comp[Competitions.registrationEnd],
-                    startTime = null
-                ),
-                registrationStart = comp[Competitions.registrationStart],
-                registrationEnd = comp[Competitions.registrationEnd],
-                maxParticipants = comp[Competitions.maxParticipants],
-                feeAmount = comp[Competitions.feeAmount],
-                feeCurrency = comp[Competitions.feeCurrency],
-                imageUrl = comp[Competitions.imageUrl],
-                regulationUrl = comp[Competitions.regulationUrl],
-                mapUrl = comp[Competitions.mapUrl],
-                contactPhone = comp[Competitions.contactPhone],
-                contactEmail = comp[Competitions.contactEmail],
-                website = comp[Competitions.website],
-                resultsStatus = comp[Competitions.resultsStatus],
-                timeZoneId = comp[Competitions.timeZoneId],
-                updatedAt = comp[Competitions.updatedAt]
-            )
-        }
+        // Для публичного списка startTime недоступен без джойна — используем даты регистрации.
+        val items = query.map { comp -> compToResponse(comp, startTime = null) }
 
         if (statuses.isEmpty()) items else items.filter { it.status in statuses }
     }
 
-    suspend fun getById(competitionId: Long, userId: String? = null): CompetitionDetailResponse? = dbQuery {
+    suspend fun getById(competitionId: String, userId: String? = null): CompetitionDetailResponse? = dbQuery {
         val comp = Competitions.selectAll()
             .where { Competitions.id eq competitionId }
             .singleOrNull() ?: return@dbQuery null
 
         val orient = OrienteeringCompetitions.selectAll()
-            .where { OrienteeringCompetitions.competitionId eq competitionId }
+            .where { OrienteeringCompetitions.id eq competitionId }
             .singleOrNull()
 
         val groups = ParticipantGroups
@@ -555,7 +376,8 @@ class OrienteeringCompetitionService {
         } else false
 
         CompetitionDetailResponse(
-            remoteId = comp[Competitions.id],
+            id = comp[Competitions.id],
+            legacyId = comp[Competitions.legacyId],
             title = comp[Competitions.title],
             startDate = comp[Competitions.startDate],
             endDate = comp[Competitions.endDate],
@@ -593,14 +415,28 @@ class OrienteeringCompetitionService {
     }
 
     /**
-     * Удаляет соревнование и все связанные сущности через CASCADE FK
-     * (orienteering_competitions, participant_groups, orienteering_participants,
-     * orienteering_results, distances). Если CASCADE не настроен в БД — удаление
-     * происходит вручную из связанных таблиц перед основной.
+     * Переходный helper: ищет соревнование по новому UUID, а если параметр числовой —
+     * по [Competitions.legacyId]. Позволяет старым клиентам, ещё знающим прежний BIGINT,
+     * читать соревнование во время миграции на UUID.
      */
-    suspend fun deleteById(competitionId: Long): Boolean = dbQuery {
-        @Suppress("DEPRECATION")
-        OrienteeringCompetitions.deleteWhere { OrienteeringCompetitions.competitionId eq competitionId }
+    suspend fun getByIdOrLegacy(rawId: String, userId: String? = null): CompetitionDetailResponse? {
+        getById(rawId, userId)?.let { return it }
+        val legacy = rawId.toLongOrNull() ?: return null
+        val resolvedId = dbQuery {
+            Competitions.selectAll()
+                .where { Competitions.legacyId eq legacy }
+                .singleOrNull()
+                ?.get(Competitions.id)
+        } ?: return null
+        return getById(resolvedId, userId)
+    }
+
+    /**
+     * Удаляет соревнование. Связанные сущности удаляются каскадом через FK
+     * (orienteering_competitions, participant_groups, orienteering_participants,
+     * orienteering_results, distances).
+     */
+    suspend fun deleteById(competitionId: String): Boolean = dbQuery {
         @Suppress("DEPRECATION")
         Competitions.deleteWhere { Competitions.id eq competitionId } > 0
     }

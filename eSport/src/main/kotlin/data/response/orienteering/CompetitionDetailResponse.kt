@@ -13,7 +13,8 @@ data class ParticipantGroupDetailResponse(
 )
 
 data class CompetitionDetailResponse(
-    val remoteId: Long,
+    val id: String,
+    val legacyId: Long? = null,
     val title: String,
     val startDate: Long,
     val endDate: Long?,

@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName
 
 data class ParticipantGroupResponse(
     @SerializedName("groupId") val groupId: Long,
-    @SerializedName("competitionId") val competitionId: Long,
+    @SerializedName("competitionId") val competitionId: String,
     @SerializedName("title") val title: String,
     @SerializedName("gender") val gender: String?,
     @SerializedName("minAge") val minAge: Int?,

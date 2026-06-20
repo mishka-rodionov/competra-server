@@ -7,7 +7,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 object IOFXmlParser {
 
-    fun parse(xmlBytes: ByteArray, competitionId: Long): List<DistanceRequest> {
+    fun parse(xmlBytes: ByteArray, competitionId: String): List<DistanceRequest> {
         val factory = DocumentBuilderFactory.newInstance().apply {
             isXIncludeAware = false
             isExpandEntityReferences = false

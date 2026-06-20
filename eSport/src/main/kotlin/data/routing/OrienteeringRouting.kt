@@ -73,7 +73,7 @@ fun Route.orienteeringPublicRoutes(
     }
 
     get("/event/orienteering/results/competition") {
-        val competitionId = call.request.queryParameters["competitionId"]?.toLongOrNull()
+        val competitionId = call.request.queryParameters["competitionId"]
             ?: return@get call.respond(
                 HttpStatusCode.BadRequest,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }
@@ -86,7 +86,7 @@ fun Route.orienteeringPublicRoutes(
     }
 
     get("/event/orienteering/participantGroups") {
-        val competitionId = call.request.queryParameters["competitionId"]?.toLongOrNull()
+        val competitionId = call.request.queryParameters["competitionId"]
             ?: return@get call.respond(
                 HttpStatusCode.BadRequest,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }
@@ -99,7 +99,7 @@ fun Route.orienteeringPublicRoutes(
     }
 
     get("/event/orienteering/participants/competition") {
-        val competitionId = call.request.queryParameters["competitionId"]?.toLongOrNull()
+        val competitionId = call.request.queryParameters["competitionId"]
             ?: return@get call.respond(
                 HttpStatusCode.BadRequest,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }
@@ -112,13 +112,13 @@ fun Route.orienteeringPublicRoutes(
     }
 
     get("/event/orienteering/competitions/public/{id}") {
-        val id = call.parameters["id"]?.toLongOrNull()
+        val id = call.parameters["id"]
             ?: return@get call.respond(
                 HttpStatusCode.BadRequest,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "id is required")) }
             )
         val userId = call.request.queryParameters["userId"]
-        val detail = competitionService.getById(id, userId)
+        val detail = competitionService.getByIdOrLegacy(id, userId)
             ?: return@get call.respond(
                 HttpStatusCode.NotFound,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(404, "Competition not found")) }
@@ -239,7 +239,7 @@ fun Route.orienteeringRoutes(
     }
 
     delete("/event/orienteering/competitions/{id}") {
-        val id = call.parameters["id"]?.toLongOrNull()
+        val id = call.parameters["id"]
             ?: return@delete call.respond(
                 HttpStatusCode.BadRequest,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "id is required")) }
@@ -322,12 +322,12 @@ fun Route.orienteeringRoutes(
     post("/event/orienteering/import/courses") {
         val multipart = call.receiveMultipart()
         var xmlBytes: ByteArray? = null
-        var competitionId: Long? = null
+        var competitionId: String? = null
 
         multipart.forEachPart { part ->
             when (part) {
                 is PartData.FileItem -> xmlBytes = part.provider().toByteArray()
-                is PartData.FormItem -> if (part.name == "competitionId") competitionId = part.value.toLongOrNull()
+                is PartData.FormItem -> if (part.name == "competitionId") competitionId = part.value
                 else -> {}
             }
             part.dispose()
@@ -348,7 +348,7 @@ fun Route.orienteeringRoutes(
     }
 
     get("/event/orienteering/distances") {
-        val competitionId = call.request.queryParameters["competitionId"]?.toLongOrNull()
+        val competitionId = call.request.queryParameters["competitionId"]
             ?: return@get call.respond(
                 HttpStatusCode.BadRequest,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }
@@ -367,7 +367,7 @@ fun Route.orienteeringRoutes(
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(401, "Unauthorized")) }
             )
 
-        val competitionId = call.parameters["competitionId"]?.toLongOrNull()
+        val competitionId = call.parameters["competitionId"]
             ?: return@delete call.respond(
                 HttpStatusCode.BadRequest,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }

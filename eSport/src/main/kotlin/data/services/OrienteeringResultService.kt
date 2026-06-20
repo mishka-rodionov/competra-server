@@ -119,7 +119,7 @@ class OrienteeringResultService {
     /**
      * Пересчитывает места для всех FINISHED-результатов группы.
      */
-    private fun recalculateRanksForGroup(competitionId: Long, groupId: Long) {
+    private fun recalculateRanksForGroup(competitionId: String, groupId: Long) {
         val finishedRows = OrienteeringResults.selectAll()
             .where {
                 (OrienteeringResults.competitionId eq competitionId) and
@@ -149,7 +149,7 @@ class OrienteeringResultService {
         }
     }
 
-    suspend fun getByCompetition(competitionId: Long): List<OrienteeringResultResponse> = dbQuery {
+    suspend fun getByCompetition(competitionId: String): List<OrienteeringResultResponse> = dbQuery {
         OrienteeringResults.selectAll()
             .where { OrienteeringResults.competitionId eq competitionId }
             .map { row ->

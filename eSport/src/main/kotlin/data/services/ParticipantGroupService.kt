@@ -79,7 +79,7 @@ class ParticipantGroupService {
         }
     }
 
-    suspend fun getByCompetition(competitionId: Long): List<ParticipantGroupResponse> = dbQuery {
+    suspend fun getByCompetition(competitionId: String): List<ParticipantGroupResponse> = dbQuery {
         ParticipantGroups.selectAll()
             .where { ParticipantGroups.competitionId eq competitionId }
             .map { it.toResponse() }

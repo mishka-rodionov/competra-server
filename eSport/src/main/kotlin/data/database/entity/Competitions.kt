@@ -3,7 +3,12 @@ package com.competra.data.database.entity
 import org.jetbrains.exposed.sql.Table
 
 object Competitions : Table("competitions") {
-    val id = long("id").autoIncrement()
+    /** Глобально-уникальный клиентский UUID — единый идентификатор соревнования на всех платформах. */
+    val id = varchar("id", 36)
+    /** Прежний серверный BIGINT-идентификатор. Хранится на время перехода клиентов на UUID. */
+    val legacyId = long("legacy_id").nullable()
+    /** Владелец/создатель соревнования (userId из JWT). Спорт-независим, лежит в ядре. */
+    val ownerId = varchar("owner_id", 200).nullable()
     val title = varchar("title", 500)
     val startDate = long("start_date")
     val endDate = long("end_date").nullable()

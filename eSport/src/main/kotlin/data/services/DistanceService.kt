@@ -78,7 +78,7 @@ class DistanceService {
         }
     }
 
-    suspend fun getByCompetition(competitionId: Long): List<DistanceResponse> = dbQuery {
+    suspend fun getByCompetition(competitionId: String): List<DistanceResponse> = dbQuery {
         Distances.selectAll()
             .where { Distances.competitionId eq competitionId }
             .map { it.toResponse() }

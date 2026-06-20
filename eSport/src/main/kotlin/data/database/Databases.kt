@@ -106,6 +106,121 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE split_times ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS start_notification_sent BOOLEAN NOT NULL DEFAULT FALSE")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS time_zone_id VARCHAR(64) NOT NULL DEFAULT 'UTC'")
+
+        // ── Миграция идентичности соревнований на единый клиентский UUID ──────────────
+        // competitions.id: BIGINT → VARCHAR(36) (UUID). orienteering_competitions и все
+        // дочерние таблицы переводят competition_id на тот же UUID. Прежний BIGINT
+        // сохраняется в competitions.legacy_id для перехода клиентов. Восстанавливаются
+        // строки orienteering_competitions для осиротевших соревнований (баг VIP-Android).
+        //
+        // Блок идемпотентен: выполняется один раз, пока competitions.id ещё BIGINT.
+        // Внутренние SQL планируются PL/pgSQL лениво, поэтому ссылки на удаляемые позже
+        // колонки (orienteering_competitions.user_id/competition_id) безопасны при early-return.
+        exec(
+            """
+            DO ${'$'}${'$'}
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'competitions' AND column_name = 'id' AND data_type = 'bigint'
+                ) THEN
+                    RETURN;
+                END IF;
+
+                -- 1) Новые колонки ядра + генерация UUID (без зависимости от расширений).
+                ALTER TABLE competitions ADD COLUMN IF NOT EXISTS id_uuid VARCHAR(36);
+                ALTER TABLE competitions ADD COLUMN IF NOT EXISTS legacy_id BIGINT;
+                ALTER TABLE competitions ADD COLUMN IF NOT EXISTS owner_id VARCHAR(200);
+
+                UPDATE competitions SET
+                    legacy_id = id,
+                    id_uuid = (
+                        SELECT substr(m,1,8)||'-'||substr(m,9,4)||'-'||substr(m,13,4)||'-'||substr(m,17,4)||'-'||substr(m,21,12)
+                        FROM (SELECT md5(random()::text || clock_timestamp()::text || competitions.id::text) AS m) s
+                    )
+                WHERE id_uuid IS NULL;
+
+                -- Владелец из существующего orienteering_competitions.user_id (колонка ещё есть).
+                UPDATE competitions c SET owner_id = o.user_id
+                    FROM orienteering_competitions o
+                    WHERE o.competition_id = c.id AND c.owner_id IS NULL;
+
+                -- 2) Перемапить competition_id дочерних таблиц на новый UUID (через временную колонку).
+                ALTER TABLE distances ADD COLUMN IF NOT EXISTS competition_uuid VARCHAR(36);
+                UPDATE distances ch SET competition_uuid = c.id_uuid FROM competitions c WHERE ch.competition_id = c.id;
+                DELETE FROM distances WHERE competition_uuid IS NULL;
+
+                ALTER TABLE participant_groups ADD COLUMN IF NOT EXISTS competition_uuid VARCHAR(36);
+                UPDATE participant_groups ch SET competition_uuid = c.id_uuid FROM competitions c WHERE ch.competition_id = c.id;
+                DELETE FROM participant_groups WHERE competition_uuid IS NULL;
+
+                ALTER TABLE orienteering_participants ADD COLUMN IF NOT EXISTS competition_uuid VARCHAR(36);
+                UPDATE orienteering_participants ch SET competition_uuid = c.id_uuid FROM competitions c WHERE ch.competition_id = c.id;
+                DELETE FROM orienteering_participants WHERE competition_uuid IS NULL;
+
+                ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS competition_uuid VARCHAR(36);
+                UPDATE orienteering_results ch SET competition_uuid = c.id_uuid FROM competitions c WHERE ch.competition_id = c.id;
+                DELETE FROM orienteering_results WHERE competition_uuid IS NULL;
+
+                -- orienteering_competitions: новый id = uuid связанного соревнования.
+                ALTER TABLE orienteering_competitions ADD COLUMN IF NOT EXISTS id_uuid VARCHAR(36);
+                UPDATE orienteering_competitions o SET id_uuid = c.id_uuid FROM competitions c WHERE o.competition_id = c.id;
+                DELETE FROM orienteering_competitions WHERE id_uuid IS NULL;
+
+                -- 3) Свап первичного ключа competitions: BIGINT id → VARCHAR id_uuid.
+                ALTER TABLE competitions DROP CONSTRAINT IF EXISTS competitions_pkey;
+                ALTER TABLE competitions DROP COLUMN id;
+                ALTER TABLE competitions RENAME COLUMN id_uuid TO id;
+                ALTER TABLE competitions ALTER COLUMN id SET NOT NULL;
+                ALTER TABLE competitions ADD PRIMARY KEY (id);
+
+                -- 4) Свап PK orienteering_competitions + удаление устаревших колонок.
+                ALTER TABLE orienteering_competitions DROP CONSTRAINT IF EXISTS orienteering_competitions_pkey;
+                ALTER TABLE orienteering_competitions DROP COLUMN id;
+                ALTER TABLE orienteering_competitions RENAME COLUMN id_uuid TO id;
+                ALTER TABLE orienteering_competitions ALTER COLUMN id SET NOT NULL;
+                ALTER TABLE orienteering_competitions ADD PRIMARY KEY (id);
+                ALTER TABLE orienteering_competitions DROP COLUMN IF EXISTS competition_id;
+                ALTER TABLE orienteering_competitions DROP COLUMN IF EXISTS user_id;
+
+                -- 5) Свап competition_id дочерних таблиц.
+                ALTER TABLE distances DROP COLUMN competition_id;
+                ALTER TABLE distances RENAME COLUMN competition_uuid TO competition_id;
+                ALTER TABLE distances ALTER COLUMN competition_id SET NOT NULL;
+
+                ALTER TABLE participant_groups DROP COLUMN competition_id;
+                ALTER TABLE participant_groups RENAME COLUMN competition_uuid TO competition_id;
+                ALTER TABLE participant_groups ALTER COLUMN competition_id SET NOT NULL;
+
+                ALTER TABLE orienteering_participants DROP COLUMN competition_id;
+                ALTER TABLE orienteering_participants RENAME COLUMN competition_uuid TO competition_id;
+                ALTER TABLE orienteering_participants ALTER COLUMN competition_id SET NOT NULL;
+
+                ALTER TABLE orienteering_results DROP COLUMN competition_id;
+                ALTER TABLE orienteering_results RENAME COLUMN competition_uuid TO competition_id;
+                ALTER TABLE orienteering_results ALTER COLUMN competition_id SET NOT NULL;
+
+                -- 6) Восстановить orienteering_competitions для осиротевших соревнований (баг VIP-Android).
+                INSERT INTO orienteering_competitions (id, direction, punching_system, start_time_mode, start_interval_seconds, updated_at)
+                SELECT c.id, 'FORWARD', 'SPORTIDENT', 'USER_SET', NULL, 0
+                FROM competitions c
+                WHERE NOT EXISTS (SELECT 1 FROM orienteering_competitions o WHERE o.id = c.id);
+
+                -- 7) Внешние ключи: 1:1 ядро↔расширение и дочерние, все ON DELETE CASCADE.
+                ALTER TABLE orienteering_competitions
+                    ADD CONSTRAINT fk_orient_competition FOREIGN KEY (id) REFERENCES competitions(id) ON DELETE CASCADE;
+                ALTER TABLE distances
+                    ADD CONSTRAINT fk_distances_competition FOREIGN KEY (competition_id) REFERENCES competitions(id) ON DELETE CASCADE;
+                ALTER TABLE participant_groups
+                    ADD CONSTRAINT fk_groups_competition FOREIGN KEY (competition_id) REFERENCES competitions(id) ON DELETE CASCADE;
+                ALTER TABLE orienteering_participants
+                    ADD CONSTRAINT fk_participants_competition FOREIGN KEY (competition_id) REFERENCES competitions(id) ON DELETE CASCADE;
+                ALTER TABLE orienteering_results
+                    ADD CONSTRAINT fk_results_competition FOREIGN KEY (competition_id) REFERENCES competitions(id) ON DELETE CASCADE;
+            END
+            ${'$'}${'$'};
+            """.trimIndent()
+        )
     }
     routing {
         route("/api") {

@@ -4,7 +4,8 @@ import org.jetbrains.exposed.sql.Table
 
 object OrienteeringResults : Table("orienteering_results") {
     val id = varchar("id", 200)
-    val competitionId = long("competition_id")
+    val competitionId = varchar("competition_id", 36)
+        .references(Competitions.id, onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
     val groupId = long("group_id")
     val participantId = varchar("participant_id", 200)
     val startTime = long("start_time").nullable()
