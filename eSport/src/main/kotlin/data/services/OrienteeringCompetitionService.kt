@@ -69,6 +69,7 @@ class OrienteeringCompetitionService {
         website = comp[Competitions.website],
         resultsStatus = comp[Competitions.resultsStatus],
         timeZoneId = comp[Competitions.timeZoneId],
+        isTest = comp[Competitions.isTest],
         updatedAt = comp[Competitions.updatedAt]
     )
 
@@ -229,6 +230,7 @@ class OrienteeringCompetitionService {
                 it[mainOrganizerId] = req.competition.mainOrganizerId
                 it[latitude] = req.competition.coordinates?.latitude
                 it[longitude] = req.competition.coordinates?.longitude
+                it[isTest] = req.competition.isTest
                 it[status] = if (req.competition.registrationStart == null) "REGISTRATION_OPEN" else "CREATED"
                 it[registrationStart] = req.competition.registrationStart
                 it[registrationEnd] = req.competition.registrationEnd
@@ -317,9 +319,14 @@ class OrienteeringCompetitionService {
         kindOfSports: List<String>,
         statuses: List<String>,
         dateFrom: Long?,
-        dateTo: Long?
+        dateTo: Long?,
+        includeTest: Boolean = false
     ): List<CompetitionResponse> = dbQuery {
         val query = Competitions.selectAll()
+        // Тестовые соревнования скрыты из публичной ленты; includeTest=true — debug-предпросмотр.
+        if (!includeTest) {
+            query.andWhere { Competitions.isTest eq false }
+        }
         if (kindOfSports.isNotEmpty()) {
             query.andWhere { Competitions.kindOfSport inList kindOfSports }
         }
@@ -410,6 +417,7 @@ class OrienteeringCompetitionService {
             timeZoneId = comp[Competitions.timeZoneId],
             participantGroups = groups,
             isUserRegistered = isUserRegistered,
+            isTest = comp[Competitions.isTest],
             updatedAt = orient?.get(OrienteeringCompetitions.updatedAt) ?: comp[Competitions.updatedAt]
         )
     }

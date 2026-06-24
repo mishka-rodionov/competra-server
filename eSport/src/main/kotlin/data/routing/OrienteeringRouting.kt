@@ -41,14 +41,16 @@ fun Route.orienteeringPublicRoutes(
         val statuses = call.request.queryParameters.getAll("statuses") ?: emptyList()
         val dateFrom = call.request.queryParameters["date_from"]?.toLongOrNull()
         val dateTo = call.request.queryParameters["date_to"]?.toLongOrNull()
+        val includeTest = call.request.queryParameters["includeTest"]?.toBoolean() ?: false
         call.application.log.info(
-            "PUBLIC_COMPETITIONS filter — kindOfSports=$kindOfSports, statuses=$statuses, dateFrom=$dateFrom, dateTo=$dateTo, fullUri=${call.request.uri}"
+            "PUBLIC_COMPETITIONS filter — kindOfSports=$kindOfSports, statuses=$statuses, dateFrom=$dateFrom, dateTo=$dateTo, includeTest=$includeTest, fullUri=${call.request.uri}"
         )
         val list = competitionService.getPublicCompetitions(
             kindOfSports = kindOfSports,
             statuses = statuses,
             dateFrom = dateFrom,
-            dateTo = dateTo
+            dateTo = dateTo,
+            includeTest = includeTest
         )
         call.application.log.info(
             "PUBLIC_COMPETITIONS result — returned ${list.size} items, statuses in result: ${list.map { it.status }.distinct()}"

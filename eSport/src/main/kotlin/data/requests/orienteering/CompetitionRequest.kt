@@ -26,6 +26,8 @@ data class CompetitionRequest(
     @SerializedName("website") val website: String?,
     @SerializedName("resultsStatus") val resultsStatus: String,
     @SerializedName("timeZoneId") val timeZoneId: String,
+    /** Тестовое соревнование: создаётся из debug-сборки, не попадает в публичную ленту. */
+    @SerializedName("isTest") val isTest: Boolean = false,
     @SerializedName("serverUpdatedAt") val serverUpdatedAt: Long? = null
 )
 

@@ -40,5 +40,7 @@ data class CompetitionDetailResponse(
     val timeZoneId: String,
     val participantGroups: List<ParticipantGroupDetailResponse>,
     val isUserRegistered: Boolean = false,
+    /** Тестовое соревнование: видно только владельцу, исключено из публичной ленты. */
+    val isTest: Boolean = false,
     val updatedAt: Long = 0L
 )

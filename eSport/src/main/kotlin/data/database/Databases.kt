@@ -106,6 +106,8 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE split_times ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS start_notification_sent BOOLEAN NOT NULL DEFAULT FALSE")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS time_zone_id VARCHAR(64) NOT NULL DEFAULT 'UTC'")
+        // is_test — тестовые соревнования исключаются из публичной ленты, видны только владельцу.
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS is_test BOOLEAN NOT NULL DEFAULT FALSE")
 
         // ── Миграция идентичности соревнований на единый клиентский UUID ──────────────
         // competitions.id: BIGINT → VARCHAR(36) (UUID). orienteering_competitions и все
