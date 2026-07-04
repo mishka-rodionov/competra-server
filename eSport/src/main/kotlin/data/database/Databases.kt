@@ -17,6 +17,10 @@ import com.competra.data.database.entity.ParticipantGroups
 import com.competra.data.database.entity.RefreshTokens
 import com.competra.data.database.entity.SplitTimes
 import com.competra.data.database.entity.VerificationCodes
+import com.competra.data.database.entity.diary.BikeDetails
+import com.competra.data.database.entity.diary.RunDetails
+import com.competra.data.database.entity.diary.SkiDetails
+import com.competra.data.database.entity.diary.Workouts
 import com.competra.data.requests.CodeVerificationRequest
 import com.competra.data.requests.EmailRequest
 import com.competra.data.requests.RefreshRequest
@@ -74,7 +78,11 @@ fun Application.configureDatabases() {
             OrienteeringResults,
             SplitTimes,
             RefreshTokens,
-            DeviceTokens
+            DeviceTokens,
+            Workouts,
+            RunDetails,
+            BikeDetails,
+            SkiDetails
         )
         // Добавляем колонки, которых может не быть в уже существующей таблице
         exec("ALTER TABLE participant_groups ALTER COLUMN distance_id TYPE BIGINT USING distance_id::BIGINT")

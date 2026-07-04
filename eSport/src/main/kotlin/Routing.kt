@@ -4,9 +4,11 @@ import com.competra.data.response.base.BaseError
 import com.competra.data.response.base.CommonModel
 import com.competra.data.response.upload.UploadResponse
 import com.competra.data.routing.deviceRoutes
+import com.competra.data.routing.diaryRoutes
 import com.competra.data.routing.orienteeringPublicRoutes
 import com.competra.data.routing.orienteeringRoutes
 import com.competra.data.services.DeviceTokenService
+import com.competra.data.services.DiaryWorkoutService
 import com.competra.data.services.DistanceService
 import com.competra.data.services.FcmService
 import com.competra.data.services.OrienteeringCompetitionService
@@ -40,6 +42,7 @@ fun Application.configureRouting() {
     val uploadService = UploadService()
     val deviceTokenService = DeviceTokenService()
     val fcmService = FcmService(deviceTokenService)
+    val diaryWorkoutService = DiaryWorkoutService()
     attributes.put(FcmServiceKey, fcmService)
 
     routing {
@@ -94,6 +97,7 @@ fun Application.configureRouting() {
 
                 orienteeringRoutes(competitionService, groupService, participantService, resultService, distanceService)
                 deviceRoutes(deviceTokenService, fcmService)
+                diaryRoutes(diaryWorkoutService)
             }
         }
     }
