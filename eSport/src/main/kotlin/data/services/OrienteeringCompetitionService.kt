@@ -61,6 +61,10 @@ class OrienteeringCompetitionService {
         feeAmount = comp[Competitions.feeAmount],
         feeCurrency = comp[Competitions.feeCurrency],
         imageUrl = comp[Competitions.imageUrl],
+        coverCropX = comp[Competitions.coverCropX],
+        coverCropY = comp[Competitions.coverCropY],
+        coverCropWidth = comp[Competitions.coverCropWidth],
+        coverCropHeight = comp[Competitions.coverCropHeight],
         regulationUrl = comp[Competitions.regulationUrl],
         mapUrl = comp[Competitions.mapUrl],
         resultsUrl = comp[Competitions.resultsUrl],
@@ -207,6 +211,10 @@ class OrienteeringCompetitionService {
                 it[feeAmount] = req.competition.feeAmount
                 it[feeCurrency] = req.competition.feeCurrency
                 it[imageUrl] = req.competition.imageUrl
+                it[coverCropX] = req.competition.coverCropX
+                it[coverCropY] = req.competition.coverCropY
+                it[coverCropWidth] = req.competition.coverCropWidth
+                it[coverCropHeight] = req.competition.coverCropHeight
                 it[regulationUrl] = req.competition.regulationUrl
                 it[mapUrl] = req.competition.mapUrl
                 it[resultsUrl] = req.competition.resultsUrl
@@ -238,6 +246,10 @@ class OrienteeringCompetitionService {
                 it[feeAmount] = req.competition.feeAmount
                 it[feeCurrency] = req.competition.feeCurrency
                 it[imageUrl] = req.competition.imageUrl
+                it[coverCropX] = req.competition.coverCropX
+                it[coverCropY] = req.competition.coverCropY
+                it[coverCropWidth] = req.competition.coverCropWidth
+                it[coverCropHeight] = req.competition.coverCropHeight
                 it[regulationUrl] = req.competition.regulationUrl
                 it[mapUrl] = req.competition.mapUrl
                 it[resultsUrl] = req.competition.resultsUrl
@@ -407,6 +419,10 @@ class OrienteeringCompetitionService {
             feeAmount = comp[Competitions.feeAmount],
             feeCurrency = comp[Competitions.feeCurrency],
             imageUrl = comp[Competitions.imageUrl],
+            coverCropX = comp[Competitions.coverCropX],
+            coverCropY = comp[Competitions.coverCropY],
+            coverCropWidth = comp[Competitions.coverCropWidth],
+            coverCropHeight = comp[Competitions.coverCropHeight],
             regulationUrl = comp[Competitions.regulationUrl],
             mapUrl = comp[Competitions.mapUrl],
             resultsUrl = comp[Competitions.resultsUrl],

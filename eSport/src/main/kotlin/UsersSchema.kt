@@ -22,6 +22,10 @@ data class UserEntity(
     val photo: String,
     val phoneNumber: String?,
     val email: String,
+    val avatarCropX: Double? = null,
+    val avatarCropY: Double? = null,
+    val avatarCropWidth: Double? = null,
+    val avatarCropHeight: Double? = null,
 )
 
 class UserService(database: Database) {
@@ -35,6 +39,10 @@ class UserService(database: Database) {
 //        val gender: Gender,
         val photo = varchar("photo", length = 300)
         val phoneNumber = varchar("phone_number", length = 20)
+        val avatarCropX = double("avatar_crop_x").nullable()
+        val avatarCropY = double("avatar_crop_y").nullable()
+        val avatarCropWidth = double("avatar_crop_width").nullable()
+        val avatarCropHeight = double("avatar_crop_height").nullable()
 
         override val primaryKey = PrimaryKey(id)
     }
@@ -55,6 +63,10 @@ class UserService(database: Database) {
             it[photo] = user.photo
             it[phoneNumber] = user.phoneNumber ?: ""
             it[email] = user.email
+            it[avatarCropX] = user.avatarCropX
+            it[avatarCropY] = user.avatarCropY
+            it[avatarCropWidth] = user.avatarCropWidth
+            it[avatarCropHeight] = user.avatarCropHeight
         }[Users.id]
     }
 
@@ -72,6 +84,10 @@ class UserService(database: Database) {
 //                    gender = it[Users.gender],
                     photo = it[Users.photo],
                     phoneNumber = it[Users.phoneNumber],
+                    avatarCropX = it[Users.avatarCropX],
+                    avatarCropY = it[Users.avatarCropY],
+                    avatarCropWidth = it[Users.avatarCropWidth],
+                    avatarCropHeight = it[Users.avatarCropHeight],
                 ) }
                 .singleOrNull()
         }
@@ -87,6 +103,10 @@ class UserService(database: Database) {
                 it[photo] = user.photo
                 it[phoneNumber] = user.phoneNumber ?: ""
                 it[email] = user.email
+                it[avatarCropX] = user.avatarCropX
+                it[avatarCropY] = user.avatarCropY
+                it[avatarCropWidth] = user.avatarCropWidth
+                it[avatarCropHeight] = user.avatarCropHeight
             }
         }
     }

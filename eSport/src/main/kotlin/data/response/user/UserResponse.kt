@@ -18,6 +18,14 @@ data class UserResponse(
     val gender: Gender,
     @SerializedName("avatar_url")
     val avatarUrl: String,
+    @SerializedName("avatar_crop_x")
+    val avatarCropX: Double?,
+    @SerializedName("avatar_crop_y")
+    val avatarCropY: Double?,
+    @SerializedName("avatar_crop_width")
+    val avatarCropWidth: Double?,
+    @SerializedName("avatar_crop_height")
+    val avatarCropHeight: Double?,
     @SerializedName("phone_number")
     val phoneNumber: String?,
     @SerializedName("email")

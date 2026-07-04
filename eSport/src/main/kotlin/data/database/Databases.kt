@@ -108,6 +108,14 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS time_zone_id VARCHAR(64) NOT NULL DEFAULT 'UTC'")
         // is_test — тестовые соревнования исключаются из публичной ленты, видны только владельцу.
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS is_test BOOLEAN NOT NULL DEFAULT FALSE")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS cover_crop_x DOUBLE PRECISION")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS cover_crop_y DOUBLE PRECISION")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS cover_crop_width DOUBLE PRECISION")
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS cover_crop_height DOUBLE PRECISION")
+        exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_crop_x DOUBLE PRECISION")
+        exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_crop_y DOUBLE PRECISION")
+        exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_crop_width DOUBLE PRECISION")
+        exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_crop_height DOUBLE PRECISION")
 
         // ── Миграция идентичности соревнований на единый клиентский UUID ──────────────
         // competitions.id: BIGINT → VARCHAR(36) (UUID). orienteering_competitions и все
@@ -355,6 +363,10 @@ fun Application.configureDatabases() {
                         birthDate = user.birthDate,
                         gender = Gender.MALE,
                         avatarUrl = user.photo,
+                        avatarCropX = user.avatarCropX,
+                        avatarCropY = user.avatarCropY,
+                        avatarCropWidth = user.avatarCropWidth,
+                        avatarCropHeight = user.avatarCropHeight,
                         phoneNumber = user.phoneNumber,
                         email = user.email,
                         qualification = emptyList()
@@ -384,6 +396,10 @@ fun Application.configureDatabases() {
                             birthDate = user.birthDate,
                             gender = Gender.MALE,
                             avatarUrl = user.photo,
+                            avatarCropX = user.avatarCropX,
+                            avatarCropY = user.avatarCropY,
+                            avatarCropWidth = user.avatarCropWidth,
+                            avatarCropHeight = user.avatarCropHeight,
                             phoneNumber = user.phoneNumber,
                             email = user.email,
                             qualification = emptyList()
@@ -416,7 +432,11 @@ fun Application.configureDatabases() {
                     birthDate = request.birthDate ?: current.birthDate,
                     photo = request.avatarUrl ?: current.photo,
                     phoneNumber = request.phoneNumber ?: current.phoneNumber,
-                    email = current.email
+                    email = current.email,
+                    avatarCropX = request.avatarCropX ?: current.avatarCropX,
+                    avatarCropY = request.avatarCropY ?: current.avatarCropY,
+                    avatarCropWidth = request.avatarCropWidth ?: current.avatarCropWidth,
+                    avatarCropHeight = request.avatarCropHeight ?: current.avatarCropHeight
                 ))
                 val updated = userService.read(userId)!!
                 call.respond(CommonModel<UserResponse>().also {
@@ -429,6 +449,10 @@ fun Application.configureDatabases() {
                         birthDate = updated.birthDate,
                         gender = Gender.MALE,
                         avatarUrl = updated.photo,
+                        avatarCropX = updated.avatarCropX,
+                        avatarCropY = updated.avatarCropY,
+                        avatarCropWidth = updated.avatarCropWidth,
+                        avatarCropHeight = updated.avatarCropHeight,
                         phoneNumber = updated.phoneNumber,
                         email = updated.email,
                         qualification = emptyList()
@@ -493,6 +517,10 @@ fun Application.configureDatabases() {
                         birthDate = user.birthDate,
                         gender = Gender.MALE,
                         avatarUrl = user.photo,
+                        avatarCropX = user.avatarCropX,
+                        avatarCropY = user.avatarCropY,
+                        avatarCropWidth = user.avatarCropWidth,
+                        avatarCropHeight = user.avatarCropHeight,
                         phoneNumber = user.phoneNumber,
                         email = user.email,
                         qualification = emptyList()
