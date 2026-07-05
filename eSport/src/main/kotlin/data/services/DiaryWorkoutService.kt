@@ -46,6 +46,7 @@ class DiaryWorkoutService {
                 it[distanceMeters] = req.distanceMeters
                 it[elevationGainMeters] = req.elevationGainMeters
                 it[notes] = req.notes
+                it[track] = req.trackEncoded
                 it[updatedAt] = now
             }
             existing[Workouts.id]
@@ -60,6 +61,7 @@ class DiaryWorkoutService {
                 it[distanceMeters] = req.distanceMeters
                 it[elevationGainMeters] = req.elevationGainMeters
                 it[notes] = req.notes
+                it[track] = req.trackEncoded
                 it[updatedAt] = now
             } get Workouts.id
         }
@@ -123,6 +125,7 @@ class DiaryWorkoutService {
             distanceMeters = this[Workouts.distanceMeters],
             elevationGainMeters = this[Workouts.elevationGainMeters],
             notes = this[Workouts.notes],
+            trackEncoded = this[Workouts.track],
             runDetails = run?.let { RunDetailsResponse(cadenceSpm = it[RunDetails.cadenceSpm]) },
             bikeDetails = bike?.let {
                 BikeDetailsResponse(cadenceRpm = it[BikeDetails.cadenceRpm], powerWatts = it[BikeDetails.powerWatts])

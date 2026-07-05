@@ -15,6 +15,7 @@ object Workouts : Table("workouts") {
     val distanceMeters = integer("distance_meters").nullable()
     val elevationGainMeters = integer("elevation_gain_meters").nullable()
     val notes = varchar("notes", 1000).nullable()
+    val track = text("track").nullable()
     val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)

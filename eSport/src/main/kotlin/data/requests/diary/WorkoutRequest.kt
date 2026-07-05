@@ -16,6 +16,7 @@ data class WorkoutRequest(
     @SerializedName("distanceMeters") val distanceMeters: Int?,
     @SerializedName("elevationGainMeters") val elevationGainMeters: Int?,
     @SerializedName("notes") val notes: String?,
+    @SerializedName("trackEncoded") val trackEncoded: String? = null,
     @SerializedName("runDetails") val runDetails: RunDetailsRequest? = null,
     @SerializedName("bikeDetails") val bikeDetails: BikeDetailsRequest? = null,
     @SerializedName("skiDetails") val skiDetails: SkiDetailsRequest? = null

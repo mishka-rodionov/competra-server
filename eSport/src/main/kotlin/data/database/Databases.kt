@@ -85,6 +85,7 @@ fun Application.configureDatabases() {
             SkiDetails
         )
         // Добавляем колонки, которых может не быть в уже существующей таблице
+        exec("ALTER TABLE workouts ADD COLUMN IF NOT EXISTS track TEXT")
         exec("ALTER TABLE participant_groups ALTER COLUMN distance_id TYPE BIGINT USING distance_id::BIGINT")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS status VARCHAR(100) NOT NULL DEFAULT 'CREATED'")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS results_status VARCHAR(100) NOT NULL DEFAULT 'NOT_PUBLISHED'")
