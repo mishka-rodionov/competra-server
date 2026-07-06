@@ -7,13 +7,18 @@ import com.competra.data.database.entity.OrienteeringParticipants
 import com.competra.data.database.entity.ParticipantGroups
 import com.competra.data.exception.ConflictException
 import com.competra.data.requests.orienteering.OrienteeringCompetitionRequest
+import com.competra.data.response.base.PagedResponse
 import com.competra.data.response.orienteering.CompetitionDetailResponse
 import com.competra.data.response.orienteering.CompetitionResponse
 import com.competra.data.response.orienteering.CoordinatesResponse
 import com.competra.data.response.orienteering.OrienteeringCompetitionResponse
 import com.competra.data.response.orienteering.ParticipantGroupDetailResponse
 import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.sql.Case
+import org.jetbrains.exposed.sql.ExpressionWithColumnType
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.SqlExpressionBuilder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greater
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
@@ -25,6 +30,7 @@ import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.stringLiteral
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
 
@@ -33,6 +39,9 @@ class OrienteeringCompetitionService {
     private companion object {
         /** Статусы, которые НЕ должны переопределяться автоматическим пересчётом. */
         val MANUAL_STATUSES = listOf("IN_PROGRESS", "FINISHED", "DRAFT", "ARCHIVED")
+
+        /** Терминальные статусы, которые [computeEffectiveStatus] возвращает как есть, без пересчёта по датам. */
+        val TERMINAL_STATUSES = listOf("IN_PROGRESS", "FINISHED")
     }
 
     /** Маппинг строки ядра в [CompetitionResponse]. startTime берётся из расширения (если есть). */
@@ -321,19 +330,42 @@ class OrienteeringCompetitionService {
     }
 
     /**
-     * Возвращает список публичных соревнований с применением фильтров.
+     * SQL-версия [computeEffectiveStatus] для публичного списка, где startTime всегда
+     * недоступен (нет джойна на OrienteeringCompetitions) — поэтому ветка IN_PROGRESS-по-startTime
+     * здесь не нужна. Должна давать тот же результат, что и Kotlin-версия при startTime == null,
+     * иначе фильтр по статусу и отображаемые карточки разъедутся.
+     */
+    private fun SqlExpressionBuilder.effectiveStatusExpr(now: Long): ExpressionWithColumnType<String> =
+        Case()
+            .When(Competitions.status inList TERMINAL_STATUSES, Competitions.status)
+            .When(
+                Competitions.registrationEnd.isNotNull() and (Competitions.registrationEnd lessEq now),
+                stringLiteral("REGISTRATION_CLOSED")
+            )
+            .When(
+                Competitions.registrationStart.isNull() or (Competitions.registrationStart lessEq now),
+                stringLiteral("REGISTRATION_OPEN")
+            )
+            .Else(stringLiteral("CREATED"))
+
+    /**
+     * Возвращает страницу публичных соревнований с применением фильтров.
      *
-     * SQL-фильтры (виды спорта, диапазон дат старта) применяются на уровне БД.
-     * Фильтр по статусу применяется в коде, потому что эффективный статус
-     * вычисляется из дат через [computeEffectiveStatus] и не хранится напрямую.
+     * Все фильтры, включая статус, применяются на уровне БД (статус — через SQL CASE,
+     * см. [effectiveStatusExpr]), поэтому LIMIT/OFFSET корректно режут уже отфильтрованный
+     * и отсортированный по дате старта набор. hasMore вычисляется без отдельного COUNT-запроса:
+     * запрашивается на 1 запись больше limit.
      */
     suspend fun getPublicCompetitions(
         kindOfSports: List<String>,
         statuses: List<String>,
         dateFrom: Long?,
         dateTo: Long?,
-        includeTest: Boolean = false
-    ): List<CompetitionResponse> = dbQuery {
+        includeTest: Boolean = false,
+        page: Int = 0,
+        limit: Int = 20
+    ): PagedResponse<CompetitionResponse> = dbQuery {
+        val now = System.currentTimeMillis()
         val query = Competitions.selectAll()
         // Тестовые соревнования скрыты из публичной ленты; includeTest=true — debug-предпросмотр.
         if (!includeTest) {
@@ -348,11 +380,15 @@ class OrienteeringCompetitionService {
         if (dateTo != null) {
             query.andWhere { Competitions.startDate lessEq dateTo }
         }
+        if (statuses.isNotEmpty()) {
+            query.andWhere { effectiveStatusExpr(now) inList statuses }
+        }
+        query.orderBy(Competitions.startDate, SortOrder.DESC)
+        query.limit(limit + 1).offset(page.toLong() * limit)
 
         // Для публичного списка startTime недоступен без джойна — используем даты регистрации.
-        val items = query.map { comp -> compToResponse(comp, startTime = null) }
-
-        if (statuses.isEmpty()) items else items.filter { it.status in statuses }
+        val rows = query.map { comp -> compToResponse(comp, startTime = null) }
+        PagedResponse(items = rows.take(limit), hasMore = rows.size > limit)
     }
 
     suspend fun getById(competitionId: String, userId: String? = null): CompetitionDetailResponse? = dbQuery {

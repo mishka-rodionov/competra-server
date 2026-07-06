@@ -30,6 +30,9 @@ import java.time.ZoneId
 // ConflictException теперь ловится глобально в StatusPages.kt c идентичным ответом
 // (HTTP 409 + CommonModel { status=0, result=currentResponse, errors=[BaseError(409, "Server record is newer")] }).
 
+private const val DEFAULT_PAGE_SIZE = 20
+private const val MAX_PAGE_SIZE = 100
+
 fun Route.orienteeringPublicRoutes(
     competitionService: OrienteeringCompetitionService,
     participantService: OrienteeringParticipantService,
@@ -42,22 +45,27 @@ fun Route.orienteeringPublicRoutes(
         val dateFrom = call.request.queryParameters["date_from"]?.toLongOrNull()
         val dateTo = call.request.queryParameters["date_to"]?.toLongOrNull()
         val includeTest = call.request.queryParameters["includeTest"]?.toBoolean() ?: false
+        val page = call.request.queryParameters["page"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+        val limit = call.request.queryParameters["limit"]?.toIntOrNull()?.coerceIn(1, MAX_PAGE_SIZE)
+            ?: DEFAULT_PAGE_SIZE
         call.application.log.info(
-            "PUBLIC_COMPETITIONS filter — kindOfSports=$kindOfSports, statuses=$statuses, dateFrom=$dateFrom, dateTo=$dateTo, includeTest=$includeTest, fullUri=${call.request.uri}"
+            "PUBLIC_COMPETITIONS filter — kindOfSports=$kindOfSports, statuses=$statuses, dateFrom=$dateFrom, dateTo=$dateTo, includeTest=$includeTest, page=$page, limit=$limit, fullUri=${call.request.uri}"
         )
-        val list = competitionService.getPublicCompetitions(
+        val paged = competitionService.getPublicCompetitions(
             kindOfSports = kindOfSports,
             statuses = statuses,
             dateFrom = dateFrom,
             dateTo = dateTo,
-            includeTest = includeTest
+            includeTest = includeTest,
+            page = page,
+            limit = limit
         )
         call.application.log.info(
-            "PUBLIC_COMPETITIONS result — returned ${list.size} items, statuses in result: ${list.map { it.status }.distinct()}"
+            "PUBLIC_COMPETITIONS result — returned ${paged.items.size} items, hasMore=${paged.hasMore}, statuses in result: ${paged.items.map { it.status }.distinct()}"
         )
         call.respond(CommonModel<Any>().also { model ->
             model.status = 1
-            model.result = list
+            model.result = paged
         })
     }
 
