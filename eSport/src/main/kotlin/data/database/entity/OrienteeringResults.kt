@@ -14,6 +14,8 @@ object OrienteeringResults : Table("orienteering_results") {
     val rank = integer("rank").nullable()
     val status = varchar("status", 50)
     val penaltyTime = long("penalty_time")
+    val totalScore = integer("total_score").nullable()
+    val scorePenalty = integer("score_penalty").default(0)
     val isEditable = bool("is_editable")
     val isEdited = bool("is_edited")
     val updatedAt = long("updated_at").default(0L)

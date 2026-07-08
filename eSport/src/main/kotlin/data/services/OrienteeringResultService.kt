@@ -1,5 +1,6 @@
 package com.competra.data.services
 
+import com.competra.data.database.entity.OrienteeringCompetitions
 import com.competra.data.database.entity.OrienteeringResults
 import com.competra.data.database.entity.SplitTimes
 import com.competra.data.exception.ConflictException
@@ -75,6 +76,8 @@ class OrienteeringResultService {
                 it[rank] = req.rank
                 it[status] = req.status
                 it[penaltyTime] = req.penaltyTime
+                it[totalScore] = req.totalScore
+                it[scorePenalty] = req.scorePenalty
                 it[isEditable] = req.isEditable
                 it[isEdited] = req.isEdited
                 it[updatedAt] = now
@@ -90,6 +93,8 @@ class OrienteeringResultService {
                 it[rank] = req.rank
                 it[status] = req.status
                 it[penaltyTime] = req.penaltyTime
+                it[totalScore] = req.totalScore
+                it[scorePenalty] = req.scorePenalty
                 it[isEditable] = req.isEditable
                 it[isEdited] = req.isEdited
                 it[updatedAt] = now
@@ -118,8 +123,17 @@ class OrienteeringResultService {
 
     /**
      * Пересчитывает места для всех FINISHED-результатов группы.
+     *
+     * Для направления BY_CHOICE (score-О) места считаются по сумме баллов (убывание),
+     * тай-брейк — по времени финиша (кто раньше). Для остальных направлений — как раньше,
+     * по общему времени с учётом штрафа (возрастание).
      */
     private fun recalculateRanksForGroup(competitionId: String, groupId: Long) {
+        val direction = OrienteeringCompetitions.selectAll()
+            .where { OrienteeringCompetitions.id eq competitionId }
+            .singleOrNull()
+            ?.get(OrienteeringCompetitions.direction)
+
         val finishedRows = OrienteeringResults.selectAll()
             .where {
                 (OrienteeringResults.competitionId eq competitionId) and
@@ -127,20 +141,34 @@ class OrienteeringResultService {
                 (OrienteeringResults.status eq "FINISHED")
             }
             .toList()
-            .sortedBy { (it[OrienteeringResults.totalTime] ?: Long.MAX_VALUE) + it[OrienteeringResults.penaltyTime] }
+
+        val comparator: Comparator<ResultRow> = if (direction == "BY_CHOICE") {
+            compareByDescending<ResultRow> { it[OrienteeringResults.totalScore] ?: 0 }
+                .thenBy { it[OrienteeringResults.finishTime] ?: Long.MAX_VALUE }
+        } else {
+            compareBy { (it[OrienteeringResults.totalTime] ?: Long.MAX_VALUE) + it[OrienteeringResults.penaltyTime] }
+        }
+
+        val sortedRows = finishedRows.sortedWith(comparator)
+
+        fun rankKey(row: ResultRow): Any = if (direction == "BY_CHOICE") {
+            row[OrienteeringResults.totalScore] ?: 0
+        } else {
+            (row[OrienteeringResults.totalTime] ?: Long.MAX_VALUE) + row[OrienteeringResults.penaltyTime]
+        }
 
         var rank = 1
-        var prevTime: Long? = null
+        var prevKey: Any? = null
         var skipCount = 0
 
-        finishedRows.forEachIndexed { index, row ->
-            val effectiveTime = (row[OrienteeringResults.totalTime] ?: Long.MAX_VALUE) + row[OrienteeringResults.penaltyTime]
+        sortedRows.forEachIndexed { index, row ->
+            val key = rankKey(row)
 
-            if (prevTime != null && effectiveTime == prevTime) {
+            if (prevKey != null && key == prevKey) {
                 skipCount++
             } else {
                 rank = index + 1 - skipCount
-                prevTime = effectiveTime
+                prevKey = key
             }
 
             OrienteeringResults.update({ OrienteeringResults.id eq row[OrienteeringResults.id] }) {
@@ -171,6 +199,8 @@ class OrienteeringResultService {
         rank = this[OrienteeringResults.rank],
         status = this[OrienteeringResults.status],
         penaltyTime = this[OrienteeringResults.penaltyTime],
+        totalScore = this[OrienteeringResults.totalScore],
+        scorePenalty = this[OrienteeringResults.scorePenalty],
         splits = splits,
         isEditable = this[OrienteeringResults.isEditable],
         isEdited = this[OrienteeringResults.isEdited],

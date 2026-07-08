@@ -27,6 +27,9 @@ class ParticipantGroupService {
                     it[maxAge] = req.maxAge
                     it[distanceId] = req.distanceId
                     it[maxParticipants] = req.maxParticipants
+                    it[timeLimitMinutes] = req.timeLimitMinutes
+                    it[scorePenaltyPerMinute] = req.scorePenaltyPerMinute
+                    it[maxLatenessMinutes] = req.maxLatenessMinutes
                     it[updatedAt] = now
                 } get ParticipantGroups.id
 
@@ -56,6 +59,9 @@ class ParticipantGroupService {
                         it[maxAge] = req.maxAge
                         it[distanceId] = req.distanceId
                         it[maxParticipants] = req.maxParticipants
+                        it[timeLimitMinutes] = req.timeLimitMinutes
+                        it[scorePenaltyPerMinute] = req.scorePenaltyPerMinute
+                        it[maxLatenessMinutes] = req.maxLatenessMinutes
                         it[updatedAt] = now
                     }
                 } else {
@@ -67,6 +73,9 @@ class ParticipantGroupService {
                         it[maxAge] = req.maxAge
                         it[distanceId] = req.distanceId
                         it[maxParticipants] = req.maxParticipants
+                        it[timeLimitMinutes] = req.timeLimitMinutes
+                        it[scorePenaltyPerMinute] = req.scorePenaltyPerMinute
+                        it[maxLatenessMinutes] = req.maxLatenessMinutes
                         it[updatedAt] = now
                     }
                 }
@@ -99,6 +108,9 @@ class ParticipantGroupService {
         maxAge = this[ParticipantGroups.maxAge],
         distanceId = this[ParticipantGroups.distanceId],
         maxParticipants = this[ParticipantGroups.maxParticipants],
+        timeLimitMinutes = this[ParticipantGroups.timeLimitMinutes],
+        scorePenaltyPerMinute = this[ParticipantGroups.scorePenaltyPerMinute],
+        maxLatenessMinutes = this[ParticipantGroups.maxLatenessMinutes],
         updatedAt = this[ParticipantGroups.updatedAt]
     )
 

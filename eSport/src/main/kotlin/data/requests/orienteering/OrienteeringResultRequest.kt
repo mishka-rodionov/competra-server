@@ -13,6 +13,8 @@ data class OrienteeringResultRequest(
     @SerializedName("rank") val rank: Int?,
     @SerializedName("status") val status: String,
     @SerializedName("penaltyTime") val penaltyTime: Long,
+    @SerializedName("totalScore") val totalScore: Int? = null,
+    @SerializedName("scorePenalty") val scorePenalty: Int = 0,
     @SerializedName("splits") val splits: List<SplitTimeRequest>?,
     @SerializedName("isEditable") val isEditable: Boolean,
     @SerializedName("isEdited") val isEdited: Boolean,

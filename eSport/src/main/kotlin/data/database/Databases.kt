@@ -103,6 +103,12 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS website VARCHAR(500)")
         exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS control_points TEXT")
         exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS finish_control_point INTEGER")
+        // Формат "по выбору" (score-О): лимит времени и штраф на уровне группы, баллы результата.
+        exec("ALTER TABLE participant_groups ADD COLUMN IF NOT EXISTS time_limit_minutes INTEGER")
+        exec("ALTER TABLE participant_groups ADD COLUMN IF NOT EXISTS score_penalty_per_minute INTEGER")
+        exec("ALTER TABLE participant_groups ADD COLUMN IF NOT EXISTS max_lateness_minutes INTEGER")
+        exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS total_score INTEGER")
+        exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS score_penalty INTEGER NOT NULL DEFAULT 0")
         // updated_at — серверная сторона serverUpdatedAt в Android-клиенте.
         // Колонка объявлена в Exposed Table-объектах (default(0L)), но в существующих
         // PostgreSQL-таблицах её нет — нужны идемпотентные ALTER'ы для каждой таблицы.
