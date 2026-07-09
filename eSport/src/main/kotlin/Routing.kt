@@ -3,10 +3,17 @@ package com.competra
 import com.competra.data.response.base.BaseError
 import com.competra.data.response.base.CommonModel
 import com.competra.data.response.upload.UploadResponse
+import com.competra.data.routing.clubsPublicRoutes
+import com.competra.data.routing.clubsRoutes
 import com.competra.data.routing.deviceRoutes
 import com.competra.data.routing.diaryRoutes
 import com.competra.data.routing.orienteeringPublicRoutes
 import com.competra.data.routing.orienteeringRoutes
+import com.competra.data.routing.teamsPublicRoutes
+import com.competra.data.routing.teamsRoutes
+import com.competra.data.services.ClubJoinRequestService
+import com.competra.data.services.ClubMemberService
+import com.competra.data.services.ClubService
 import com.competra.data.services.DeviceTokenService
 import com.competra.data.services.DiaryWorkoutService
 import com.competra.data.services.DistanceService
@@ -15,6 +22,8 @@ import com.competra.data.services.OrienteeringCompetitionService
 import com.competra.data.services.OrienteeringParticipantService
 import com.competra.data.services.OrienteeringResultService
 import com.competra.data.services.ParticipantGroupService
+import com.competra.data.services.TeamMemberService
+import com.competra.data.services.TeamService
 import com.competra.data.services.UploadService
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
@@ -43,6 +52,11 @@ fun Application.configureRouting() {
     val deviceTokenService = DeviceTokenService()
     val fcmService = FcmService(deviceTokenService)
     val diaryWorkoutService = DiaryWorkoutService()
+    val clubService = ClubService()
+    val clubMemberService = ClubMemberService()
+    val clubJoinRequestService = ClubJoinRequestService()
+    val teamService = TeamService()
+    val teamMemberService = TeamMemberService()
     attributes.put(FcmServiceKey, fcmService)
 
     routing {
@@ -51,6 +65,8 @@ fun Application.configureRouting() {
 
         route("/api") {
             orienteeringPublicRoutes(competitionService, participantService, resultService, groupService)
+            clubsPublicRoutes(clubService, clubMemberService)
+            teamsPublicRoutes(teamService, teamMemberService)
 
             authenticate("auth-jwt") {
                 post("/upload/file") {
@@ -98,6 +114,8 @@ fun Application.configureRouting() {
                 orienteeringRoutes(competitionService, groupService, participantService, resultService, distanceService)
                 deviceRoutes(deviceTokenService, fcmService)
                 diaryRoutes(diaryWorkoutService)
+                clubsRoutes(clubService, clubMemberService, clubJoinRequestService)
+                teamsRoutes(teamService, teamMemberService)
             }
         }
     }

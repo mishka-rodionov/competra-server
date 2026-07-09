@@ -195,7 +195,7 @@ class OrienteeringParticipantService {
             it[groupId] = req.groupId
             it[OrienteeringParticipants.groupName] = groupName
             it[competitionId] = req.competitionId
-            it[commandName] = null
+            it[commandName] = req.commandName
             it[startNumber] = 0
             it[startTime] = 0L
             it[chipNumber] = 0L

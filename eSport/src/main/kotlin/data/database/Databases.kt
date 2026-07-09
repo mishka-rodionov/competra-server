@@ -17,6 +17,11 @@ import com.competra.data.database.entity.ParticipantGroups
 import com.competra.data.database.entity.RefreshTokens
 import com.competra.data.database.entity.SplitTimes
 import com.competra.data.database.entity.VerificationCodes
+import com.competra.data.database.entity.clubs.ClubJoinRequests
+import com.competra.data.database.entity.clubs.ClubMembers
+import com.competra.data.database.entity.clubs.Clubs
+import com.competra.data.database.entity.clubs.TeamMembers
+import com.competra.data.database.entity.clubs.Teams
 import com.competra.data.database.entity.diary.BikeDetails
 import com.competra.data.database.entity.diary.RunDetails
 import com.competra.data.database.entity.diary.SkiDetails
@@ -82,7 +87,12 @@ fun Application.configureDatabases() {
             Workouts,
             RunDetails,
             BikeDetails,
-            SkiDetails
+            SkiDetails,
+            Clubs,
+            ClubMembers,
+            ClubJoinRequests,
+            Teams,
+            TeamMembers
         )
         // Добавляем колонки, которых может не быть в уже существующей таблице
         exec("ALTER TABLE workouts ADD COLUMN IF NOT EXISTS track TEXT")
@@ -131,6 +141,22 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_crop_y DOUBLE PRECISION")
         exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_crop_width DOUBLE PRECISION")
         exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_crop_height DOUBLE PRECISION")
+
+        // Клубы: опциональный владелец-клуб соревнования. FK добавляется отдельно (идемпотентно
+        // через DO-блок ниже), т.к. ADD CONSTRAINT IF NOT EXISTS не поддерживается в PostgreSQL.
+        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS organizing_club_id VARCHAR(36)")
+        exec(
+            """
+            DO ${'$'}${'$'}
+            BEGIN
+                ALTER TABLE competitions
+                    ADD CONSTRAINT fk_competitions_organizing_club
+                    FOREIGN KEY (organizing_club_id) REFERENCES clubs(id) ON DELETE SET NULL;
+            EXCEPTION WHEN duplicate_object THEN NULL;
+            END
+            ${'$'}${'$'};
+            """.trimIndent()
+        )
 
         // ── Миграция идентичности соревнований на единый клиентский UUID ──────────────
         // competitions.id: BIGINT → VARCHAR(36) (UUID). orienteering_competitions и все

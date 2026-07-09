@@ -5,7 +5,9 @@ import com.competra.data.database.entity.Distances
 import com.competra.data.database.entity.OrienteeringCompetitions
 import com.competra.data.database.entity.OrienteeringParticipants
 import com.competra.data.database.entity.ParticipantGroups
+import com.competra.data.database.entity.clubs.ClubMembers
 import com.competra.data.exception.ConflictException
+import com.competra.data.exception.ForbiddenException
 import com.competra.data.requests.orienteering.OrienteeringCompetitionRequest
 import com.competra.data.response.base.PagedResponse
 import com.competra.data.response.orienteering.CompetitionDetailResponse
@@ -83,7 +85,8 @@ class OrienteeringCompetitionService {
         resultsStatus = comp[Competitions.resultsStatus],
         timeZoneId = comp[Competitions.timeZoneId],
         isTest = comp[Competitions.isTest],
-        updatedAt = comp[Competitions.updatedAt]
+        updatedAt = comp[Competitions.updatedAt],
+        organizingClubId = comp[Competitions.organizingClubId]
     )
 
     /** Маппинг пары (ядро, расширение) в [OrienteeringCompetitionResponse]. */
@@ -202,6 +205,12 @@ class OrienteeringCompetitionService {
             .where { Competitions.id eq competitionId }
             .singleOrNull()
 
+        // Задать/сменить клуба-организатора может только FOUNDER/ADMIN этого клуба.
+        val newClubId = req.competition.organizingClubId
+        if (newClubId != null && newClubId != existingComp?.get(Competitions.organizingClubId)) {
+            requireClubAdmin(newClubId, userId)
+        }
+
         if (existingComp != null) {
             Competitions.update({ Competitions.id eq competitionId }) {
                 it[title] = req.competition.title
@@ -232,6 +241,7 @@ class OrienteeringCompetitionService {
                 it[website] = req.competition.website
                 it[resultsStatus] = req.competition.resultsStatus
                 it[timeZoneId] = req.competition.timeZoneId
+                it[organizingClubId] = req.competition.organizingClubId
                 it[updatedAt] = now
             }
         } else {
@@ -267,6 +277,7 @@ class OrienteeringCompetitionService {
                 it[website] = req.competition.website
                 it[resultsStatus] = req.competition.resultsStatus
                 it[timeZoneId] = req.competition.timeZoneId
+                it[organizingClubId] = req.competition.organizingClubId
                 it[updatedAt] = now
             }
         }
@@ -296,6 +307,16 @@ class OrienteeringCompetitionService {
         val comp = Competitions.selectAll().where { Competitions.id eq competitionId }.single()
         val orient = OrienteeringCompetitions.selectAll().where { OrienteeringCompetitions.id eq competitionId }.single()
         buildOrienteeringResponse(comp, orient)
+    }
+
+    /** Бросает [ForbiddenException], если userId не FOUNDER/ADMIN клуба [clubId]. */
+    private fun requireClubAdmin(clubId: String, userId: String) {
+        val membership = ClubMembers.selectAll()
+            .where { (ClubMembers.clubId eq clubId) and (ClubMembers.userId eq userId) }
+            .singleOrNull() ?: throw ForbiddenException("Вы не состоите в клубе-организаторе")
+        if (membership[ClubMembers.role] !in listOf("FOUNDER", "ADMIN")) {
+            throw ForbiddenException("Только FOUNDER/ADMIN клуба может создавать соревнования от его имени")
+        }
     }
 
     suspend fun getByUserId(userId: String): List<OrienteeringCompetitionResponse> = dbQuery {

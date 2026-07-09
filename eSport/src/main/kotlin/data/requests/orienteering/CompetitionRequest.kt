@@ -32,7 +32,9 @@ data class CompetitionRequest(
     @SerializedName("timeZoneId") val timeZoneId: String,
     /** Тестовое соревнование: создаётся из debug-сборки, не попадает в публичную ленту. */
     @SerializedName("isTest") val isTest: Boolean = false,
-    @SerializedName("serverUpdatedAt") val serverUpdatedAt: Long? = null
+    @SerializedName("serverUpdatedAt") val serverUpdatedAt: Long? = null,
+    /** Опциональный клуб-организатор. Задать/сменить может только FOUNDER/ADMIN этого клуба. */
+    @SerializedName("organizingClubId") val organizingClubId: String? = null
 )
 
 data class CoordinatesRequest(

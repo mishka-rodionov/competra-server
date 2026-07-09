@@ -41,6 +41,8 @@ object Competitions : Table("competitions") {
     val updatedAt = long("updated_at").default(0L)
     val startNotificationSent = bool("start_notification_sent").default(false)
     val timeZoneId = varchar("time_zone_id", 64).default("UTC")
+    /** Опциональный владелец-клуб. Удаление клуба не удаляет соревнование (ON DELETE SET NULL). */
+    val organizingClubId = varchar("organizing_club_id", 36).nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

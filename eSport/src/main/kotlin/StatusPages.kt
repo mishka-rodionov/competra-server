@@ -1,6 +1,7 @@
 package com.competra
 
 import com.competra.data.exception.ConflictException
+import com.competra.data.exception.ForbiddenException
 import com.competra.data.response.base.BaseError
 import com.competra.data.response.base.CommonModel
 import io.ktor.http.HttpStatusCode
@@ -31,6 +32,16 @@ fun Application.configureStatusPages() {
                     it.status = 0
                     it.result = cause.currentResponse
                     it.errors = listOf(BaseError(409, "Server record is newer"))
+                }
+            )
+        }
+
+        exception<ForbiddenException> { call, cause ->
+            call.respond(
+                HttpStatusCode.Forbidden,
+                CommonModel<Any>().also {
+                    it.status = 0
+                    it.errors = listOf(BaseError(403, cause.message ?: "Forbidden"))
                 }
             )
         }
