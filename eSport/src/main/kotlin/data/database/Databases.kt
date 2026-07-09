@@ -22,6 +22,10 @@ import com.competra.data.database.entity.clubs.ClubMembers
 import com.competra.data.database.entity.clubs.Clubs
 import com.competra.data.database.entity.clubs.TeamMembers
 import com.competra.data.database.entity.clubs.Teams
+import com.competra.data.database.entity.rating.RatingCompetitions
+import com.competra.data.database.entity.rating.RatingGroupMappings
+import com.competra.data.database.entity.rating.RatingGroups
+import com.competra.data.database.entity.rating.RatingSeries
 import com.competra.data.database.entity.diary.BikeDetails
 import com.competra.data.database.entity.diary.RunDetails
 import com.competra.data.database.entity.diary.SkiDetails
@@ -92,7 +96,11 @@ fun Application.configureDatabases() {
             ClubMembers,
             ClubJoinRequests,
             Teams,
-            TeamMembers
+            TeamMembers,
+            RatingSeries,
+            RatingGroups,
+            RatingCompetitions,
+            RatingGroupMappings
         )
         // Добавляем колонки, которых может не быть в уже существующей таблице
         exec("ALTER TABLE workouts ADD COLUMN IF NOT EXISTS track TEXT")

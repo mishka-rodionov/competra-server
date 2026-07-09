@@ -25,6 +25,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greater
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.andWhere
 import org.jetbrains.exposed.sql.deleteWhere
@@ -384,13 +385,17 @@ class OrienteeringCompetitionService {
         dateTo: Long?,
         includeTest: Boolean = false,
         page: Int = 0,
-        limit: Int = 20
+        limit: Int = 20,
+        searchQuery: String? = null
     ): PagedResponse<CompetitionResponse> = dbQuery {
         val now = System.currentTimeMillis()
         val query = Competitions.selectAll()
         // Тестовые соревнования скрыты из публичной ленты; includeTest=true — debug-предпросмотр.
         if (!includeTest) {
             query.andWhere { Competitions.isTest eq false }
+        }
+        if (!searchQuery.isNullOrBlank()) {
+            query.andWhere { Competitions.title like "%$searchQuery%" }
         }
         if (kindOfSports.isNotEmpty()) {
             query.andWhere { Competitions.kindOfSport inList kindOfSports }

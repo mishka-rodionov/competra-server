@@ -48,8 +48,9 @@ fun Route.orienteeringPublicRoutes(
         val page = call.request.queryParameters["page"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
         val limit = call.request.queryParameters["limit"]?.toIntOrNull()?.coerceIn(1, MAX_PAGE_SIZE)
             ?: DEFAULT_PAGE_SIZE
+        val searchQuery = call.request.queryParameters["query"]
         call.application.log.info(
-            "PUBLIC_COMPETITIONS filter — kindOfSports=$kindOfSports, statuses=$statuses, dateFrom=$dateFrom, dateTo=$dateTo, includeTest=$includeTest, page=$page, limit=$limit, fullUri=${call.request.uri}"
+            "PUBLIC_COMPETITIONS filter — kindOfSports=$kindOfSports, statuses=$statuses, dateFrom=$dateFrom, dateTo=$dateTo, includeTest=$includeTest, page=$page, limit=$limit, query=$searchQuery, fullUri=${call.request.uri}"
         )
         val paged = competitionService.getPublicCompetitions(
             kindOfSports = kindOfSports,
@@ -58,7 +59,8 @@ fun Route.orienteeringPublicRoutes(
             dateTo = dateTo,
             includeTest = includeTest,
             page = page,
-            limit = limit
+            limit = limit,
+            searchQuery = searchQuery
         )
         call.application.log.info(
             "PUBLIC_COMPETITIONS result — returned ${paged.items.size} items, hasMore=${paged.hasMore}, statuses in result: ${paged.items.map { it.status }.distinct()}"

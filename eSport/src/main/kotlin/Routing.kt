@@ -9,6 +9,8 @@ import com.competra.data.routing.deviceRoutes
 import com.competra.data.routing.diaryRoutes
 import com.competra.data.routing.orienteeringPublicRoutes
 import com.competra.data.routing.orienteeringRoutes
+import com.competra.data.routing.ratingPublicRoutes
+import com.competra.data.routing.ratingRoutes
 import com.competra.data.routing.teamsPublicRoutes
 import com.competra.data.routing.teamsRoutes
 import com.competra.data.services.ClubJoinRequestService
@@ -22,6 +24,7 @@ import com.competra.data.services.OrienteeringCompetitionService
 import com.competra.data.services.OrienteeringParticipantService
 import com.competra.data.services.OrienteeringResultService
 import com.competra.data.services.ParticipantGroupService
+import com.competra.data.services.RatingService
 import com.competra.data.services.TeamMemberService
 import com.competra.data.services.TeamService
 import com.competra.data.services.UploadService
@@ -57,6 +60,7 @@ fun Application.configureRouting() {
     val clubJoinRequestService = ClubJoinRequestService()
     val teamService = TeamService()
     val teamMemberService = TeamMemberService()
+    val ratingService = RatingService()
     attributes.put(FcmServiceKey, fcmService)
 
     routing {
@@ -67,6 +71,7 @@ fun Application.configureRouting() {
             orienteeringPublicRoutes(competitionService, participantService, resultService, groupService)
             clubsPublicRoutes(clubService, clubMemberService)
             teamsPublicRoutes(teamService, teamMemberService)
+            ratingPublicRoutes(ratingService)
 
             authenticate("auth-jwt") {
                 post("/upload/file") {
@@ -116,6 +121,7 @@ fun Application.configureRouting() {
                 diaryRoutes(diaryWorkoutService)
                 clubsRoutes(clubService, clubMemberService, clubJoinRequestService)
                 teamsRoutes(teamService, teamMemberService)
+                ratingRoutes(ratingService)
             }
         }
     }
