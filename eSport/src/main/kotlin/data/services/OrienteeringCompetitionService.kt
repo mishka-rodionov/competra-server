@@ -320,6 +320,19 @@ class OrienteeringCompetitionService {
         }
     }
 
+    /**
+     * Публичное получение одного соревнования (с ориентировочно-специфичными полями,
+     * включая [OrienteeringCompetitions.direction]) по id — без ограничения по владельцу/участию,
+     * в отличие от [getByUserId]/[getRegisteredByUserId].
+     */
+    suspend fun getOrienteeringCompetitionById(competitionId: String): OrienteeringCompetitionResponse? = dbQuery {
+        val comp = Competitions.selectAll().where { Competitions.id eq competitionId }.singleOrNull()
+            ?: return@dbQuery null
+        val orient = OrienteeringCompetitions.selectAll().where { OrienteeringCompetitions.id eq competitionId }
+            .singleOrNull() ?: return@dbQuery null
+        buildOrienteeringResponse(comp, orient)
+    }
+
     suspend fun getByUserId(userId: String): List<OrienteeringCompetitionResponse> = dbQuery {
         Competitions.selectAll()
             .where { Competitions.ownerId eq userId }
