@@ -5,5 +5,7 @@ import com.google.gson.annotations.SerializedName
 data class ControlPointRequest(
     @SerializedName("number") val number: Int,
     @SerializedName("role") val role: String = "ORDINARY",
-    @SerializedName("score") val score: Int = 0
+    @SerializedName("score") val score: Int = 0,
+    @SerializedName("latitude") val latitude: Double? = null,
+    @SerializedName("longitude") val longitude: Double? = null
 )

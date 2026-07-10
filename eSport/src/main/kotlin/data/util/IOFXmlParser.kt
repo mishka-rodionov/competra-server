@@ -17,6 +17,21 @@ object IOFXmlParser {
             .getElementsByTagName("RaceCourseData").item(0) as? Element
             ?: return emptyList()
 
+        // Справочник КП объявлен как прямые дети RaceCourseData: <Control><Id/><Position lat lng/></Control>.
+        // getElementsByTagName рекурсивен и задел бы также ссылки <Control> внутри CourseControl,
+        // поэтому справочник собираем только по прямым потомкам.
+        val controlPositions = mutableMapOf<String, Pair<Double, Double>>()
+        val rcdChildren = rcd.childNodes
+        for (k in 0 until rcdChildren.length) {
+            val node = rcdChildren.item(k) as? Element ?: continue
+            if (node.tagName != "Control") continue
+            val id = node.getElementsByTagName("Id").item(0)?.textContent ?: continue
+            val position = node.getElementsByTagName("Position").item(0) as? Element ?: continue
+            val lat = position.getAttribute("lat").toDoubleOrNull()
+            val lng = position.getAttribute("lng").toDoubleOrNull()
+            if (lat != null && lng != null) controlPositions[id] = lat to lng
+        }
+
         val courses = rcd.getElementsByTagName("Course")
         return (0 until courses.length).map { i ->
             val course = courses.item(i) as Element
@@ -33,7 +48,14 @@ object IOFXmlParser {
                 val code   = ctrlId.filter { it.isDigit() }.toIntOrNull()
                 val role   = when (type) { "Start" -> "Start"; "Finish" -> "Finish"; else -> "ORDINARY" }
                 if (role == "Finish" && code != null) finishNumber = code
-                ControlPointRequest(number = code ?: j, role = role, score = 0)
+                val position = controlPositions[ctrlId]
+                ControlPointRequest(
+                    number = code ?: j,
+                    role = role,
+                    score = 0,
+                    latitude = position?.first,
+                    longitude = position?.second
+                )
             }
 
             DistanceRequest(
