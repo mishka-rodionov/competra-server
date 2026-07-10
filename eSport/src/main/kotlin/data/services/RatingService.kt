@@ -23,6 +23,7 @@ import com.competra.data.response.rating.RatingStandingBreakdownEntry
 import com.competra.data.response.rating.RatingStandingEntry
 import com.competra.data.response.rating.RatingStandingsResponse
 import com.competra.data.util.RatingPointsTable
+import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.NotFoundException
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.ResultRow
@@ -114,6 +115,11 @@ class RatingService {
 
         val competition = Competitions.selectAll().where { Competitions.id eq competitionId }.singleOrNull()
             ?: throw NotFoundException("Competition not found")
+
+        val alreadyAdded = RatingCompetitions.selectAll()
+            .where { (RatingCompetitions.ratingId eq ratingId) and (RatingCompetitions.competitionId eq competitionId) }
+            .any()
+        if (alreadyAdded) throw BadRequestException("Соревнование уже добавлено в этот рейтинг")
 
         val ratingCompetitionId = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
