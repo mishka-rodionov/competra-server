@@ -5,6 +5,7 @@ import com.competra.data.database.entity.OrienteeringParticipants
 import com.competra.data.database.entity.OrienteeringResults
 import com.competra.data.database.entity.ParticipantGroups
 import com.competra.data.database.entity.clubs.ClubMembers
+import com.competra.data.database.entity.clubs.Clubs
 import com.competra.data.database.entity.rating.RatingCompetitions
 import com.competra.data.database.entity.rating.RatingGroupMappings
 import com.competra.data.database.entity.rating.RatingGroups
@@ -14,11 +15,13 @@ import com.competra.data.requests.rating.CreateRatingRequest
 import com.competra.data.requests.rating.RatingGroupRequest
 import com.competra.data.requests.rating.SetGroupMappingRequest
 import com.competra.data.requests.rating.UpdateRatingRequest
+import com.competra.data.response.base.PagedResponse
 import com.competra.data.response.rating.AddCompetitionToRatingResponse
 import com.competra.data.response.rating.RatingCompetitionResponse
 import com.competra.data.response.rating.RatingGroupMappingSuggestionResponse
 import com.competra.data.response.rating.RatingGroupResponse
 import com.competra.data.response.rating.RatingResponse
+import com.competra.data.response.rating.RatingSearchResponse
 import com.competra.data.response.rating.RatingStandingBreakdownEntry
 import com.competra.data.response.rating.RatingStandingEntry
 import com.competra.data.response.rating.RatingStandingsResponse
@@ -30,7 +33,9 @@ import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.andWhere
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.innerJoin
 import org.jetbrains.exposed.sql.insert
@@ -90,6 +95,29 @@ class RatingService {
             .where { RatingSeries.ownerClubId eq clubId }
             .orderBy(RatingSeries.createdAt, SortOrder.DESC)
             .map { it.toResponse(loadGroups(it[RatingSeries.id])) }
+    }
+
+    /** Глобальный поиск по всем рейтингам (без привязки к клубу) — для экрана "Все рейтинги". */
+    suspend fun search(query: String?, page: Int, limit: Int): PagedResponse<RatingSearchResponse> = dbQuery {
+        val baseQuery = (RatingSeries innerJoin Clubs).selectAll()
+        if (!query.isNullOrBlank()) {
+            baseQuery.andWhere { RatingSeries.name like "%$query%" }
+        }
+        baseQuery.orderBy(RatingSeries.createdAt, SortOrder.DESC)
+        baseQuery.limit(limit + 1).offset(page.toLong() * limit)
+
+        val rows = baseQuery.toList()
+        val hasMore = rows.size > limit
+        val items = rows.take(limit).map {
+            RatingSearchResponse(
+                id = it[RatingSeries.id],
+                name = it[RatingSeries.name],
+                ownerClubId = it[RatingSeries.ownerClubId],
+                ownerClubName = it[Clubs.name],
+                createdAt = it[RatingSeries.createdAt]
+            )
+        }
+        PagedResponse(items, hasMore)
     }
 
     suspend fun listCompetitions(ratingId: String): List<RatingCompetitionResponse> = dbQuery {

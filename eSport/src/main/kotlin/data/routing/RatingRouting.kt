@@ -15,7 +15,19 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
+private const val DEFAULT_PAGE_SIZE = 20
+private const val MAX_PAGE_SIZE = 100
+
 fun Route.ratingPublicRoutes(ratingService: RatingService) {
+    get("/ratings") {
+        val query = call.request.queryParameters["query"]
+        val page = call.request.queryParameters["page"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+        val limit = call.request.queryParameters["limit"]?.toIntOrNull()?.coerceIn(1, MAX_PAGE_SIZE)
+            ?: DEFAULT_PAGE_SIZE
+        val result = ratingService.search(query, page, limit)
+        call.respond(CommonModel<Any>().also { it.status = 1; it.result = result })
+    }
+
     get("/clubs/{clubId}/ratings") {
         val clubId = call.parameters["clubId"]!!
         val result = ratingService.listForClub(clubId)
