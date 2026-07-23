@@ -61,6 +61,7 @@ class FcmService(
         title: String,
         body: String,
         data: Map<String, String> = emptyMap(),
+        includeNotificationBlock: Boolean = true,
     ) {
         if (!isEnabled) {
             log.debug("FCM disabled, skipping push to userId=$userId")
@@ -71,14 +72,21 @@ class FcmService(
             log.info("No device tokens for userId=$userId, skipping push")
             return
         }
-        tokens.forEach { token -> sendToToken(token, title, body, data) }
+        tokens.forEach { token -> sendToToken(token, title, body, data, includeNotificationBlock) }
     }
 
+    /**
+     * @param includeNotificationBlock Если `true` (по умолчанию), payload содержит FCM `notification`-блок —
+     *   в фоне Android рисует уведомление сам, минуя `onMessageReceived` (штатное поведение FCM). Категории
+     *   пушей с клиентской фильтрацией по настройкам пользователя и/или deep-link'ом ДОЛЖНЫ передавать `false`:
+     *   тогда payload data-only, и `onMessageReceived` гарантированно вызывается независимо от состояния приложения.
+     */
     suspend fun sendToToken(
         token: String,
         title: String,
         body: String,
         data: Map<String, String> = emptyMap(),
+        includeNotificationBlock: Boolean = true,
     ) {
         val creds = credentials ?: run {
             log.debug("FCM disabled, skipping push to token=${token.take(12)}…")
@@ -88,7 +96,7 @@ class FcmService(
             creds.refreshIfExpired()
             creds.accessToken.tokenValue
         }
-        val payload = buildMessagePayload(token, title, body, data)
+        val payload = buildMessagePayload(token, title, body, data, includeNotificationBlock)
         val url = "https://fcm.googleapis.com/v1/projects/$projectId/messages:send"
 
         val response = httpClient.post(url) {
@@ -124,15 +132,24 @@ class FcmService(
         title: String,
         body: String,
         data: Map<String, String>,
+        includeNotificationBlock: Boolean,
     ): JsonObject = buildJsonObject {
         putJsonObject("message") {
             put("token", token)
-            putJsonObject("notification") {
-                put("title", title)
-                put("body", body)
+            if (includeNotificationBlock) {
+                putJsonObject("notification") {
+                    put("title", title)
+                    put("body", body)
+                }
             }
-            if (data.isNotEmpty()) {
+            if (!includeNotificationBlock || data.isNotEmpty()) {
                 putJsonObject("data") {
+                    // data-only payload кладёт title/body сюда же — CompetraMessagingService.onMessageReceived
+                    // читает их как fallback, когда notification-блока нет.
+                    if (!includeNotificationBlock) {
+                        put("title", title)
+                        put("body", body)
+                    }
                     data.forEach { (k, v) -> put(k, v) }
                 }
             }

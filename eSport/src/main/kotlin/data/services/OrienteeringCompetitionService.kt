@@ -1,5 +1,6 @@
 package com.competra.data.services
 
+import com.competra.data.database.entity.CompetitionNotificationType
 import com.competra.data.database.entity.Competitions
 import com.competra.data.database.entity.Distances
 import com.competra.data.database.entity.OrienteeringCompetitions
@@ -37,7 +38,17 @@ import org.jetbrains.exposed.sql.stringLiteral
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
 
-class OrienteeringCompetitionService {
+/**
+ * `true`, если переход resultsStatus означает первую публикацию результатов
+ * (заслуживает push-уведомления участникам). Чистая функция — покрыта unit-тестом.
+ */
+internal fun shouldNotifyResultsPublished(oldStatus: String?, newStatus: String): Boolean =
+    oldStatus == "NOT_PUBLISHED" && newStatus in listOf("PRELIMINARY", "OFFICIAL")
+
+class OrienteeringCompetitionService(
+    private val fcmService: FcmService,
+    private val notificationLogService: CompetitionNotificationLogService,
+) {
 
     private companion object {
         /** Статусы, которые НЕ должны переопределяться автоматическим пересчётом. */
@@ -181,7 +192,37 @@ class OrienteeringCompetitionService {
         total
     }
 
-    suspend fun upsert(req: OrienteeringCompetitionRequest, userId: String): OrienteeringCompetitionResponse = dbQuery {
+    suspend fun upsert(req: OrienteeringCompetitionRequest, userId: String): OrienteeringCompetitionResponse {
+        val (response, resultsJustPublished) = upsertInTransaction(req, userId)
+        if (resultsJustPublished) {
+            notifyResultsPublished(req.competitionId, req.competition.title)
+        }
+        return response
+    }
+
+    /** Уведомляет зарегистрированных участников о публикации результатов. Сеть — вне DB-транзакции upsert(). */
+    private suspend fun notifyResultsPublished(competitionId: String, competitionTitle: String) {
+        if (notificationLogService.hasSent(competitionId, CompetitionNotificationType.RESULTS_PUBLISHED)) return
+        val userIds = newSuspendedTransaction(Dispatchers.IO) {
+            OrienteeringParticipants.selectAll()
+                .where { OrienteeringParticipants.competitionId eq competitionId }
+                .mapNotNull { it[OrienteeringParticipants.userId] }
+                .distinct()
+        }
+        userIds.forEach { userId ->
+            fcmService.sendToUser(
+                userId = userId,
+                title = "Результаты опубликованы",
+                body = "Результаты соревнования «$competitionTitle» опубликованы",
+                data = mapOf("competition_id" to competitionId, "kind" to "results_published"),
+                includeNotificationBlock = false,
+            )
+        }
+        notificationLogService.markSent(competitionId, CompetitionNotificationType.RESULTS_PUBLISHED)
+    }
+
+    /** @return построенный [OrienteeringCompetitionResponse] и флаг «resultsStatus только что перешёл в опубликованный». */
+    private suspend fun upsertInTransaction(req: OrienteeringCompetitionRequest, userId: String): Pair<OrienteeringCompetitionResponse, Boolean> = dbQuery {
         val now = System.currentTimeMillis()
         val competitionId = req.competitionId
 
@@ -205,6 +246,11 @@ class OrienteeringCompetitionService {
         val existingComp = Competitions.selectAll()
             .where { Competitions.id eq competitionId }
             .singleOrNull()
+
+        val resultsJustPublished = shouldNotifyResultsPublished(
+            oldStatus = existingComp?.get(Competitions.resultsStatus),
+            newStatus = req.competition.resultsStatus,
+        )
 
         // Задать/сменить клуба-организатора может только FOUNDER/ADMIN этого клуба.
         val newClubId = req.competition.organizingClubId
@@ -307,7 +353,7 @@ class OrienteeringCompetitionService {
 
         val comp = Competitions.selectAll().where { Competitions.id eq competitionId }.single()
         val orient = OrienteeringCompetitions.selectAll().where { OrienteeringCompetitions.id eq competitionId }.single()
-        buildOrienteeringResponse(comp, orient)
+        buildOrienteeringResponse(comp, orient) to resultsJustPublished
     }
 
     /** Бросает [ForbiddenException], если userId не FOUNDER/ADMIN клуба [clubId]. */

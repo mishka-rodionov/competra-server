@@ -1,5 +1,7 @@
 package com.competra.data.scheduler
 
+import com.competra.CompetitionNotificationLogServiceKey
+import com.competra.FcmServiceKey
 import com.competra.data.services.OrienteeringCompetitionService
 import io.ktor.server.application.*
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -24,7 +26,7 @@ private const val INTERVAL_MS = 5 * 60_000L  // 5 минут
  * если БД ещё не синхронизирована.
  */
 fun Application.configureStatusScheduler() {
-    val service = OrienteeringCompetitionService()
+    val service = OrienteeringCompetitionService(attributes[FcmServiceKey], attributes[CompetitionNotificationLogServiceKey])
     val handler = CoroutineExceptionHandler { _, t ->
         log.error("CompetitionStatusScheduler exception", t)
     }

@@ -16,6 +16,7 @@ import com.competra.data.routing.teamsRoutes
 import com.competra.data.services.ClubJoinRequestService
 import com.competra.data.services.ClubMemberService
 import com.competra.data.services.ClubService
+import com.competra.data.services.CompetitionNotificationLogService
 import com.competra.data.services.DeviceTokenService
 import com.competra.data.services.DiaryWorkoutService
 import com.competra.data.services.DistanceService
@@ -42,11 +43,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 val FcmServiceKey = AttributeKey<FcmService>("FcmService")
+val CompetitionNotificationLogServiceKey = AttributeKey<CompetitionNotificationLogService>("CompetitionNotificationLogService")
 
 fun Application.configureRouting() {
     install(AutoHeadResponse)
 
-    val competitionService = OrienteeringCompetitionService()
     val groupService = ParticipantGroupService()
     val participantService = OrienteeringParticipantService()
     val resultService = OrienteeringResultService()
@@ -54,6 +55,8 @@ fun Application.configureRouting() {
     val uploadService = UploadService()
     val deviceTokenService = DeviceTokenService()
     val fcmService = FcmService(deviceTokenService)
+    val notificationLogService = CompetitionNotificationLogService()
+    val competitionService = OrienteeringCompetitionService(fcmService, notificationLogService)
     val diaryWorkoutService = DiaryWorkoutService()
     val clubService = ClubService()
     val clubMemberService = ClubMemberService()
@@ -62,6 +65,7 @@ fun Application.configureRouting() {
     val teamMemberService = TeamMemberService()
     val ratingService = RatingService()
     attributes.put(FcmServiceKey, fcmService)
+    attributes.put(CompetitionNotificationLogServiceKey, notificationLogService)
 
     routing {
         // /health, /health/ready остаются на корне для внешних мониторингов (UptimeRobot и т.д.)

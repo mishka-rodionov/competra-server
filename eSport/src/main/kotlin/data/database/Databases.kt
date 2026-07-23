@@ -7,6 +7,7 @@ import com.competra.data.requests.UserProfileRequest
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
+import com.competra.data.database.entity.CompetitionNotifications
 import com.competra.data.database.entity.Competitions
 import com.competra.data.database.entity.DeviceTokens
 import com.competra.data.database.entity.Distances
@@ -100,7 +101,8 @@ fun Application.configureDatabases() {
             RatingSeries,
             RatingGroups,
             RatingCompetitions,
-            RatingGroupMappings
+            RatingGroupMappings,
+            CompetitionNotifications
         )
         // Добавляем колонки, которых может не быть в уже существующей таблице
         exec("ALTER TABLE workouts ADD COLUMN IF NOT EXISTS track TEXT")
@@ -137,7 +139,30 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE orienteering_participants ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
         exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
         exec("ALTER TABLE split_times ADD COLUMN IF NOT EXISTS updated_at BIGINT NOT NULL DEFAULT 0")
-        exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS start_notification_sent BOOLEAN NOT NULL DEFAULT FALSE")
+        // Перенос start_notification_sent в единую лог-таблицу competition_notifications (см. CompetitionNotifications.kt):
+        // бэкфиллим строку (id, START_REMINDER) для уже уведомлённых соревнований и дропаем колонку.
+        // Guard на существование колонки — exec() здесь гоняется при каждом старте, а после первого
+        // успешного прогона колонки уже не будет.
+        exec(
+            """
+            DO ${'$'}${'$'}
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'competitions' AND column_name = 'start_notification_sent'
+                ) THEN
+                    INSERT INTO competition_notifications (competition_id, notification_type, sent_at)
+                    SELECT id, 'START_REMINDER', ${System.currentTimeMillis()}
+                    FROM competitions
+                    WHERE start_notification_sent = true
+                    ON CONFLICT (competition_id, notification_type) DO NOTHING;
+
+                    ALTER TABLE competitions DROP COLUMN start_notification_sent;
+                END IF;
+            END
+            ${'$'}${'$'};
+            """.trimIndent()
+        )
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS time_zone_id VARCHAR(64) NOT NULL DEFAULT 'UTC'")
         // is_test — тестовые соревнования исключаются из публичной ленты, видны только владельцу.
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS is_test BOOLEAN NOT NULL DEFAULT FALSE")
