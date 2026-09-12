@@ -136,8 +136,13 @@ class OrienteeringResultService {
      * Пересчитывает места для всех FINISHED-результатов группы.
      *
      * Для направления BY_CHOICE (score-О) места считаются по сумме баллов (убывание),
-     * тай-брейк — по времени финиша (кто раньше). Для остальных направлений — как раньше,
-     * по общему времени с учётом штрафа (возрастание).
+     * тай-брейк — по времени прохождения дистанции (totalTime = finish - start участника).
+     * Для остальных направлений — как раньше, по общему времени с учётом штрафа (возрастание).
+     *
+     * Тай-брейк BY_CHOICE использует именно totalTime, а не finishTime (абсолютное время по
+     * часам) — при интервальном/разном старте участников более раннее абсолютное время финиша
+     * не означает более быстрый забег. См. аналогичную логику и комментарий в Android-клиенте:
+     * OrienteeringCompetitionInteractor.recalculateRanksV2.
      */
     private fun recalculateRanksForGroup(competitionId: String, groupId: Long) {
         val direction = OrienteeringCompetitions.selectAll()
@@ -155,18 +160,18 @@ class OrienteeringResultService {
 
         val comparator: Comparator<ResultRow> = if (direction == "BY_CHOICE") {
             compareByDescending<ResultRow> { it[OrienteeringResults.totalScore] ?: 0 }
-                .thenBy { it[OrienteeringResults.finishTime] ?: Long.MAX_VALUE }
+                .thenBy { it[OrienteeringResults.totalTime] ?: Long.MAX_VALUE }
         } else {
             compareBy { (it[OrienteeringResults.totalTime] ?: Long.MAX_VALUE) + it[OrienteeringResults.penaltyTime] }
         }
 
         val sortedRows = finishedRows.sortedWith(comparator)
 
-        // Для BY_CHOICE ключ должен включать finishTime — иначе два участника с одинаковыми
+        // Для BY_CHOICE ключ должен включать totalTime — иначе два участника с одинаковыми
         // очками, но разным временем (тай-брейк уже учтён компаратором выше), получат одно и то
         // же место вместо разных.
         fun rankKey(row: ResultRow): Any = if (direction == "BY_CHOICE") {
-            (row[OrienteeringResults.totalScore] ?: 0) to (row[OrienteeringResults.finishTime] ?: Long.MAX_VALUE)
+            (row[OrienteeringResults.totalScore] ?: 0) to (row[OrienteeringResults.totalTime] ?: Long.MAX_VALUE)
         } else {
             (row[OrienteeringResults.totalTime] ?: Long.MAX_VALUE) + row[OrienteeringResults.penaltyTime]
         }
