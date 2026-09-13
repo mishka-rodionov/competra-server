@@ -70,18 +70,18 @@ SMTP_USER, SMTP_PASSWORD  # Yandex Mail
 | Проект | Путь | Роль |
 |---|---|---|
 | **competra-android** | `/Users/rodionov/android_projects/competra-android` | Android-клиент (Retrofit + Room + NFC) |
-| **competra-web** | `/Users/rodionov/web_projects/competra-web` | Веб-клиент (Kotlin/Wasm + Ktor client) |
+| **competra-web-ts** | `/Users/rodionov/web_projects/competra-web-ts` | Веб-клиент (React + TypeScript + Vite + TanStack Query, `fetch`) — деплоится на `competra.ru` через GitHub Pages. Заменил собой прежний Kotlin/Wasm веб-клиент (`competra-web`, теперь архивный) |
 | **mapper** | `/Users/rodionov/android_projects/mapper` | Qt/C++ редактор карт, поставщик IOF XML |
 
 ### Правила для Claude
 
-**При добавлении или изменении эндпоинта** — **спроси пользователя**: нужно ли обновить клиентский код в `competra-android` и/или `competra-web`? Оба клиента зависят от одного API-контракта.
+**При добавлении или изменении эндпоинта** — **спроси пользователя**: нужно ли обновить клиентский код в `competra-android` и/или `competra-web-ts`? Оба клиента зависят от одного API-контракта.
 
-**При изменении формата ответа** (`CommonModel<T>`, структуры DTO, кодов ошибок) — **спроси**: не сломается ли парсинг на Android (`data:remote`) или в Web (`shared/data/api`)?
+**При изменении формата ответа** (`CommonModel<T>`, структуры DTO, кодов ошибок) — **спроси**: не сломается ли парсинг на Android (`data:remote`) или в Web (`src/api/` в `competra-web-ts`)?
 
 **При изменении эндпоинтов авторизации** (`/user/login`, `/user/verify_code`, `/refresh_token`) — **спроси**: нужно ли обновить `AuthRepository` в обоих клиентах?
 
-**При изменении `IOFXmlParser.kt`** или эндпоинта `POST /event/orienteering/import/courses` — **спроси**: не сломается ли импорт дистанций из Mapper? Mapper экспортирует IOF XML, Android (`DistanceRepository.importFromXml`) и Web загружают его на этот эндпоинт.
+**При изменении `IOFXmlParser.kt`** или эндпоинта `POST /event/orienteering/import/courses` — **спроси**: не сломается ли импорт дистанций из Mapper? Mapper экспортирует IOF XML, Android (`DistanceRepository.importFromXml`) и Web (`src/api/distanceRepository.ts` → `importFromXml` в `competra-web-ts`) загружают его на этот эндпоинт.
 
 ### Контракт, общий для всех клиентов
 - Все ответы: `{"status": 1, "result": ..., "errors": [...]}` — `status == 1` означает успех
