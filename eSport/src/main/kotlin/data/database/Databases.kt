@@ -326,6 +326,22 @@ fun Application.configureDatabases() {
         route("/api") {
         post("/user/login") {
             val request = call.receive<EmailRequest>()
+
+            // Без этой проверки verify_code создавал бы пустого пользователя для любого email,
+            // введённого на экране «Войти» вместо регистрации.
+            val userExists = transaction {
+                UserService.Users.selectAll().where { UserService.Users.email eq request.email }.singleOrNull() != null
+            }
+            if (!userExists) {
+                call.respond(
+                    CommonModel<Any>().also { model ->
+                        model.status = 0
+                        model.errors = listOf(BaseError(code = 1004, message = "Пользователь с такой электронной почтой не найден. Пожалуйста, зарегистрируйтесь."))
+                    }
+                )
+                return@post
+            }
+
             createAndSendVerificationCode(request.email)
             call.respond(CommonModel<Any>().also { model -> model.status = 1 })
         }
