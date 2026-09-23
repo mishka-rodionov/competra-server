@@ -67,10 +67,12 @@ internal object ResultRanking {
             .singleOrNull()
             ?.get(ParticipantGroups.timeLimitMinutes)
 
-        val limitMillis = effectiveControlTimeMinutes(
+        // totalTime и penaltyTime хранятся в СЕКУНДАХ (см. OrienteeringResult в Android-клиенте),
+        // поэтому лимит переводим в секунды, а не в миллисекунды.
+        val limitSeconds = effectiveControlTimeMinutes(
             groupLimitMinutes = groupLimitMinutes,
             competitionLimitMinutes = orient?.get(OrienteeringCompetitions.controlTimeMinutes)
-        )?.let { it * 60_000L }
+        )?.let { it * 60L }
 
         // Берём оба статуса: OVERTIME выводится заново и может вернуться в FINISHED.
         val rows = OrienteeringResults.selectAll()
@@ -83,9 +85,9 @@ internal object ResultRanking {
 
         // Снимаем только при DISQUALIFY: при IGNORE КВ носит справочный характер, при
         // SCORE_PENALTY (BY_CHOICE) опоздание штрафуется очками, а не снятием.
-        val disqualifiesOvertime = policy == OvertimePolicy.DISQUALIFY && limitMillis != null
+        val disqualifiesOvertime = policy == OvertimePolicy.DISQUALIFY && limitSeconds != null
         val (overtimeRows, finishedRows) = rows.partition {
-            disqualifiesOvertime && isOvertime(it[OrienteeringResults.totalTime], limitMillis)
+            disqualifiesOvertime && isOvertime(it[OrienteeringResults.totalTime], limitSeconds)
         }
 
         // Статус пишем только при фактическом изменении, места — как раньше, всем FINISHED.
@@ -150,7 +152,9 @@ internal object ResultRanking {
      * Превышение КВ считается по чистому времени на дистанции (финиш − старт участника),
      * без штрафного времени: [OrienteeringResults.penaltyTime] — санкция судьи, а не бег.
      * Ровно КВ укладывается в лимит, снимается только строгое превышение.
+     *
+     * Обе величины — в секундах.
      */
-    fun isOvertime(totalTime: Long?, limitMillis: Long?): Boolean =
-        limitMillis != null && totalTime != null && totalTime > limitMillis
+    fun isOvertime(totalTimeSeconds: Long?, limitSeconds: Long?): Boolean =
+        limitSeconds != null && totalTimeSeconds != null && totalTimeSeconds > limitSeconds
 }

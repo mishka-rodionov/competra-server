@@ -9,7 +9,8 @@ import kotlin.test.assertTrue
 
 class ControlTimeTest {
 
-    private val ninetyMinutes = 90 * 60_000L
+    /** КВ 90 минут в секундах: totalTime результата хранится в секундах. */
+    private val ninetyMinutes = 90 * 60L
 
     @Test
     fun `group control time overrides competition default`() {
@@ -36,22 +37,22 @@ class ControlTimeTest {
 
     @Test
     fun `result slower than control time is overtime`() {
-        assertTrue(ResultRanking.isOvertime(totalTime = ninetyMinutes + 1, limitMillis = ninetyMinutes))
+        assertTrue(ResultRanking.isOvertime(totalTimeSeconds = ninetyMinutes + 1, limitSeconds = ninetyMinutes))
     }
 
     @Test
     fun `result exactly at control time fits the limit`() {
-        assertFalse(ResultRanking.isOvertime(totalTime = ninetyMinutes, limitMillis = ninetyMinutes))
+        assertFalse(ResultRanking.isOvertime(totalTimeSeconds = ninetyMinutes, limitSeconds = ninetyMinutes))
     }
 
     @Test
     fun `result without total time is never overtime`() {
-        assertFalse(ResultRanking.isOvertime(totalTime = null, limitMillis = ninetyMinutes))
+        assertFalse(ResultRanking.isOvertime(totalTimeSeconds = null, limitSeconds = ninetyMinutes))
     }
 
     @Test
     fun `no control time means no overtime`() {
-        assertFalse(ResultRanking.isOvertime(totalTime = ninetyMinutes * 10, limitMillis = null))
+        assertFalse(ResultRanking.isOvertime(totalTimeSeconds = ninetyMinutes * 10, limitSeconds = null))
     }
 
     @Test
