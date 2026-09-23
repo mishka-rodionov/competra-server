@@ -1,5 +1,6 @@
 package com.competra
 
+import com.competra.data.events.ResultEventPublisher
 import com.competra.data.response.base.BaseError
 import com.competra.data.response.base.CommonModel
 import com.competra.data.response.upload.UploadResponse
@@ -51,7 +52,11 @@ fun Application.configureRouting() {
 
     val groupService = ParticipantGroupService()
     val participantService = OrienteeringParticipantService()
-    val resultService = OrienteeringResultService()
+    // result.saved → процесс трекинга закрывает онлайн-трек финишировавшего. Публикация —
+    // best effort после коммита: недоступный RabbitMQ не мешает сохранять результаты.
+    val resultEventPublisher = ResultEventPublisher(System.getenv("RABBITMQ_URI"), log)
+    monitor.subscribe(ApplicationStopping) { resultEventPublisher.close() }
+    val resultService = OrienteeringResultService(resultEventPublisher)
     val distanceService = DistanceService()
     val organizerService = CompetitionOrganizerService()
     val uploadService = UploadService()

@@ -46,6 +46,8 @@ services:
       MAIN_RO_DB_URL: jdbc:postgresql://postgres:5432/competra
       MAIN_RO_DB_USER: competra_tracking_ro
       MAIN_RO_DB_PASSWORD: ${TRACKING_RO_DB_PASSWORD:-}
+      # result.saved из app закрывает трек финишировавшего; без брокера — закрытие по таймауту.
+      RABBITMQ_URI: amqp://competra:${RABBITMQ_PASSWORD}@rabbitmq:5672
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER:-ktor_server}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-ktor_audience}

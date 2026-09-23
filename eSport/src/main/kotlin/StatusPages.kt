@@ -2,6 +2,8 @@ package com.competra
 
 import com.competra.data.exception.ConflictException
 import com.competra.data.exception.ForbiddenException
+import com.competra.data.exception.ServiceUnavailableException
+import com.competra.data.exception.UnprocessableEntityException
 import com.competra.data.response.base.BaseError
 import com.competra.data.response.base.CommonModel
 import io.ktor.http.HttpStatusCode
@@ -42,6 +44,26 @@ fun Application.configureStatusPages() {
                 CommonModel<Any>().also {
                     it.status = 0
                     it.errors = listOf(BaseError(403, cause.message ?: "Forbidden"))
+                }
+            )
+        }
+
+        exception<UnprocessableEntityException> { call, cause ->
+            call.respond(
+                HttpStatusCode.UnprocessableEntity,
+                CommonModel<Any>().also {
+                    it.status = 0
+                    it.errors = listOf(BaseError(422, cause.message ?: "Unprocessable entity"))
+                }
+            )
+        }
+
+        exception<ServiceUnavailableException> { call, cause ->
+            call.respond(
+                HttpStatusCode.ServiceUnavailable,
+                CommonModel<Any>().also {
+                    it.status = 0
+                    it.errors = listOf(BaseError(503, cause.message ?: "Service unavailable"))
                 }
             )
         }

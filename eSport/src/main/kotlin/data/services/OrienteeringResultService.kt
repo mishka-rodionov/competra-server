@@ -2,6 +2,8 @@ package com.competra.data.services
 
 import com.competra.data.database.entity.OrienteeringResults
 import com.competra.data.database.entity.SplitTimes
+import com.competra.data.events.ResultEventPublisher
+import com.competra.data.events.ResultSavedEvent
 import com.competra.data.exception.ConflictException
 import com.competra.data.exception.ForbiddenException
 import com.competra.data.requests.orienteering.OrienteeringResultRequest
@@ -17,13 +19,19 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
 
-class OrienteeringResultService {
+/**
+ * Результаты участников.
+ *
+ * @param eventPublisher Публикация `result.saved` после сохранения (для онлайн-трекинга);
+ *   `null` — события не публикуются. Публикация идёт после коммита и не может сорвать сохранение.
+ */
+class OrienteeringResultService(private val eventPublisher: ResultEventPublisher? = null) {
 
     suspend fun upsert(req: OrienteeringResultRequest, callerUserId: String): OrienteeringResultResponse = dbQuery {
         upsertSingle(req, callerUserId)
         ResultRanking.recalculateGroup(req.competitionId, req.groupId)
         loadResponse(req.id)
-    }
+    }.also { publishSaved(listOf(req)) }
 
     /**
      * Batch-upsert с одним пересчётом мест на каждую уникальную пару (competitionId, groupId).
@@ -36,6 +44,23 @@ class OrienteeringResultService {
             .distinct()
             .forEach { (competitionId, groupId) -> ResultRanking.recalculateGroup(competitionId, groupId) }
         requests.map { loadResponse(it.id) }
+    }.also { publishSaved(requests) }
+
+    /** Сообщает трекингу о сохранённых результатах (после коммита транзакции, без ожидания). */
+    private fun publishSaved(requests: List<OrienteeringResultRequest>) {
+        val publisher = eventPublisher ?: return
+        val now = System.currentTimeMillis()
+        publisher.publishResultsSaved(
+            requests.map {
+                ResultSavedEvent(
+                    competitionId = it.competitionId,
+                    participantId = it.participantId,
+                    resultStatus = it.status,
+                    finishTime = it.finishTime,
+                    savedAt = now
+                )
+            }
+        )
     }
 
     suspend fun deleteById(id: String, callerUserId: String): Boolean = dbQuery {
