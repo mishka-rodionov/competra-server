@@ -31,6 +31,35 @@ services:
         condition: service_healthy
     restart: on-failure
 
+  # Процесс онлайн-трекинга: тот же образ, APP_MODE=tracking. Отдельный контейнер с потолком
+  # памяти/CPU — его сбой не задевает приём финиша и результатов в app (см. спеку live-tracking).
+  # БД competra_tracking и роли готовит scripts/setup_tracking_db.sh (он же генерирует пароли в .env).
+  tracking:
+    build: .
+    ports:
+      - "8081:8080"
+    environment:
+      APP_MODE: tracking
+      TRACKING_DB_URL: jdbc:postgresql://postgres:5432/competra_tracking
+      TRACKING_DB_USER: competra_tracking
+      TRACKING_DB_PASSWORD: ${TRACKING_DB_PASSWORD:-}
+      MAIN_RO_DB_URL: jdbc:postgresql://postgres:5432/competra
+      MAIN_RO_DB_USER: competra_tracking_ro
+      MAIN_RO_DB_PASSWORD: ${TRACKING_RO_DB_PASSWORD:-}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-ktor_server}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-ktor_audience}
+      LOKI_URL: ${LOKI_URL:-}
+      LOKI_USER_ID: ${LOKI_USER_ID:-}
+      LOKI_API_KEY: ${LOKI_API_KEY:-}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
+    mem_limit: 512m
+    cpus: 1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
   postgres:
     image: postgres:16-alpine
     environment:

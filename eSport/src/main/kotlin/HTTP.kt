@@ -31,6 +31,17 @@ import org.koin.logger.slf4jLogger
 import org.slf4j.event.*
 
 fun Application.configureHTTP() {
+    configureCors()
+    routing {
+        openAPI(path = "openapi")
+    }
+}
+
+/**
+ * CORS для веб-клиента. Общий для обоих режимов процесса ([AppMode]): веб-зритель онлайн-треков
+ * ходит в процесс tracking с тех же доменов, что и в основное приложение.
+ */
+fun Application.configureCors() {
     install(CORS) {
         allowHost("mishka-rodionov.github.io", schemes = listOf("https"))
         allowHost("start.competra.ru", schemes = listOf("https"))
@@ -46,8 +57,5 @@ fun Application.configureHTTP() {
         allowMethod(HttpMethod.Delete)
         allowMethod(HttpMethod.Patch)
         allowMethod(HttpMethod.Options)
-    }
-    routing {
-        openAPI(path = "openapi")
     }
 }

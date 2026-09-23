@@ -8,6 +8,13 @@ services:
     ports: !reset null
     restart: unless-stopped
 
+  tracking:
+    image: ghcr.io/${GITHUB_REPOSITORY}:latest
+    build: !reset null
+    # Как и app, снаружи закрыт: nginx ходит к нему по docker-сети как tracking:8080.
+    ports: !reset null
+    restart: unless-stopped
+
   postgres:
     restart: unless-stopped
     ports:

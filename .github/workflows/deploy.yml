@@ -43,7 +43,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "eSport/docker-compose.yml,eSport/docker-compose.prod.yml,eSport/nginx/**"
+          source: "eSport/docker-compose.yml,eSport/docker-compose.prod.yml,eSport/nginx/**,eSport/scripts/**"
           target: "/opt/competra"
           strip_components: 1
           # Без overwrite scp-action молча пропускает уже существующие файлы — поэтому
@@ -90,4 +90,10 @@ jobs:
             # старый конфиг висеть в памяти.
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec nginx nginx -t
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec nginx nginx -s reload
+            # Процесс онлайн-трекинга — строго ПОСЛЕ app и nginx: если что-то ниже упадёт, основное
+            # приложение уже выкачено и работает, а nginx отдаёт 502 только на /api/live-track/.
+            # setup_tracking_db.sh идемпотентен: роли/БД competra_tracking, пароли в .env.
+            bash ./scripts/setup_tracking_db.sh
+            # Образ тот же, что у app (уже скачан выше), --no-deps — не трогать postgres/rabbitmq.
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate --no-deps tracking
             docker image prune -f
