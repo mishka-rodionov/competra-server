@@ -31,9 +31,10 @@ if [[ "${1:-}" == "--yes" || "${1:-}" == "-y" ]]; then
     export ASSUME_YES=1
 fi
 
-# Валидация: competitions.id это BIGINT.
-if ! [[ "$COMPETITION_ID" =~ ^[0-9]+$ ]]; then
-    echo "[error] competition_id должен быть целым числом, получено: '$COMPETITION_ID'" >&2
+# Валидация: competitions.id — клиентский UUID (varchar(36)). Допускаем только
+# символы, которые встречаются в UUID, чтобы исключить SQL-инъекцию через аргумент.
+if ! [[ "$COMPETITION_ID" =~ ^[0-9a-fA-F-]{1,36}$ ]]; then
+    echo "[error] competition_id должен быть UUID, получено: '$COMPETITION_ID'" >&2
     exit 1
 fi
 
@@ -41,7 +42,7 @@ echo "БД:   $PGDATABASE @ $PGHOST:$PGPORT (user=$PGUSER)"
 echo "Цель: удалить соревнование id=$COMPETITION_ID и все связанные данные."
 
 # Проверяем, что соревнование существует, и показываем краткую инфу.
-EXISTS_SQL="SELECT id, title, start_date FROM competitions WHERE id = $COMPETITION_ID;"
+EXISTS_SQL="SELECT id, title, start_date FROM competitions WHERE id = '$COMPETITION_ID';"
 run_psql "$EXISTS_SQL"
 
 if ! confirm "Удалить это соревнование?"; then
@@ -51,20 +52,22 @@ fi
 
 # Удаление в одной транзакции, в порядке от листьев к корню.
 # split_times связано с результатами через result_id (VARCHAR), внешних ключей в схеме нет.
+# orienteering_competitions использует тот же id, что и competitions (1:1, без отдельной
+# колонки competition_id) — см. комментарий в data/database/entity/OrienteeringCompetitions.kt.
 run_psql "
 BEGIN;
 
 DELETE FROM split_times
 WHERE result_id IN (
-    SELECT id FROM orienteering_results WHERE competition_id = $COMPETITION_ID
+    SELECT id FROM orienteering_results WHERE competition_id = '$COMPETITION_ID'
 );
 
-DELETE FROM orienteering_results       WHERE competition_id = $COMPETITION_ID;
-DELETE FROM orienteering_participants  WHERE competition_id = $COMPETITION_ID;
-DELETE FROM participant_groups         WHERE competition_id = $COMPETITION_ID;
-DELETE FROM distances                  WHERE competition_id = $COMPETITION_ID;
-DELETE FROM orienteering_competitions  WHERE competition_id = $COMPETITION_ID;
-DELETE FROM competitions               WHERE id = $COMPETITION_ID;
+DELETE FROM orienteering_results       WHERE competition_id = '$COMPETITION_ID';
+DELETE FROM orienteering_participants  WHERE competition_id = '$COMPETITION_ID';
+DELETE FROM participant_groups         WHERE competition_id = '$COMPETITION_ID';
+DELETE FROM distances                  WHERE competition_id = '$COMPETITION_ID';
+DELETE FROM orienteering_competitions  WHERE id = '$COMPETITION_ID';
+DELETE FROM competitions               WHERE id = '$COMPETITION_ID';
 
 COMMIT;
 "

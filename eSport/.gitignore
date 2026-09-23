@@ -18,3 +18,7 @@ nginx/htpasswd
 
 # Let's Encrypt runtime state (живые сертификаты и приватные ключи)
 certbot/
+
+# Дампы БД (scripts/backup_db.sh) — содержат персональные данные пользователей
+backups/
+*.dump
