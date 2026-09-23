@@ -11,5 +11,9 @@ data class OrienteeringCompetitionResponse(
     @SerializedName("countdownTimer") val countdownTimer: Long?,
     @SerializedName("startTime") val startTime: Long?,
     @SerializedName("startIntervalSeconds") val startIntervalSeconds: Int? = null,
+    /** Контрольное время соревнования в минутах; группа может переопределить его своим timeLimitMinutes. */
+    @SerializedName("controlTimeMinutes") val controlTimeMinutes: Int? = null,
+    /** [com.competra.domain.orienteering.OvertimePolicy]: IGNORE / DISQUALIFY / SCORE_PENALTY. */
+    @SerializedName("overtimePolicy") val overtimePolicy: String = "IGNORE",
     @SerializedName("updatedAt") val updatedAt: Long = 0L
 )

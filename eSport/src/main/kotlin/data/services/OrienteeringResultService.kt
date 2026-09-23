@@ -1,6 +1,5 @@
 package com.competra.data.services
 
-import com.competra.data.database.entity.OrienteeringCompetitions
 import com.competra.data.database.entity.OrienteeringResults
 import com.competra.data.database.entity.SplitTimes
 import com.competra.data.exception.ConflictException
@@ -22,7 +21,7 @@ class OrienteeringResultService {
 
     suspend fun upsert(req: OrienteeringResultRequest, callerUserId: String): OrienteeringResultResponse = dbQuery {
         upsertSingle(req, callerUserId)
-        recalculateRanksForGroup(req.competitionId, req.groupId)
+        ResultRanking.recalculateGroup(req.competitionId, req.groupId)
         loadResponse(req.id)
     }
 
@@ -35,7 +34,7 @@ class OrienteeringResultService {
         requests
             .map { it.competitionId to it.groupId }
             .distinct()
-            .forEach { (competitionId, groupId) -> recalculateRanksForGroup(competitionId, groupId) }
+            .forEach { (competitionId, groupId) -> ResultRanking.recalculateGroup(competitionId, groupId) }
         requests.map { loadResponse(it.id) }
     }
 
@@ -130,70 +129,6 @@ class OrienteeringResultService {
             .orderBy(SplitTimes.timestamp)
             .map { SplitTimeResponse(it[SplitTimes.controlPoint], it[SplitTimes.timestamp]) }
         return row.toResponse(splits)
-    }
-
-    /**
-     * Пересчитывает места для всех FINISHED-результатов группы.
-     *
-     * Для направления BY_CHOICE (score-О) места считаются по сумме баллов (убывание),
-     * тай-брейк — по времени прохождения дистанции (totalTime = finish - start участника).
-     * Для остальных направлений — как раньше, по общему времени с учётом штрафа (возрастание).
-     *
-     * Тай-брейк BY_CHOICE использует именно totalTime, а не finishTime (абсолютное время по
-     * часам) — при интервальном/разном старте участников более раннее абсолютное время финиша
-     * не означает более быстрый забег. См. аналогичную логику и комментарий в Android-клиенте:
-     * OrienteeringCompetitionInteractor.recalculateRanksV2.
-     */
-    private fun recalculateRanksForGroup(competitionId: String, groupId: Long) {
-        val direction = OrienteeringCompetitions.selectAll()
-            .where { OrienteeringCompetitions.id eq competitionId }
-            .singleOrNull()
-            ?.get(OrienteeringCompetitions.direction)
-
-        val finishedRows = OrienteeringResults.selectAll()
-            .where {
-                (OrienteeringResults.competitionId eq competitionId) and
-                (OrienteeringResults.groupId eq groupId) and
-                (OrienteeringResults.status eq "FINISHED")
-            }
-            .toList()
-
-        val comparator: Comparator<ResultRow> = if (direction == "BY_CHOICE") {
-            compareByDescending<ResultRow> { it[OrienteeringResults.totalScore] ?: 0 }
-                .thenBy { it[OrienteeringResults.totalTime] ?: Long.MAX_VALUE }
-        } else {
-            compareBy { (it[OrienteeringResults.totalTime] ?: Long.MAX_VALUE) + it[OrienteeringResults.penaltyTime] }
-        }
-
-        val sortedRows = finishedRows.sortedWith(comparator)
-
-        // Для BY_CHOICE ключ должен включать totalTime — иначе два участника с одинаковыми
-        // очками, но разным временем (тай-брейк уже учтён компаратором выше), получат одно и то
-        // же место вместо разных.
-        fun rankKey(row: ResultRow): Any = if (direction == "BY_CHOICE") {
-            (row[OrienteeringResults.totalScore] ?: 0) to (row[OrienteeringResults.totalTime] ?: Long.MAX_VALUE)
-        } else {
-            (row[OrienteeringResults.totalTime] ?: Long.MAX_VALUE) + row[OrienteeringResults.penaltyTime]
-        }
-
-        var rank = 1
-        var prevKey: Any? = null
-        var skipCount = 0
-
-        sortedRows.forEachIndexed { index, row ->
-            val key = rankKey(row)
-
-            if (prevKey != null && key == prevKey) {
-                skipCount++
-            } else {
-                rank = index + 1 - skipCount
-                prevKey = key
-            }
-
-            OrienteeringResults.update({ OrienteeringResults.id eq row[OrienteeringResults.id] }) {
-                it[OrienteeringResults.rank] = rank
-            }
-        }
     }
 
     suspend fun getByCompetition(competitionId: String): List<OrienteeringResultResponse> = dbQuery {

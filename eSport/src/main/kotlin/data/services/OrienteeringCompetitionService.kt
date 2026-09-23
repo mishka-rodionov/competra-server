@@ -17,6 +17,7 @@ import com.competra.data.response.orienteering.CoordinatesResponse
 import com.competra.data.response.orienteering.OrienteeringCompetitionResponse
 import com.competra.data.response.orienteering.ParticipantGroupDetailResponse
 import com.competra.UserService
+import com.competra.domain.orienteering.OvertimePolicy
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.Case
 import org.jetbrains.exposed.sql.ExpressionWithColumnType
@@ -141,8 +142,14 @@ class OrienteeringCompetitionService(
         countdownTimer = orient[OrienteeringCompetitions.countdownTimer],
         startTime = orient[OrienteeringCompetitions.startTime],
         startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds],
+        controlTimeMinutes = orient[OrienteeringCompetitions.controlTimeMinutes],
+        overtimePolicy = orient[OrienteeringCompetitions.overtimePolicy],
         updatedAt = orient[OrienteeringCompetitions.updatedAt]
     )
+
+    /** Умолчание политики КВ для нового соревнования — зависит от направления. */
+    private fun defaultOvertimePolicy(direction: String): String =
+        if (direction == "BY_CHOICE") OvertimePolicy.SCORE_PENALTY.name else OvertimePolicy.DEFAULT.name
 
     private fun computeEffectiveStatus(
         storedStatus: String,
@@ -367,6 +374,13 @@ class OrienteeringCompetitionService(
             }
         }
 
+        // Политику КВ старые клиенты не присылают (null) — тогда сохраняем уже выбранную, а для
+        // нового соревнования берём умолчание по направлению: у BY_CHOICE опоздание исторически
+        // штрафуется очками, у остальных КВ по умолчанию справочное.
+        val newOvertimePolicy = req.overtimePolicy?.let { OvertimePolicy.fromString(it).name }
+            ?: existingOrient?.get(OrienteeringCompetitions.overtimePolicy)
+            ?: defaultOvertimePolicy(req.direction)
+
         if (existingOrient == null) {
             OrienteeringCompetitions.insert {
                 it[id] = competitionId
@@ -376,6 +390,8 @@ class OrienteeringCompetitionService(
                 it[countdownTimer] = req.countdownTimer
                 it[startTime] = null
                 it[startIntervalSeconds] = req.startIntervalSeconds
+                it[controlTimeMinutes] = req.controlTimeMinutes
+                it[overtimePolicy] = newOvertimePolicy
                 it[updatedAt] = now
             }
         } else {
@@ -385,8 +401,21 @@ class OrienteeringCompetitionService(
                 it[startTimeMode] = req.startTimeMode
                 it[countdownTimer] = req.countdownTimer
                 it[startIntervalSeconds] = req.startIntervalSeconds
+                it[controlTimeMinutes] = req.controlTimeMinutes
+                it[overtimePolicy] = newOvertimePolicy
                 it[updatedAt] = now
             }
+        }
+
+        // Изменение КВ, политики или направления меняет статусы и места уже сохранённых
+        // результатов — пересчитываем все группы соревнования (см. ResultRanking).
+        val rankingInputsChanged = existingOrient != null && (
+            existingOrient[OrienteeringCompetitions.controlTimeMinutes] != req.controlTimeMinutes ||
+            existingOrient[OrienteeringCompetitions.overtimePolicy] != newOvertimePolicy ||
+            existingOrient[OrienteeringCompetitions.direction] != req.direction
+        )
+        if (rankingInputsChanged) {
+            ResultRanking.recalculateCompetition(competitionId)
         }
 
         val comp = Competitions.selectAll().where { Competitions.id eq competitionId }.single()
@@ -525,6 +554,8 @@ class OrienteeringCompetitionService(
             .where { OrienteeringCompetitions.id eq competitionId }
             .singleOrNull()
 
+        val competitionControlTime = orient?.get(OrienteeringCompetitions.controlTimeMinutes)
+
         val groups = ParticipantGroups
             .join(Distances, JoinType.LEFT, ParticipantGroups.distanceId, Distances.id)
             .selectAll()
@@ -533,6 +564,7 @@ class OrienteeringCompetitionService(
                 val registeredCount = OrienteeringParticipants.selectAll()
                     .where { OrienteeringParticipants.groupId eq row[ParticipantGroups.id] }
                     .count().toInt()
+                val groupControlTime = row[ParticipantGroups.timeLimitMinutes]
                 ParticipantGroupDetailResponse(
                     groupId = row[ParticipantGroups.id],
                     title = row[ParticipantGroups.title],
@@ -545,7 +577,12 @@ class OrienteeringCompetitionService(
                     distanceClimbMeters = row[Distances.climbMeters],
                     distanceControlsCount = row[Distances.controlsCount],
                     distanceDescription = row[Distances.description],
-                    timeLimitMinutes = row[ParticipantGroups.timeLimitMinutes],
+                    timeLimitMinutes = groupControlTime,
+                    controlTimeMinutes = ResultRanking.effectiveControlTimeMinutes(
+                        groupLimitMinutes = groupControlTime,
+                        competitionLimitMinutes = competitionControlTime
+                    ),
+                    controlTimeInherited = groupControlTime == null && competitionControlTime != null,
                     scorePenaltyPerMinute = row[ParticipantGroups.scorePenaltyPerMinute],
                     maxLatenessMinutes = row[ParticipantGroups.maxLatenessMinutes]
                 )
@@ -581,6 +618,9 @@ class OrienteeringCompetitionService(
             organizerMiddleName = comp.getOrNull(UserService.Users.middleName),
             startTime = orient?.get(OrienteeringCompetitions.startTime),
             direction = orient?.get(OrienteeringCompetitions.direction) ?: "FORWARD",
+            controlTimeMinutes = competitionControlTime,
+            overtimePolicy = orient?.get(OrienteeringCompetitions.overtimePolicy)
+                ?: OvertimePolicy.DEFAULT.name,
             coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
                 CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
             else null,

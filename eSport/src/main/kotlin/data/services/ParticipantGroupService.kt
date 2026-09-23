@@ -18,7 +18,10 @@ class ParticipantGroupService {
 
     suspend fun upsertAll(requests: List<ParticipantGroupRequest>, userId: String): List<ParticipantGroupResponse> = dbQuery {
         val now = System.currentTimeMillis()
-        requests.map { req ->
+        // Группы, у которых поменялось собственное КВ: их результаты нужно пересчитать
+        // (снятие за превышение обратимо — см. ResultRanking).
+        val groupsWithChangedControlTime = mutableListOf<Pair<String, Long>>()
+        val responses = requests.map { req ->
             if (req.groupId == null) {
                 requireGroupEditAccess(req.competitionId, userId)
                 val generatedId = ParticipantGroups.insert {
@@ -72,6 +75,9 @@ class ParticipantGroupService {
                         throw ForbiddenException("Группа участников принадлежит другому соревнованию")
                     }
                     requireGroupEditAccess(req.competitionId, userId)
+                    if (existing[ParticipantGroups.timeLimitMinutes] != req.timeLimitMinutes) {
+                        groupsWithChangedControlTime += req.competitionId to req.groupId
+                    }
                     ParticipantGroups.update({ ParticipantGroups.id eq req.groupId }) {
                         it[competitionId] = req.competitionId
                         it[title] = req.title
@@ -93,6 +99,12 @@ class ParticipantGroupService {
                     .toResponse()
             }
         }
+
+        groupsWithChangedControlTime.distinct().forEach { (competitionId, groupId) ->
+            ResultRanking.recalculateGroup(competitionId, groupId)
+        }
+
+        responses
     }
 
     suspend fun getByCompetition(competitionId: String): List<ParticipantGroupResponse> = dbQuery {

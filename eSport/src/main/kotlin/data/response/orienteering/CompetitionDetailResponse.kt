@@ -13,8 +13,12 @@ data class ParticipantGroupDetailResponse(
     val distanceClimbMeters: Int? = null,
     val distanceControlsCount: Int? = null,
     val distanceDescription: String? = null,
-    /** Лимит времени для формата "по выбору" (BY_CHOICE), в минутах. */
+    /** Собственное КВ группы в минутах (null — наследуется от соревнования). Для BY_CHOICE — лимит времени. */
     val timeLimitMinutes: Int? = null,
+    /** Итоговое контрольное время группы: `timeLimitMinutes ?: competition.controlTimeMinutes`. */
+    val controlTimeMinutes: Int? = null,
+    /** true, если [controlTimeMinutes] унаследовано от соревнования, а не задано у группы. */
+    val controlTimeInherited: Boolean = false,
     /** Штраф в очках за минуту опоздания сверх лимита (BY_CHOICE). */
     val scorePenaltyPerMinute: Int? = null,
     /** Порог сильного опоздания, после которого результат обнуляется (BY_CHOICE). */
@@ -42,6 +46,10 @@ data class CompetitionDetailResponse(
     val startTime: Long? = null,
     /** "FORWARD" / "BY_CHOICE" / "MARKING" — направление ориентирования. */
     val direction: String = "FORWARD",
+    /** Контрольное время соревнования в минутах — умолчание для групп без своего КВ. */
+    val controlTimeMinutes: Int? = null,
+    /** [com.competra.domain.orienteering.OvertimePolicy]: IGNORE / DISQUALIFY / SCORE_PENALTY. */
+    val overtimePolicy: String = "IGNORE",
     val registrationStart: Long?,
     val registrationEnd: Long?,
     val maxParticipants: Int?,

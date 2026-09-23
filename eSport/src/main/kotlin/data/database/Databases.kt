@@ -138,6 +138,32 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE participant_groups ADD COLUMN IF NOT EXISTS time_limit_minutes INTEGER")
         exec("ALTER TABLE participant_groups ADD COLUMN IF NOT EXISTS score_penalty_per_minute INTEGER")
         exec("ALTER TABLE participant_groups ADD COLUMN IF NOT EXISTS max_lateness_minutes INTEGER")
+        // Контрольное время: значение по умолчанию на уровне соревнования + политика применения
+        // (IGNORE / DISQUALIFY / SCORE_PENALTY). Переопределение КВ для группы — в уже существующей
+        // participant_groups.time_limit_minutes.
+        exec("ALTER TABLE orienteering_competitions ADD COLUMN IF NOT EXISTS control_time_minutes INTEGER")
+        // Колонка создаётся и бэкфиллится одним DO-блоком: для уже существующих BY_CHOICE-стартов
+        // политикой должна стать SCORE_PENALTY (их лимит времени со штрафом очками работал и раньше),
+        // но перезатирать её при каждом старте приложения нельзя — организатор вправе выбрать другую.
+        exec(
+            """
+            DO ${'$'}${'$'}
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'orienteering_competitions' AND column_name = 'overtime_policy'
+                ) THEN
+                    ALTER TABLE orienteering_competitions
+                        ADD COLUMN overtime_policy VARCHAR(20) NOT NULL DEFAULT 'IGNORE';
+
+                    UPDATE orienteering_competitions
+                    SET overtime_policy = 'SCORE_PENALTY'
+                    WHERE direction = 'BY_CHOICE';
+                END IF;
+            END
+            ${'$'}${'$'};
+            """.trimIndent()
+        )
         exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS total_score INTEGER")
         exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS score_penalty INTEGER NOT NULL DEFAULT 0")
         // updated_at — серверная сторона serverUpdatedAt в Android-клиенте.

@@ -17,6 +17,16 @@ object OrienteeringCompetitions : Table("orienteering_competitions") {
     val countdownTimer = long("countdown_timer").nullable()
     val startTime = long("start_time").nullable()
     val startIntervalSeconds = integer("start_interval_seconds").nullable()
+
+    /**
+     * Контрольное время соревнования в минутах (null — не задано).
+     * Группа может переопределить его через [ParticipantGroups.timeLimitMinutes].
+     */
+    val controlTimeMinutes = integer("control_time_minutes").nullable()
+
+    /** [com.competra.domain.orienteering.OvertimePolicy] — что делать с превысившими КВ. */
+    val overtimePolicy = varchar("overtime_policy", 20).default("IGNORE")
+
     val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)
