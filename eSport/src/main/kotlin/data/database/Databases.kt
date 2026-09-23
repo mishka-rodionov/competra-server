@@ -49,6 +49,8 @@ import com.competra.data.services.smtp.tokens.jwtIssuer
 import com.competra.data.services.smtp.tokens.jwtSecret
 import com.competra.domain.user.Gender
 import com.auth0.jwt.JWT
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -65,6 +67,34 @@ import kotlin.time.Duration.Companion.days
 
 val tempUsers = mutableListOf<UserRequest>()
 
+/** Размер пула по умолчанию: с запасом для пиков, но далеко от `max_connections` Postgres (100). */
+private const val DEFAULT_DB_POOL_SIZE = 10
+
+/** Сколько ждать свободного соединения из пула, прежде чем упасть с ошибкой, а не висеть. */
+private const val DB_CONNECTION_TIMEOUT_MS = 5_000L
+
+/**
+ * Пул соединений к основной БД. Ограничивает число одновременных соединений сверху
+ * (`DB_POOL_SIZE`, по умолчанию [DEFAULT_DB_POOL_SIZE]): всплеск запросов ставится в очередь пула,
+ * а не исчерпывает `max_connections` Postgres, из-за чего падали бы все запросы подряд, включая
+ * сохранение результатов. При исчерпании пула запрос через [DB_CONNECTION_TIMEOUT_MS] получает
+ * ошибку, а не висит бесконечно.
+ */
+private fun createMainDataSource(): HikariDataSource = HikariDataSource(
+    HikariConfig().apply {
+        poolName = "competra-main"
+        jdbcUrl = System.getenv("DB_URL") ?: "jdbc:postgresql://localhost:5432/postgres"
+        driverClassName = "org.postgresql.Driver"
+        username = System.getenv("DB_USER") ?: "rodionov"
+        password = requireEnv("DB_PASSWORD")
+        maximumPoolSize = System.getenv("DB_POOL_SIZE")?.toIntOrNull() ?: DEFAULT_DB_POOL_SIZE
+        minimumIdle = 2
+        connectionTimeout = DB_CONNECTION_TIMEOUT_MS
+        // Exposed сам управляет коммитами внутри transaction {} — рекомендация из документации Exposed.
+        isAutoCommit = false
+    }
+)
+
 fun Application.configureDatabases() {
 //    val database = Database.connect(
 //        url = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1",
@@ -73,12 +103,7 @@ fun Application.configureDatabases() {
 //        password = "",
 //    )
 
-    val database = Database.connect(
-        url = System.getenv("DB_URL") ?: "jdbc:postgresql://localhost:5432/postgres",
-        driver = "org.postgresql.Driver",
-        user = System.getenv("DB_USER") ?: "rodionov",
-        password = requireEnv("DB_PASSWORD")
-    )
+    val database = Database.connect(createMainDataSource())
     val userService = UserService(database)
     transaction(database) {
         SchemaUtils.create(

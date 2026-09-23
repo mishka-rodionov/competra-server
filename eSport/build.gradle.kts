@@ -56,6 +56,9 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-jdbc:${exposed_version}")
     implementation("org.jetbrains.exposed:exposed-java-time:${exposed_version}")
     implementation("org.postgresql:postgresql:42.7.7")
+    // Пул соединений к Postgres: без него каждая транзакция Exposed открывала новое соединение,
+    // и всплеск нагрузки мог исчерпать max_connections Postgres (см. docs live-tracking, этап 0).
+    implementation("com.zaxxer:HikariCP:6.2.1")
 
     // SMTP
     implementation("com.sun.mail:jakarta.mail:2.0.1")
