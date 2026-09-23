@@ -62,11 +62,19 @@ class DistanceService {
                         it[controlPoints] = cpJson
                         it[finishControlPoint] = req.finishControlPoint
                         it[startControlPoint] = req.startControlPoint
-                        it[mapUrl] = req.mapUrl
-                        it[mapTopLeftLat] = req.mapTopLeftLat
-                        it[mapTopLeftLng] = req.mapTopLeftLng
-                        it[mapBottomRightLat] = req.mapBottomRightLat
-                        it[mapBottomRightLng] = req.mapBottomRightLng
+                        // Карту и её привязку обновляем только если клиент её прислал. Android-клиент
+                        // и формы редактирования дистанции поля карты не шлют — без этой проверки
+                        // любое их сохранение стирало карту, прикреплённую через веб. Открепления
+                        // карты в клиентах нет, поэтому mapUrl == null всегда значит «не трогать».
+                        if (req.mapUrl != null) {
+                            it[mapUrl] = req.mapUrl
+                            it[mapTopLeftLat] = req.mapTopLeftLat
+                            it[mapTopLeftLng] = req.mapTopLeftLng
+                            it[mapTopRightLat] = req.mapTopRightLat
+                            it[mapTopRightLng] = req.mapTopRightLng
+                            it[mapBottomRightLat] = req.mapBottomRightLat
+                            it[mapBottomRightLng] = req.mapBottomRightLng
+                        }
                         it[updatedAt] = now
                     }
                     return@map Distances.selectAll().where { Distances.id eq req.distanceId }.single().toResponse()
@@ -87,6 +95,8 @@ class DistanceService {
                 it[mapUrl] = req.mapUrl
                 it[mapTopLeftLat] = req.mapTopLeftLat
                 it[mapTopLeftLng] = req.mapTopLeftLng
+                it[mapTopRightLat] = req.mapTopRightLat
+                it[mapTopRightLng] = req.mapTopRightLng
                 it[mapBottomRightLat] = req.mapBottomRightLat
                 it[mapBottomRightLng] = req.mapBottomRightLng
                 it[updatedAt] = now
@@ -124,6 +134,8 @@ class DistanceService {
         mapUrl = this[Distances.mapUrl],
         mapTopLeftLat = this[Distances.mapTopLeftLat],
         mapTopLeftLng = this[Distances.mapTopLeftLng],
+        mapTopRightLat = this[Distances.mapTopRightLat],
+        mapTopRightLng = this[Distances.mapTopRightLng],
         mapBottomRightLat = this[Distances.mapBottomRightLat],
         mapBottomRightLng = this[Distances.mapBottomRightLng],
         updatedAt = this[Distances.updatedAt]

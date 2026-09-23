@@ -159,6 +159,9 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS map_top_left_lng DOUBLE PRECISION")
         exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS map_bottom_right_lat DOUBLE PRECISION")
         exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS map_bottom_right_lng DOUBLE PRECISION")
+        // Верхний правый угол — привязка по трём точкам для повёрнутых карт (см. Distances.mapTopRightLat).
+        exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS map_top_right_lat DOUBLE PRECISION")
+        exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS map_top_right_lng DOUBLE PRECISION")
         // Формат "по выбору" (score-О): лимит времени и штраф на уровне группы, баллы результата.
         exec("ALTER TABLE participant_groups ADD COLUMN IF NOT EXISTS time_limit_minutes INTEGER")
         exec("ALTER TABLE participant_groups ADD COLUMN IF NOT EXISTS score_penalty_per_minute INTEGER")
