@@ -8,6 +8,7 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greater
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.neq
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.batchInsert
@@ -40,6 +41,14 @@ interface LiveTrackRepository {
      * @return `false`, если батч — повтор (или сессия уже не активна); точки тогда не пишутся.
      */
     suspend fun appendPoints(sessionId: String, batchSeq: Int, points: List<TrackPoint>, lastPointAt: Long?): Boolean
+
+    /**
+     * Дописывает досланные точки в трек **закрытой** сессии (`track_encoded`): бегун финишировал
+     * без связи, а сессию уже закрыл результат. Идемпотентно по [batchSeq], как [appendPoints].
+     *
+     * @return обновлённая сессия или `null`, если батч — повтор (или сессия активна).
+     */
+    suspend fun appendLatePoints(sessionId: String, batchSeq: Int, points: List<TrackPoint>): LiveTrackSession?
 
     /**
      * Закрывает **активную** сессию: сворачивает её точки в `track_encoded` и удаляет их.
@@ -130,6 +139,30 @@ class ExposedLiveTrackRepository(private val db: Database) : LiveTrackRepository
             this[LiveTrackPoints.accuracy] = point.accuracy
         }
         true
+    }
+
+    override suspend fun appendLatePoints(
+        sessionId: String,
+        batchSeq: Int,
+        points: List<TrackPoint>
+    ): LiveTrackSession? = tx {
+        val row = LiveTrackSessions.selectAll()
+            .where {
+                (LiveTrackSessions.id eq sessionId) and
+                    (LiveTrackSessions.status neq LiveTrackStatus.ACTIVE.name) and
+                    (LiveTrackSessions.lastBatchSeq less batchSeq)
+            }
+            .forUpdate()
+            .singleOrNull() ?: return@tx null
+        val session = row.toSession()
+        val merged = (TrackCodec.decode(session.startedAt, row[LiveTrackSessions.trackEncoded]) + points).sortedBy { it.t }
+        val lastPointAt = merged.maxOfOrNull { it.t } ?: session.lastPointAt
+        LiveTrackSessions.update({ LiveTrackSessions.id eq sessionId }) {
+            it[LiveTrackSessions.lastBatchSeq] = batchSeq
+            it[LiveTrackSessions.lastPointAt] = lastPointAt
+            it[LiveTrackSessions.trackEncoded] = TrackCodec.encode(session.startedAt, merged)
+        }
+        session.copy(lastBatchSeq = batchSeq, lastPointAt = lastPointAt)
     }
 
     override suspend fun close(

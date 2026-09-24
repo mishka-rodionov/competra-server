@@ -33,6 +33,13 @@ class LiveTrackServiceTest {
             this.points.getOrPut(sessionId) { mutableListOf() } += points
             return true
         }
+        override suspend fun appendLatePoints(sessionId: String, batchSeq: Int, points: List<TrackPoint>): LiveTrackSession? {
+            val s = sessions.getValue(sessionId)
+            if (s.status == LiveTrackStatus.ACTIVE || s.lastBatchSeq >= batchSeq) return null
+            val merged = (TrackCodec.decode(s.startedAt, encoded[sessionId]) + points).sortedBy { it.t }
+            encoded[sessionId] = TrackCodec.encode(s.startedAt, merged)
+            return s.copy(lastBatchSeq = batchSeq).also { sessions[sessionId] = it }
+        }
         override suspend fun close(sessionId: String, status: LiveTrackStatus, reason: CloseReason, closedAt: Long): LiveTrackSession? {
             val s = sessions[sessionId]?.takeIf { it.status == LiveTrackStatus.ACTIVE } ?: return null
             val closed = s.copy(status = status, closeReason = reason, closedAt = closedAt)
@@ -50,7 +57,10 @@ class LiveTrackServiceTest {
     }
 
     private class FakeDirectory(var context: ParticipantContext?) : ParticipantDirectory {
+        var extraIdsForUser = emptyList<String>()
         override suspend fun find(participantId: String) = context?.takeIf { it.participantId == participantId }
+        override suspend fun findIdsByUser(competitionId: String, userId: String) =
+            listOfNotNull(context?.takeIf { it.competitionId == competitionId && it.userId == userId }?.participantId) + extraIdsForUser
     }
 
     private val participant = ParticipantContext(
@@ -176,6 +186,41 @@ class LiveTrackServiceTest {
         service.appendPoints("u1", second, batch(1, now))
         assertEquals(1, service.sweep())
         assertEquals(CloseReason.CONTROL_TIME, repository.sessions.getValue(second).closeReason)
+    }
+
+    @Test
+    fun `start without participantId finds the user's participant in the competition`() = runBlocking<Unit> {
+        service.initialize()
+
+        val response = service.start("u1", startRequest.copy(participantId = null))
+
+        assertEquals("p1", repository.sessions.getValue(response.sessionId).participantId)
+        assertFailsWith<UnprocessableEntityException> { service.start("stranger", startRequest.copy(participantId = null)) }
+        directory.extraIdsForUser = listOf("p-other")
+        assertFailsWith<UnprocessableEntityException> { service.start("u1", startRequest.copy(participantId = null)) }
+    }
+
+    @Test
+    fun `points sent after the result closed the session are appended to the stored track`() = runBlocking<Unit> {
+        service.initialize()
+        val sessionId = service.start("u1", startRequest).sessionId
+        service.appendPoints("u1", sessionId, batch(1, NOW + 1_000))
+        now = NOW + 60_000
+        service.onResultSaved(ResultSavedEvent("c1", "p1", "FINISHED", now, now))
+
+        // Батч, снятый до финиша, досылается позже: дописывается; точка после закрытия отбрасывается.
+        now = NOW + TimeUnit.MINUTES.toMillis(30)
+        val ack = service.appendPoints("u1", sessionId, batch(2, NOW + 30_000, NOW + TimeUnit.MINUTES.toMillis(20)))
+
+        assertEquals(LiveTrackStatus.FINISHED, ack.status)
+        assertEquals(listOf(NOW + 1_000, NOW + 30_000), TrackCodec.decode(NOW, repository.encoded[sessionId]).map { it.t })
+        assertEquals(2, service.live(7, null).sessions.single().points.size)
+
+        // Повтор того же батча не задваивает, а после окна досылки точки не принимаются.
+        service.appendPoints("u1", sessionId, batch(2, NOW + 30_000))
+        now = NOW + TimeUnit.HOURS.toMillis(3)
+        service.appendPoints("u1", sessionId, batch(3, NOW + 40_000))
+        assertEquals(2, TrackCodec.decode(NOW, repository.encoded[sessionId]).size)
     }
 
     @Test

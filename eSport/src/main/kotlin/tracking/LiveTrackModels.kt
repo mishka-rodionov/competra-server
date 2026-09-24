@@ -101,7 +101,8 @@ data class ArchivedSession(
  * `POST /api/live-track/sessions` — старт или возобновление трекинга.
  *
  * @property competitionId Соревнование.
- * @property participantId Участник, от имени которого пишется трек.
+ * @property participantId Участник, от имени которого пишется трек. Необязателен: без него
+ *   участник ищется среди участников соревнования по `userId` из JWT.
  * @property consent Согласие на публикацию трека (обязательно `true`).
  */
 data class StartSessionRequest(

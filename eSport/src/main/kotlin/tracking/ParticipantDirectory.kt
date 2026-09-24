@@ -51,6 +51,9 @@ data class ParticipantContext(
 interface ParticipantDirectory {
     /** Участник со всем контекстом или `null`, если его нет. */
     suspend fun find(participantId: String): ParticipantContext?
+
+    /** Id участников соревнования, принадлежащих пользователю (обычно один или ни одного). */
+    suspend fun findIdsByUser(competitionId: String, userId: String): List<String>
 }
 
 /**
@@ -58,6 +61,14 @@ interface ParticipantDirectory {
  * `statement_timeout` 3 с). Вызывается один раз на старт сессии.
  */
 class MainDbParticipantDirectory(private val mainReadOnly: Database) : ParticipantDirectory {
+
+    override suspend fun findIdsByUser(competitionId: String, userId: String): List<String> = withContext(Dispatchers.IO) {
+        transaction(mainReadOnly) {
+            OrienteeringParticipants.selectAll()
+                .where { (OrienteeringParticipants.competitionId eq competitionId) and (OrienteeringParticipants.userId eq userId) }
+                .map { it[OrienteeringParticipants.id] }
+        }
+    }
 
     override suspend fun find(participantId: String): ParticipantContext? = withContext(Dispatchers.IO) {
         transaction(mainReadOnly) {

@@ -36,6 +36,12 @@ private val COMPETITION_WINDOW_MS = TimeUnit.DAYS.toMillis(1)
 /** Закрытые сессии держатся в памяти для зрителей `live` столько, потом — только архив `tracks`. */
 val RECENT_CLOSED_WINDOW_MS: Long = TimeUnit.HOURS.toMillis(1)
 
+/**
+ * Сколько после закрытия сессии принимаются досланные точки (бегун финишировал без связи, а
+ * сессию уже закрыл результат). Точки дописываются в сохранённый трек.
+ */
+private val LATE_POINTS_WINDOW_MS = TimeUnit.HOURS.toMillis(2)
+
 /** Статусы соревнования, при которых трекинг уже не включить. */
 private val CLOSED_COMPETITION_STATUSES = setOf("FINISHED", "ARCHIVED")
 
@@ -75,11 +81,11 @@ class LiveTrackService(
      */
     suspend fun start(userId: String, request: StartSessionRequest): SessionResponse {
         requireReady()
-        val participantId = request.participantId?.takeIf { it.isNotBlank() }
-            ?: throw BadRequestException("participantId is required")
         val competitionId = request.competitionId?.takeIf { it.isNotBlank() }
             ?: throw BadRequestException("competitionId is required")
         if (request.consent != true) throw UnprocessableEntityException("Нужно согласие на публикацию трека")
+        val participantId = request.participantId?.takeIf { it.isNotBlank() }
+            ?: resolveParticipantId(competitionId, userId)
 
         val participant = participants.find(participantId) ?: throw NotFoundException("Участник не найден")
         if (participant.competitionId != competitionId) throw BadRequestException("Участник из другого соревнования")
@@ -141,9 +147,8 @@ class LiveTrackService(
         }
         val session = findSession(sessionId)
         if (session.userId != userId) throw ForbiddenException("Чужая сессия трекинга")
-        if (session.status != LiveTrackStatus.ACTIVE || batchSeq <= session.lastBatchSeq) {
-            return PointsAckResponse(session.status, session.closeReason, batchSeq)
-        }
+        if (batchSeq <= session.lastBatchSeq) return PointsAckResponse(session.status, session.closeReason, batchSeq)
+        if (session.status != LiveTrackStatus.ACTIVE) return appendLatePoints(session, batchSeq, rawPoints)
 
         val now = clock()
         val points = rawPoints.mapNotNull { it.toValidPoint(session.startedAt - POINT_PAST_TOLERANCE_MS, now + POINT_FUTURE_TOLERANCE_MS) }
@@ -151,13 +156,32 @@ class LiveTrackService(
             ?.let { maxOf(it, session.lastPointAt ?: it) }
         val accepted = repository.appendPoints(sessionId, batchSeq, points, lastPointAt)
         if (!accepted) {
-            // Повтор или сессию закрыли между чтением и записью — отвечаем актуальным состоянием.
+            // Повтор или сессию закрыли между чтением и записью — отвечаем актуальным состоянием;
+            // во втором случае точки ещё можно дописать в закрытый трек.
             val current = repository.findById(sessionId) ?: session
             store.upsertSession(current)
+            if (current.status != LiveTrackStatus.ACTIVE && batchSeq > current.lastBatchSeq) {
+                return appendLatePoints(current, batchSeq, rawPoints)
+            }
             return PointsAckResponse(current.status, current.closeReason, batchSeq)
         }
         store.addPoints(session.copy(lastBatchSeq = batchSeq, lastPointAt = lastPointAt), points)
         return PointsAckResponse(LiveTrackStatus.ACTIVE, null, batchSeq)
+    }
+
+    /**
+     * Батч для уже закрытой сессии: в течение [LATE_POINTS_WINDOW_MS] после закрытия точки,
+     * снятые до момента закрытия, дописываются в трек; иначе батч подтверждается без записи.
+     * Клиент по статусу в ответе всё равно прекращает запись GPS и только досылает буфер.
+     */
+    private suspend fun appendLatePoints(session: LiveTrackSession, batchSeq: Int, rawPoints: List<PointRequest>): PointsAckResponse {
+        val closedAt = session.closedAt
+        val ack = PointsAckResponse(session.status, session.closeReason, batchSeq)
+        if (closedAt == null || clock() - closedAt > LATE_POINTS_WINDOW_MS) return ack
+        val points = rawPoints.mapNotNull { it.toValidPoint(session.startedAt - POINT_PAST_TOLERANCE_MS, closedAt + POINT_FUTURE_TOLERANCE_MS) }
+        val updated = repository.appendLatePoints(session.id, batchSeq, points) ?: return ack
+        store.addPoints(updated, points)
+        return ack
     }
 
     /** Ручная остановка трекинга владельцем. */
@@ -231,6 +255,16 @@ class LiveTrackService(
         val closed = repository.close(sessionId, status, reason, clock()) ?: return null
         store.upsertSession(closed)
         return closed
+    }
+
+    /** Участник пользователя в соревновании, если трекинг включают без явного `participantId`. */
+    private suspend fun resolveParticipantId(competitionId: String, userId: String): String {
+        val ids = participants.findIdsByUser(competitionId, userId)
+        return when (ids.size) {
+            0 -> throw UnprocessableEntityException("Вы не зарегистрированы на это соревнование")
+            1 -> ids.single()
+            else -> throw UnprocessableEntityException("Несколько участий в соревновании — укажите participantId")
+        }
     }
 
     private suspend fun findSession(sessionId: String): LiveTrackSession =
