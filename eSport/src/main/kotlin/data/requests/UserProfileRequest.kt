@@ -1,5 +1,6 @@
 package com.competra.data.requests
 
+import com.competra.domain.user.Gender
 import com.google.gson.annotations.SerializedName
 
 data class UserProfileRequest(
@@ -12,5 +13,6 @@ data class UserProfileRequest(
     @SerializedName("avatar_crop_x") val avatarCropX: Double? = null,
     @SerializedName("avatar_crop_y") val avatarCropY: Double? = null,
     @SerializedName("avatar_crop_width") val avatarCropWidth: Double? = null,
-    @SerializedName("avatar_crop_height") val avatarCropHeight: Double? = null
+    @SerializedName("avatar_crop_height") val avatarCropHeight: Double? = null,
+    @SerializedName("gender") val gender: Gender? = null
 )

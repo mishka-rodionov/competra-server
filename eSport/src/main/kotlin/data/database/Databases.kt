@@ -241,6 +241,8 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_crop_height DOUBLE PRECISION")
         // Фиксация согласия на обработку персональных данных при регистрации (152-ФЗ ст.9).
         exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_accepted_at BIGINT")
+        // Пол пользователя, указывается при регистрации (MALE / FEMALE); у старых пользователей — NULL.
+        exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(10)")
         // Организатор произвольным текстом — для соревнований, чей организатор не зарегистрирован
         // в системе (например, оцифровка прошедших соревнований).
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS organizer_name VARCHAR(200)")
@@ -465,6 +467,7 @@ fun Application.configureDatabases() {
                                 phoneNumber = "",
                                 email = request.email,
                                 privacyAcceptedAt = if (tempUser?.privacyAccepted == true) System.currentTimeMillis() else null,
+                                gender = tempUser?.gender,
                             )
                         )
                     }
@@ -499,7 +502,7 @@ fun Application.configureDatabases() {
                         lastName = user.lastName,
                         middleName = user.middleName,
                         birthDate = user.birthDate,
-                        gender = Gender.MALE,
+                        gender = user.gender ?: Gender.MALE,
                         avatarUrl = user.photo,
                         avatarCropX = user.avatarCropX,
                         avatarCropY = user.avatarCropY,
@@ -532,7 +535,7 @@ fun Application.configureDatabases() {
                             lastName = user.lastName,
                             middleName = user.middleName,
                             birthDate = user.birthDate,
-                            gender = Gender.MALE,
+                            gender = user.gender ?: Gender.MALE,
                             avatarUrl = user.photo,
                             avatarCropX = user.avatarCropX,
                             avatarCropY = user.avatarCropY,
@@ -576,6 +579,7 @@ fun Application.configureDatabases() {
                     avatarCropWidth = request.avatarCropWidth ?: current.avatarCropWidth,
                     avatarCropHeight = request.avatarCropHeight ?: current.avatarCropHeight,
                     privacyAcceptedAt = current.privacyAcceptedAt,
+                    gender = request.gender ?: current.gender,
                 ))
                 val updated = userService.read(userId)!!
                 call.respond(CommonModel<UserResponse>().also {
@@ -586,7 +590,7 @@ fun Application.configureDatabases() {
                         lastName = updated.lastName,
                         middleName = updated.middleName,
                         birthDate = updated.birthDate,
-                        gender = Gender.MALE,
+                        gender = updated.gender ?: Gender.MALE,
                         avatarUrl = updated.photo,
                         avatarCropX = updated.avatarCropX,
                         avatarCropY = updated.avatarCropY,
@@ -700,7 +704,7 @@ fun Application.configureDatabases() {
                         lastName = user.lastName,
                         middleName = user.middleName,
                         birthDate = user.birthDate,
-                        gender = Gender.MALE,
+                        gender = user.gender ?: Gender.MALE,
                         avatarUrl = user.photo,
                         avatarCropX = user.avatarCropX,
                         avatarCropY = user.avatarCropY,

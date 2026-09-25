@@ -27,6 +27,8 @@ data class UserEntity(
     val avatarCropWidth: Double? = null,
     val avatarCropHeight: Double? = null,
     val privacyAcceptedAt: Long? = null,
+    /** Пол пользователя; null — не указан (пользователи, зарегистрированные до появления поля). */
+    val gender: Gender? = null,
 )
 
 class UserService(database: Database) {
@@ -45,6 +47,7 @@ class UserService(database: Database) {
         val avatarCropWidth = double("avatar_crop_width").nullable()
         val avatarCropHeight = double("avatar_crop_height").nullable()
         val privacyAcceptedAt = long("privacy_accepted_at").nullable()
+        val gender = enumerationByName("gender", 10, Gender::class).nullable()
 
         override val primaryKey = PrimaryKey(id)
     }
@@ -70,6 +73,7 @@ class UserService(database: Database) {
             it[avatarCropWidth] = user.avatarCropWidth
             it[avatarCropHeight] = user.avatarCropHeight
             it[privacyAcceptedAt] = user.privacyAcceptedAt
+            it[gender] = user.gender
         }[Users.id]
     }
 
@@ -92,6 +96,7 @@ class UserService(database: Database) {
                     avatarCropWidth = it[Users.avatarCropWidth],
                     avatarCropHeight = it[Users.avatarCropHeight],
                     privacyAcceptedAt = it[Users.privacyAcceptedAt],
+                    gender = it[Users.gender],
                 ) }
                 .singleOrNull()
         }
@@ -112,6 +117,7 @@ class UserService(database: Database) {
                 it[avatarCropWidth] = user.avatarCropWidth
                 it[avatarCropHeight] = user.avatarCropHeight
                 it[privacyAcceptedAt] = user.privacyAcceptedAt
+                it[gender] = user.gender
             }
         }
     }

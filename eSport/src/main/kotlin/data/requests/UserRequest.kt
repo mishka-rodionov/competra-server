@@ -1,5 +1,6 @@
 package com.rodionov.remote.request.user
 
+import com.competra.domain.user.Gender
 import com.google.gson.annotations.SerializedName
 import java.util.Date
 
@@ -20,4 +21,7 @@ data class UserRequest(
 //    val qualification: List<Qualification>
     @SerializedName("privacy_accepted")
     val privacyAccepted: Boolean = false,
+    /** Пол пользователя. Null — старые клиенты, которые не присылают поле. */
+    @SerializedName("gender")
+    val gender: Gender? = null,
 )
