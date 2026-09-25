@@ -1,5 +1,6 @@
 package com.competra.data.services
 
+import com.competra.UserService
 import com.competra.data.database.entity.Competitions
 import com.competra.data.database.entity.OrienteeringCompetitions
 import com.competra.data.database.entity.OrienteeringParticipants
@@ -159,6 +160,8 @@ class OrienteeringParticipantService {
     /**
      * Регистрирует пользователя как участника соревнования.
      * Если пользователь уже зарегистрирован — выбрасывает IllegalStateException.
+     * Если группа не из этого соревнования, в ней нет мест или она не подходит пользователю
+     * по полу/возрасту (см. [checkGroupEligibility]) — UnprocessableEntityException (HTTP 422).
      */
     suspend fun register(req: RegisterParticipantRequest, userId: String): OrienteeringParticipantResponse = dbQuery {
         // Проверяем статус соревнования — регистрация доступна только при REGISTRATION_OPEN
@@ -192,11 +195,32 @@ class OrienteeringParticipantService {
             throw IllegalStateException("Вы уже зарегистрированы на данный старт")
         }
 
-        val groupName = ParticipantGroups.selectAll()
-            .where { ParticipantGroups.id eq req.groupId }
+        val group = ParticipantGroups.selectAll()
+            .where { (ParticipantGroups.id eq req.groupId) and (ParticipantGroups.competitionId eq req.competitionId) }
             .singleOrNull()
-            ?.get(ParticipantGroups.title)
-            ?: ""
+            ?: throw UnprocessableEntityException("Группа не найдена в этом соревновании")
+        val groupName = group[ParticipantGroups.title]
+
+        group[ParticipantGroups.maxParticipants]?.takeIf { it > 0 }?.let { limit ->
+            val registeredCount = OrienteeringParticipants.selectAll()
+                .where { OrienteeringParticipants.groupId eq req.groupId }
+                .count()
+            if (registeredCount >= limit) throw UnprocessableEntityException("В группе $groupName не осталось мест")
+        }
+
+        // Только самостоятельная регистрация: организатор через upsertAll ставит участника в любую группу.
+        val user = UserService.Users.selectAll()
+            .where { UserService.Users.id eq userId }
+            .singleOrNull()
+        checkGroupEligibility(
+            groupTitle = groupName,
+            groupGender = group[ParticipantGroups.gender],
+            minAge = group[ParticipantGroups.minAge],
+            maxAge = group[ParticipantGroups.maxAge],
+            userGender = user?.get(UserService.Users.gender),
+            userBirthDate = user?.get(UserService.Users.birthDate),
+            competitionYear = competitionYear(comp[Competitions.startDate], comp[Competitions.timeZoneId]),
+        )?.let { throw UnprocessableEntityException(it) }
 
         val participantId = UUID.randomUUID().toString()
         OrienteeringParticipants.insert {
