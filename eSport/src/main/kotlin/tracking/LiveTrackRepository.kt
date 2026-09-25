@@ -226,8 +226,9 @@ class ExposedLiveTrackRepository(private val db: Database) : LiveTrackRepository
                 TrackedDistanceResponse(
                     distanceId = distanceId,
                     name = sessions.last().distanceName,
-                    activeCount = sessions.count { it.status == LiveTrackStatus.ACTIVE },
-                    totalCount = sessions.size
+                    // Считаем участников, а не сессии: перезапуск трека не должен давать «лишний» трек.
+                    activeCount = sessions.filter { it.status == LiveTrackStatus.ACTIVE }.distinctBy { it.participantId }.size,
+                    totalCount = sessions.distinctBy { it.participantId }.size
                 )
             }
             .sortedBy { it.name.orEmpty() }
