@@ -70,6 +70,10 @@ fun connectTrackingDatabases(): TrackingDatabases {
             // Дублирует настройку роли в Postgres (scripts/setup_tracking_db.sh) — на случай, если
             // процесс подключили к основной БД под другой ролью.
             connectionInitSql = "SET statement_timeout = $MAIN_STATEMENT_TIMEOUT_MS"
+            // При autoCommit = false Hikari оставляет транзакцию connectionInitSql открытой, и первая
+            // транзакция Exposed на новом соединении падает на смене уровня изоляции. С этим флагом
+            // Hikari коммитит служебные запросы сам.
+            isIsolateInternalQueries = true
         }
     )
     // Одна попытка транзакции вместо трёх по умолчанию: при недоступной БД запрос должен быстро
