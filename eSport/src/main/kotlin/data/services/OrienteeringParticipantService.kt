@@ -223,8 +223,31 @@ class OrienteeringParticipantService {
 
     /**
      * Отменяет регистрацию пользователя на соревнование.
+     * Отмена доступна только пока регистрация не закрыта (статус CREATED или REGISTRATION_OPEN):
+     * после окончания регистрации — в т.ч. досрочного, когда организатор кнопкой «Завершить
+     * регистрацию» выставляет registrationEnd на текущий момент — стартовый протокол меняет только
+     * организатор. Иначе удаление участника на сервере конфликтует с его офлайн-правками.
+     * Если регистрация закрыта — выбрасывает IllegalStateException.
      */
     suspend fun cancelRegistration(competitionId: String, userId: String) = dbQuery {
+        val comp = Competitions.selectAll()
+            .where { Competitions.id eq competitionId }
+            .singleOrNull() ?: throw IllegalStateException("Соревнование не найдено")
+
+        val orient = OrienteeringCompetitions.selectAll()
+            .where { OrienteeringCompetitions.id eq competitionId }
+            .singleOrNull()
+
+        val effectiveStatus = computeEffectiveStatus(
+            storedStatus = comp[Competitions.status],
+            registrationStart = comp[Competitions.registrationStart],
+            registrationEnd = comp[Competitions.registrationEnd],
+            startTime = orient?.get(OrienteeringCompetitions.startTime)
+        )
+        if (effectiveStatus != "CREATED" && effectiveStatus != "REGISTRATION_OPEN") {
+            throw IllegalStateException("Регистрация завершена, отменить её уже нельзя")
+        }
+
         OrienteeringParticipants.deleteWhere {
             (OrienteeringParticipants.userId eq userId) and
             (OrienteeringParticipants.competitionId eq competitionId)

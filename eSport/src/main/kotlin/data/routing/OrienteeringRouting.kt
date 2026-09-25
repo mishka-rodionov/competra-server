@@ -510,7 +510,14 @@ fun Route.orienteeringRoutes(
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }
             )
 
-        participantService.cancelRegistration(competitionId, userId)
-        call.respond(CommonModel<Any>().also { it.status = 1 })
+        try {
+            participantService.cancelRegistration(competitionId, userId)
+            call.respond(CommonModel<Any>().also { it.status = 1 })
+        } catch (e: IllegalStateException) {
+            call.respond(
+                HttpStatusCode.Conflict,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(409, e.message ?: "Registration closed")) }
+            )
+        }
     }
 }
