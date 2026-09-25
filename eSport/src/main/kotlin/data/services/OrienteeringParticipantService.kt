@@ -6,6 +6,7 @@ import com.competra.data.database.entity.OrienteeringParticipants
 import com.competra.data.database.entity.ParticipantGroups
 import com.competra.data.exception.ConflictException
 import com.competra.data.exception.ForbiddenException
+import com.competra.data.exception.UnprocessableEntityException
 import com.competra.data.requests.orienteering.OrienteeringParticipantRequest
 import com.competra.data.requests.orienteering.RegisterParticipantRequest
 import com.competra.data.response.orienteering.OrienteeringParticipantResponse
@@ -278,12 +279,48 @@ class OrienteeringParticipantService {
             .map { it.toResponse() }
     }
 
+    /**
+     * Удаляет участника (действие организатора).
+     * После старта соревнования удаление запрещено: к участнику уже привязаны стартовое время,
+     * чип и результат, а удаление сдвигает места в протоколе. Неявку в этом случае отмечают
+     * результатом со статусом DNS.
+     *
+     * @throws UnprocessableEntityException если соревнование уже стартовало (HTTP 422).
+     */
     suspend fun deleteById(id: String, callerUserId: String): Boolean = dbQuery {
         val existing = OrienteeringParticipants.selectAll().where { OrienteeringParticipants.id eq id }.singleOrNull()
             ?: return@dbQuery false
-        requireParticipantEditAccess(existing[OrienteeringParticipants.competitionId], callerUserId)
+        val competitionId = existing[OrienteeringParticipants.competitionId]
+        requireParticipantEditAccess(competitionId, callerUserId)
+        if (isCompetitionStarted(competitionId)) {
+            throw UnprocessableEntityException(
+                "Соревнование уже стартовало — удалить участника нельзя, отметьте его как «Не стартовал»"
+            )
+        }
         @Suppress("DEPRECATION")
         OrienteeringParticipants.deleteWhere { OrienteeringParticipants.id eq id } > 0
+    }
+
+    /**
+     * true, если соревнование уже стартовало: сохранённый статус IN_PROGRESS/FINISHED/ARCHIVED
+     * либо наступило время старта (фоновый шедулер переводит статус с задержкой до 5 минут).
+     */
+    private fun isCompetitionStarted(competitionId: String): Boolean {
+        val comp = Competitions.selectAll()
+            .where { Competitions.id eq competitionId }
+            .singleOrNull() ?: return false
+        val storedStatus = comp[Competitions.status]
+        if (storedStatus in STARTED_STATUSES) return true
+        val orient = OrienteeringCompetitions.selectAll()
+            .where { OrienteeringCompetitions.id eq competitionId }
+            .singleOrNull()
+        val effectiveStatus = computeEffectiveStatus(
+            storedStatus = storedStatus,
+            registrationStart = comp[Competitions.registrationStart],
+            registrationEnd = comp[Competitions.registrationEnd],
+            startTime = orient?.get(OrienteeringCompetitions.startTime)
+        )
+        return storedStatus != "DRAFT" && effectiveStatus in STARTED_STATUSES
     }
 
     private fun ResultRow.toResponse() = OrienteeringParticipantResponse(
@@ -305,4 +342,9 @@ class OrienteeringParticipantService {
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
+
+    companion object {
+        /** Статусы, после которых участника нельзя удалить. */
+        private val STARTED_STATUSES = setOf("IN_PROGRESS", "FINISHED", "ARCHIVED")
+    }
 }
