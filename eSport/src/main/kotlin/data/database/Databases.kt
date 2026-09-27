@@ -441,8 +441,15 @@ fun Application.configureDatabases() {
                     .singleOrNull()?.get(VerificationCodes.code)
             }
 
+            // Ответ в формате CommonModel, как и остальные ветки: раньше здесь был голый
+            // {"error": "..."}, клиенты не находили errors[0] и показывали «Unknown error».
             if (storedCode == null || storedCode != request.code) {
-                call.respond(mapOf("error" to "Invalid code"))
+                call.respond(
+                    CommonModel<Any>().also { model ->
+                        model.status = 0
+                        model.errors = listOf(BaseError(code = 1005, message = "Неверный или устаревший код. Запросите новый код и введите его из последнего письма."))
+                    }
+                )
                 return@post
             }
 
