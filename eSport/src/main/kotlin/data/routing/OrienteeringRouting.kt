@@ -492,7 +492,9 @@ fun Route.orienteeringRoutes(
                 }
             )
 
-        val requests = IOFXmlParser.parse(xmlBytes!!, competitionId!!)
+        val useStartStation = competitionService.getOrienteeringCompetitionById(competitionId!!)
+            ?.startTimeMode == "BY_START_STATION"
+        val requests = IOFXmlParser.parse(xmlBytes!!, competitionId!!, useStartStation)
         val result = distanceService.upsertAll(requests, userId)
         call.respond(CommonModel<Any>().also { it.status = 1; it.result = result })
     }

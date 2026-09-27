@@ -55,24 +55,31 @@ class IOFXmlParserTest {
         assertEquals(1, result.size)
         val distance = result.first()
         assertEquals("Test course", distance.name)
-        assertEquals(3, distance.controlPoints.size)
 
-        val (start, ordinary, finish) = distance.controlPoints
-
-        assertEquals("Start", start.role)
-        assertEquals(51.0, start.latitude)
-        assertEquals(8.0, start.longitude)
-
-        assertEquals("ORDINARY", ordinary.role)
+        val ordinary = distance.controlPoints.single()
+        assertEquals("ordinary", ordinary.role)
         assertEquals(101, ordinary.number)
         assertEquals(50.9998836, ordinary.latitude)
         assertEquals(8.003674, ordinary.longitude)
+    }
 
-        assertEquals("Finish", finish.role)
-        assertEquals(50.9997745, finish.latitude)
-        assertEquals(8.0071138, finish.longitude)
-        assertEquals(finish.number, distance.finishControlPoint)
-        assertEquals(start.number, distance.startControlPoint)
+    @Test
+    fun `start and finish are kept out of the control point list`() {
+        val distance = IOFXmlParser.parse(sampleXml.toByteArray(), competitionId = "c1").first()
+
+        assertEquals(listOf(101), distance.controlPoints.map { it.number })
+        assertEquals(1, distance.controlsCount)
+        assertEquals(1, distance.finishControlPoint)
+    }
+
+    @Test
+    fun `start control point is set only for start station mode`() {
+        val withoutStation = IOFXmlParser.parse(sampleXml.toByteArray(), competitionId = "c1")
+        assertNull(withoutStation.first().startControlPoint)
+
+        val withStation = IOFXmlParser.parse(sampleXml.toByteArray(), competitionId = "c1", useStartStation = true)
+        assertEquals(1, withStation.first().startControlPoint)
+        assertEquals(listOf(101), withStation.first().controlPoints.map { it.number })
     }
 
     @Test

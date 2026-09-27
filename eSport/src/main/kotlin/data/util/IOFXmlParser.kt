@@ -7,7 +7,14 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 object IOFXmlParser {
 
-    fun parse(xmlBytes: ByteArray, competitionId: String): List<DistanceRequest> {
+    /**
+     * В [DistanceRequest.controlPoints] попадают только КП, отмечаемые по ходу дистанции.
+     * Финиш хранится отдельно в [DistanceRequest.finishControlPoint] (клиенты сами добавляют
+     * его в конец списка), старт — в [DistanceRequest.startControlPoint], причём только если
+     * [useStartStation] (режим старта BY_START_STATION): в остальных режимах стартовой
+     * станции нет и её номер не нужен.
+     */
+    fun parse(xmlBytes: ByteArray, competitionId: String, useStartStation: Boolean = false): List<DistanceRequest> {
         val factory = DocumentBuilderFactory.newInstance().apply {
             isXIncludeAware = false
             isExpandEntityReferences = false
@@ -42,26 +49,29 @@ object IOFXmlParser {
             val courseControls = course.getElementsByTagName("CourseControl")
             var finishNumber: Int? = null
             var startNumber: Int? = null
-            val controlPoints = (0 until courseControls.length).map { j ->
+            val controlPoints = mutableListOf<ControlPointRequest>()
+            for (j in 0 until courseControls.length) {
                 val cc     = courseControls.item(j) as Element
                 val type   = cc.getAttribute("type")
                 val ctrlId = cc.getElementsByTagName("Control").item(0)?.textContent ?: ""
                 val code   = ctrlId.filter { it.isDigit() }.toIntOrNull()
-                // Значения должны совпадать с ControlPointRole на Android (Gson @SerializedName
-                // там в нижнем регистре: "start"/"finish"/"ordinary") — иначе Gson не может
-                // разобрать поле и роняет NPE при сборке доменной модели дистанции.
-                val role   = when (type) { "Start" -> "start"; "Finish" -> "finish"; else -> "ordinary" }
-                if (role == "finish" && code != null) finishNumber = code
-                if (role == "start" && code != null) startNumber = code
-                val position = controlPositions[ctrlId]
-                val score  = cc.getElementsByTagName("Score").item(0)?.textContent?.toIntOrNull() ?: 0
-                ControlPointRequest(
-                    number = code ?: j,
-                    role = role,
-                    score = score,
-                    latitude = position?.first,
-                    longitude = position?.second
-                )
+                when (type) {
+                    "Start" -> if (useStartStation && code != null) startNumber = code
+                    "Finish" -> if (code != null) finishNumber = code
+                    else -> {
+                        val position = controlPositions[ctrlId]
+                        val score = cc.getElementsByTagName("Score").item(0)?.textContent?.toIntOrNull() ?: 0
+                        // Роль должна совпадать с ControlPointRole на Android (Gson @SerializedName
+                        // там в нижнем регистре) — иначе Gson роняет NPE при сборке модели дистанции.
+                        controlPoints += ControlPointRequest(
+                            number = code ?: j,
+                            role = "ordinary",
+                            score = score,
+                            latitude = position?.first,
+                            longitude = position?.second
+                        )
+                    }
+                }
             }
 
             DistanceRequest(
