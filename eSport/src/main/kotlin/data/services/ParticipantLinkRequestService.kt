@@ -460,11 +460,13 @@ class ParticipantLinkRequestService(private val fcmService: FcmService) {
 
     private suspend fun send(notice: Notice) {
         runCatching {
+            // data-only: иначе в фоне Android рисует уведомление сам, и тап не ведёт на экран заявок.
             fcmService.sendToUser(
                 userId = notice.userId,
                 title = notice.title,
                 body = notice.body,
                 data = notice.data,
+                includeNotificationBlock = false,
             )
         }.onFailure { log.warn("Failed to send link request push to userId=${notice.userId}", it) }
     }
