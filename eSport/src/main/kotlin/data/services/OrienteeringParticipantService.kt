@@ -78,7 +78,9 @@ class OrienteeringParticipantService {
                 }
                 requireParticipantEditAccess(req.competitionId, callerUserId)
                 OrienteeringParticipants.update({ OrienteeringParticipants.id eq req.id }) {
-                    it[userId] = req.userId
+                    // userId меняется только через заявки на привязку/отвязку (ParticipantLinkRequestService),
+                    // а не через редактирование: иначе устаревшая копия у организатора сотрёт привязку.
+                    it[userId] = existing[OrienteeringParticipants.userId]
                     it[firstName] = req.firstName
                     it[lastName] = req.lastName
                     it[groupId] = req.groupId
@@ -138,7 +140,9 @@ class OrienteeringParticipantService {
             }
             requireParticipantEditAccess(req.competitionId, callerUserId)
             OrienteeringParticipants.update({ OrienteeringParticipants.id eq req.id }) {
-                it[userId] = req.userId
+                // userId меняется только через заявки на привязку/отвязку (ParticipantLinkRequestService),
+                // а не через редактирование: иначе устаревшая копия у организатора сотрёт привязку.
+                it[userId] = existing[OrienteeringParticipants.userId]
                 it[firstName] = req.firstName
                 it[lastName] = req.lastName
                 it[groupId] = req.groupId
