@@ -62,6 +62,17 @@ class DistanceService {
                         it[controlPoints] = cpJson
                         it[finishControlPoint] = req.finishControlPoint
                         it[startControlPoint] = req.startControlPoint
+                        // Координаты старта/финиша — как и карта, только если клиент их прислал:
+                        // формы редактирования и старые версии Android их не знают и затёрли бы
+                        // координаты, пришедшие из IOF XML.
+                        if (req.startLatitude != null && req.startLongitude != null) {
+                            it[startLatitude] = req.startLatitude
+                            it[startLongitude] = req.startLongitude
+                        }
+                        if (req.finishLatitude != null && req.finishLongitude != null) {
+                            it[finishLatitude] = req.finishLatitude
+                            it[finishLongitude] = req.finishLongitude
+                        }
                         // Карту и её привязку обновляем только если клиент её прислал. Android-клиент
                         // и формы редактирования дистанции поля карты не шлют — без этой проверки
                         // любое их сохранение стирало карту, прикреплённую через веб. Открепления
@@ -92,6 +103,10 @@ class DistanceService {
                 it[controlPoints] = cpJson
                 it[finishControlPoint] = req.finishControlPoint
                 it[startControlPoint] = req.startControlPoint
+                it[startLatitude] = req.startLatitude
+                it[startLongitude] = req.startLongitude
+                it[finishLatitude] = req.finishLatitude
+                it[finishLongitude] = req.finishLongitude
                 it[mapUrl] = req.mapUrl
                 it[mapTopLeftLat] = req.mapTopLeftLat
                 it[mapTopLeftLng] = req.mapTopLeftLng
@@ -131,6 +146,10 @@ class DistanceService {
         controlPoints = deserializeControlPoints(this[Distances.controlPoints]),
         finishControlPoint = this[Distances.finishControlPoint],
         startControlPoint = this[Distances.startControlPoint],
+        startLatitude = this[Distances.startLatitude],
+        startLongitude = this[Distances.startLongitude],
+        finishLatitude = this[Distances.finishLatitude],
+        finishLongitude = this[Distances.finishLongitude],
         mapUrl = this[Distances.mapUrl],
         mapTopLeftLat = this[Distances.mapTopLeftLat],
         mapTopLeftLng = this[Distances.mapTopLeftLng],

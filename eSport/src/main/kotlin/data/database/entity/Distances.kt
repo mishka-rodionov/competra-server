@@ -14,6 +14,12 @@ object Distances : Table("distances") {
     val controlPoints = text("control_points").nullable()
     val finishControlPoint = integer("finish_control_point").nullable()
     val startControlPoint = integer("start_control_point").nullable()
+    // Координаты старта и финиша (WGS84) — нужны клиентам для длины первого и последнего перегона
+    // (темп в сплитах). Приходят из IOF XML; null, если неизвестны.
+    val startLatitude = double("start_latitude").nullable()
+    val startLongitude = double("start_longitude").nullable()
+    val finishLatitude = double("finish_latitude").nullable()
+    val finishLongitude = double("finish_longitude").nullable()
     val mapUrl = varchar("map_url", 500).nullable()
     val mapTopLeftLat = double("map_top_left_lat").nullable()
     val mapTopLeftLng = double("map_top_left_lng").nullable()

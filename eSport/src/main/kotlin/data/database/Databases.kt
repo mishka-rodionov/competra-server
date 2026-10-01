@@ -155,6 +155,11 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS finish_control_point INTEGER")
         // Стартовый КП (отдельная физическая старт-станция) — для StartTimeMode.BY_START_STATION.
         exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS start_control_point INTEGER")
+        // Координаты старта и финиша — для длины первого/последнего перегона (темп в сплитах).
+        exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS start_latitude DOUBLE PRECISION")
+        exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS start_longitude DOUBLE PRECISION")
+        exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS finish_latitude DOUBLE PRECISION")
+        exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS finish_longitude DOUBLE PRECISION")
         // Карта дистанции (растр из mapper) + гео-привязка углов (WGS84) для наложения на OSM.
         exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS map_url VARCHAR(500)")
         exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS map_top_left_lat DOUBLE PRECISION")

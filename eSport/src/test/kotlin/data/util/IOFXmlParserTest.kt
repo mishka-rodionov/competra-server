@@ -83,6 +83,16 @@ class IOFXmlParserTest {
     }
 
     @Test
+    fun `start and finish coordinates are kept regardless of start station mode`() {
+        val distance = IOFXmlParser.parse(sampleXml.toByteArray(), competitionId = "c1").first()
+
+        assertEquals(51.0, distance.startLatitude)
+        assertEquals(8.0, distance.startLongitude)
+        assertEquals(50.9997745, distance.finishLatitude)
+        assertEquals(8.0071138, distance.finishLongitude)
+    }
+
+    @Test
     fun `control without position keeps null coordinates`() {
         val xml = """
             <?xml version="1.0" encoding="UTF-8"?>

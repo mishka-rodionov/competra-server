@@ -12,7 +12,8 @@ object IOFXmlParser {
      * Финиш хранится отдельно в [DistanceRequest.finishControlPoint] (клиенты сами добавляют
      * его в конец списка), старт — в [DistanceRequest.startControlPoint], причём только если
      * [useStartStation] (режим старта BY_START_STATION): в остальных режимах стартовой
-     * станции нет и её номер не нужен.
+     * станции нет и её номер не нужен. Координаты старта и финиша сохраняются всегда (если есть
+     * в справочнике) — по ним клиенты считают длину первого и последнего перегона.
      */
     fun parse(xmlBytes: ByteArray, competitionId: String, useStartStation: Boolean = false): List<DistanceRequest> {
         val factory = DocumentBuilderFactory.newInstance().apply {
@@ -49,6 +50,8 @@ object IOFXmlParser {
             val courseControls = course.getElementsByTagName("CourseControl")
             var finishNumber: Int? = null
             var startNumber: Int? = null
+            var startPosition: Pair<Double, Double>? = null
+            var finishPosition: Pair<Double, Double>? = null
             val controlPoints = mutableListOf<ControlPointRequest>()
             for (j in 0 until courseControls.length) {
                 val cc     = courseControls.item(j) as Element
@@ -56,8 +59,14 @@ object IOFXmlParser {
                 val ctrlId = cc.getElementsByTagName("Control").item(0)?.textContent ?: ""
                 val code   = ctrlId.filter { it.isDigit() }.toIntOrNull()
                 when (type) {
-                    "Start" -> if (useStartStation && code != null) startNumber = code
-                    "Finish" -> if (code != null) finishNumber = code
+                    "Start" -> {
+                        if (useStartStation && code != null) startNumber = code
+                        startPosition = controlPositions[ctrlId]
+                    }
+                    "Finish" -> {
+                        if (code != null) finishNumber = code
+                        finishPosition = controlPositions[ctrlId]
+                    }
                     else -> {
                         val position = controlPositions[ctrlId]
                         val score = cc.getElementsByTagName("Score").item(0)?.textContent?.toIntOrNull() ?: 0
@@ -85,6 +94,10 @@ object IOFXmlParser {
                 controlPoints = controlPoints,
                 finishControlPoint = finishNumber,
                 startControlPoint = startNumber,
+                startLatitude = startPosition?.first,
+                startLongitude = startPosition?.second,
+                finishLatitude = finishPosition?.first,
+                finishLongitude = finishPosition?.second,
                 serverUpdatedAt = null
             )
         }
