@@ -103,3 +103,27 @@ internal fun checkGroupEligibility(
     }
     return null
 }
+
+/**
+ * Та же проверка, что [checkGroupEligibility], но тексты — для организатора, который проверяет
+ * заявку на привязку результата: подсказка, а не отказ в регистрации. Чистая функция — покрыта unit-тестом.
+ */
+internal fun linkEligibilityWarning(
+    groupTitle: String,
+    groupGender: String?,
+    minAge: Int?,
+    maxAge: Int?,
+    userGender: Gender?,
+    userBirthDate: String?,
+    competitionYear: Int,
+): String? {
+    if (groupGenderRestriction(groupGender) != null && userGender == null) {
+        return "В профиле заявителя не указан пол — не проверить соответствие группе $groupTitle"
+    }
+    val hasAgeLimit = (minAge ?: 0) > 0 || (maxAge ?: 0) > 0
+    if (hasAgeLimit && parseBirthYear(userBirthDate) == null) {
+        return "В профиле заявителя не указана дата рождения — не проверить соответствие группе $groupTitle"
+    }
+    return checkGroupEligibility(groupTitle, groupGender, minAge, maxAge, userGender, userBirthDate, competitionYear)
+        ?.replace("ваш год рождения", "год рождения заявителя")
+}

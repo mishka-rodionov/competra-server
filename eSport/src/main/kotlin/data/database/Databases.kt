@@ -17,6 +17,7 @@ import com.competra.data.database.entity.OrienteeringCompetitions
 import com.competra.data.database.entity.OrienteeringParticipants
 import com.competra.data.database.entity.OrienteeringResults
 import com.competra.data.database.entity.ParticipantGroups
+import com.competra.data.database.entity.ParticipantLinkRequests
 import com.competra.data.database.entity.RefreshTokens
 import com.competra.data.database.entity.SplitTimes
 import com.competra.data.database.entity.VerificationCodes
@@ -130,7 +131,8 @@ fun Application.configureDatabases() {
             RatingCompetitions,
             RatingGroupMappings,
             CompetitionNotifications,
-            CompetitionOrganizers
+            CompetitionOrganizers,
+            ParticipantLinkRequests
         )
         // Добавляем колонки, которых может не быть в уже существующей таблице
         exec("ALTER TABLE workouts ADD COLUMN IF NOT EXISTS track TEXT")

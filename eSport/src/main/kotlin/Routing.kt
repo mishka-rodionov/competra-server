@@ -10,6 +10,7 @@ import com.competra.data.routing.deviceRoutes
 import com.competra.data.routing.diaryRoutes
 import com.competra.data.routing.orienteeringPublicRoutes
 import com.competra.data.routing.orienteeringRoutes
+import com.competra.data.routing.participantLinkRoutes
 import com.competra.data.routing.ratingPublicRoutes
 import com.competra.data.routing.ratingRoutes
 import com.competra.data.routing.teamsPublicRoutes
@@ -27,6 +28,7 @@ import com.competra.data.services.OrienteeringCompetitionService
 import com.competra.data.services.OrienteeringParticipantService
 import com.competra.data.services.OrienteeringResultService
 import com.competra.data.services.ParticipantGroupService
+import com.competra.data.services.ParticipantLinkRequestService
 import com.competra.data.services.RatingService
 import com.competra.data.services.TeamMemberService
 import com.competra.data.services.TeamService
@@ -71,6 +73,7 @@ fun Application.configureRouting() {
     val teamService = TeamService()
     val teamMemberService = TeamMemberService()
     val ratingService = RatingService()
+    val participantLinkRequestService = ParticipantLinkRequestService(fcmService)
     attributes.put(FcmServiceKey, fcmService)
     attributes.put(CompetitionNotificationLogServiceKey, notificationLogService)
 
@@ -133,6 +136,7 @@ fun Application.configureRouting() {
                 clubsRoutes(clubService, clubMemberService, clubJoinRequestService)
                 teamsRoutes(teamService, teamMemberService)
                 ratingRoutes(ratingService)
+                participantLinkRoutes(participantLinkRequestService)
             }
         }
     }

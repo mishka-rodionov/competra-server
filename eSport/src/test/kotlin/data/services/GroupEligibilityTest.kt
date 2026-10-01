@@ -100,4 +100,21 @@ class GroupEligibilityTest {
             check(maxAge = 14, birthDate = ""),
         )
     }
+
+    @Test
+    fun `link warning speaks about the applicant, not the reader`() {
+        assertEquals(
+            "В профиле заявителя не указан пол — не проверить соответствие группе М14",
+            linkEligibilityWarning("М14", "M", null, null, null, "", 2026),
+        )
+        assertEquals(
+            "В профиле заявителя не указана дата рождения — не проверить соответствие группе М14",
+            linkEligibilityWarning("М14", null, 0, 14, Gender.MALE, "", 2026),
+        )
+        assertEquals(
+            "Группа М14 — для участников 1991 г.р. и старше, год рождения заявителя — 2012",
+            linkEligibilityWarning("М14", null, 35, null, Gender.MALE, utcMidnight("2012-06-15"), 2026),
+        )
+        assertNull(linkEligibilityWarning("М14", "M", 0, 0, Gender.MALE, "", 2026))
+    }
 }
