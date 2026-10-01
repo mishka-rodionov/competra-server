@@ -83,8 +83,13 @@ class ParticipantLinkRequestService(private val fcmService: FcmService) {
             .map { it[OrienteeringParticipants.id] }
         if (matchedIds.isEmpty()) return@dbQuery emptyList()
 
+        // Тестовые соревнования видны только тем, кто ими управляет, — и в подсказках тоже.
+        val manageableCompetitionIds = competitionIdsWithPermission(userId, CompetitionPermission.MANAGE_PARTICIPANTS)
         val rows = participantsWithCompetition()
-            .where { OrienteeringParticipants.id inList matchedIds }
+            .where {
+                (OrienteeringParticipants.id inList matchedIds) and
+                    ((Competitions.isTest eq false) or (Competitions.id inList manageableCompetitionIds))
+            }
             .orderBy(Competitions.startDate, SortOrder.DESC)
             .limit(MAX_SUGGESTIONS)
             .toList()
@@ -122,6 +127,12 @@ class ParticipantLinkRequestService(private val fcmService: FcmService) {
                     .where { OrienteeringParticipants.id eq participantId }
                     .singleOrNull() ?: throw NotFoundException("Участник не найден")
                 val competitionId = participant[OrienteeringParticipants.competitionId]
+                // Тестовое соревнование чужим не видно — отвечаем так же, как на несуществующего участника.
+                if (isTestCompetition(competitionId) &&
+                    !hasCompetitionPermission(competitionId, userId, CompetitionPermission.MANAGE_PARTICIPANTS)
+                ) {
+                    throw NotFoundException("Участник не найден")
+                }
                 val participantName = participant.fullName()
                 val linkedUserId = participant[OrienteeringParticipants.userId]?.takeIf { it.isNotBlank() }
                 if (linkedUserId == userId) continue
@@ -479,6 +490,11 @@ class ParticipantLinkRequestService(private val fcmService: FcmService) {
         OrienteeringParticipants.selectAll()
             .where { (OrienteeringParticipants.competitionId eq competitionId) and (OrienteeringParticipants.userId eq userId) }
             .firstOrNull { it[OrienteeringParticipants.id] != exceptParticipantId }
+
+    private fun isTestCompetition(competitionId: String): Boolean =
+        Competitions.select(Competitions.isTest)
+            .where { Competitions.id eq competitionId }
+            .singleOrNull()?.get(Competitions.isTest) ?: false
 
     private fun competitionTitle(competitionId: String): String =
         Competitions.select(Competitions.title)
