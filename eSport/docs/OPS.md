@@ -124,6 +124,23 @@ gunzip -c backup-2026-05-14.sql.gz | dc exec -T postgres psql -U competra -d com
 scp root@<server>:/opt/competra/backup-2026-05-14.sql ~/Downloads/
 ```
 
+### Автоматический бэкап (cron)
+
+Каждый деплой ставит в crontab пользователя деплоя ежедневный запуск `scripts/backup_db.sh` в 03:00
+**по времени сервера** (`scripts/install_backup_cron.sh`, идемпотентно). Дампы в custom-формате лежат в
+`/opt/competra/backups/competra_<дата>.dump`, хранятся 14 дней. Копий вне VPS пока нет: смерть
+сервера или диска = потеря и БД, и бэкапов. Периодически забирай свежий дамп себе через `scp`.
+
+```bash
+crontab -l | grep competra-backup               # установлено ли и с каким расписанием
+tail -n 30 /opt/competra/backups/backup.log     # последние запуски (ищи [error])
+ls -lh /opt/competra/backups/                   # сами дампы
+./scripts/backup_db.sh                          # внеплановый дамп руками (из /opt/competra)
+
+# Восстановить из .dump (ОСТОРОЖНО — затирает текущие данные; app лучше остановить: dc stop app tracking)
+dc exec -T postgres pg_restore -U competra -d competra --clean --if-exists < backups/competra_20261002_030000.dump
+```
+
 ---
 
 ## Удаление соревнований и связанных данных
@@ -347,7 +364,7 @@ ps aux --sort=-%mem | head -10
 └── volumes/competra_postgres_data/   # данные Postgres
 ```
 
-Бэкапить регулярно: **`.env`** (вручную, в защищённое место) и **дамп БД** (`pg_dump` по cron'у).
+Бэкапить регулярно: **`.env`** (вручную, в защищённое место) и **дамп БД** (уже по cron'у, см. «Автоматический бэкап»).
 
 ---
 

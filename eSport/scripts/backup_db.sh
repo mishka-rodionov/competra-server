@@ -8,6 +8,8 @@
 # после завершения скрипт печатает готовую команду scp — выполните её уже на
 # локальной машине (не на сервере).
 #
+# На проде запускается ежедневно по cron — см. scripts/install_backup_cron.sh.
+#
 # Использование (на VPS, из корня проекта eSport):
 #   ./scripts/backup_db.sh                # обычный дамп
 #   KEEP_DAYS=30 ./scripts/backup_db.sh    # хранить локальные дампы 30 дней вместо 14
@@ -31,7 +33,13 @@ mkdir -p "$BACKUP_DIR"
 
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 DUMP_FILE="$BACKUP_DIR/competra_${TIMESTAMP}.dump"
+# Пишем во временный файл и переименовываем только после успешного pg_dump: иначе при сбое
+# (например, из cron, когда никто не смотрит) остался бы обрезанный .dump, неотличимый от
+# нормального бэкапа. .part не попадает под маску ротации ниже и удаляется trap'ом.
+PART_FILE="$DUMP_FILE.part"
+trap 'rm -f "$PART_FILE"' EXIT
 
+echo "=== $(date '+%F %T') ==="
 echo "БД:     $PGDATABASE @ $PGHOST:$PGPORT (user=$PGUSER)"
 echo "Файл:   $DUMP_FILE"
 
@@ -45,7 +53,7 @@ if [[ "$MODE" == "docker" ]]; then
     fi
     echo "Режим:  docker (контейнер: $CONTAINER)"
     docker exec -e PGPASSWORD="$PGPASSWORD" "$CONTAINER" \
-        pg_dump -U "$PGUSER" -d "$PGDATABASE" -F c > "$DUMP_FILE"
+        pg_dump -U "$PGUSER" -d "$PGDATABASE" -F c > "$PART_FILE"
 else
     echo "Режим:  local (psql/pg_dump на хосте)"
     if ! command -v pg_dump >/dev/null 2>&1; then
@@ -54,8 +62,9 @@ else
         exit 1
     fi
     PGPASSWORD="$PGPASSWORD" pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" \
-        -F c -f "$DUMP_FILE"
+        -F c -f "$PART_FILE"
 fi
+mv "$PART_FILE" "$DUMP_FILE"
 
 SIZE="$(du -h "$DUMP_FILE" | cut -f1)"
 echo "Готово: $DUMP_FILE ($SIZE)"
