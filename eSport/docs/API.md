@@ -79,10 +79,19 @@
 | POST | `/api/event/orienteering/save/distances` | `List<DistanceRequest>` | Upsert дистанций |
 | DELETE | `/api/event/orienteering/distances/{id}` | — | Удалить дистанцию |
 | POST | `/api/event/orienteering/import/courses` | multipart: IOF XML-файл + `competitionId` | Импорт дистанций из IOF XML (Mapper) через `IOFXmlParser` |
-| POST | `/api/event/orienteering/register` | `RegisterParticipantRequest` | Самостоятельная регистрация пользователя на соревнование |
+| POST | `/api/event/orienteering/register` | `RegisterParticipantRequest` | Самостоятельная регистрация пользователя на соревнование (`commandName` ≤ 200 символов, необязательный `teamId` своей клубной команды) |
 | DELETE | `/api/event/orienteering/register/{competitionId}` | — | Отмена своей регистрации |
 
 Права на save/delete проверяются по ролям организаторов (MAIN/JUDGE/SECRETARY/COURSE_SETTER/OTHER).
+
+### Команда при регистрации — `data/routing/RegistrationTeamRouting.kt` 🔒
+
+| Метод | Путь | Тело / параметры | Описание |
+|---|---|---|---|
+| GET | `/api/event/orienteering/competitions/{id}/registration-team-options` | — | Мои клубные команды по виду спорта соревнования (подпись «Клуб (Команда)»), подписи команд из протокола и `suggestedCommandName` для автоподстановки |
+| GET | `/api/clubs/match` | query: `name` | Клубы, чьё название совпадает с введённой подписью команды (без учёта регистра), где пользователь не состоит — для подсказки «вступить в клуб» |
+
+У участника хранится текст `commandName` (подпись в протоколе) и nullable `team_id` (ссылка на `teams`, `ON DELETE SET NULL`). `team_id` ставится только при самостоятельной регистрации; при сохранении участника организатором ссылка сохраняется, пока не изменилась подпись (без учёта регистра и пробелов).
 
 ## Привязка участников к аккаунтам — `data/routing/ParticipantLinkRouting.kt` 🔒
 

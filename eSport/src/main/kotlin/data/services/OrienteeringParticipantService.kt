@@ -87,6 +87,10 @@ class OrienteeringParticipantService {
                     it[groupName] = req.groupName
                     it[competitionId] = req.competitionId
                     it[commandName] = req.commandName
+                    // Ссылка на клубную команду живёт, пока организатор не поменял подпись: иначе
+                    // протокол и teamId разъедутся. Клиенты teamId не присылают — берём из БД.
+                    it[teamId] = existing[OrienteeringParticipants.teamId]
+                        .takeIf { sameCommandName(req.commandName, existing[OrienteeringParticipants.commandName]) }
                     it[startNumber] = req.startNumber
                     it[startTime] = req.startTime
                     it[chipNumber] = req.chipNumber
@@ -149,6 +153,10 @@ class OrienteeringParticipantService {
                 it[groupName] = req.groupName
                 it[competitionId] = req.competitionId
                 it[commandName] = req.commandName
+                // Ссылка на клубную команду живёт, пока организатор не поменял подпись: иначе
+                // протокол и teamId разъедутся. Клиенты teamId не присылают — берём из БД.
+                it[teamId] = existing[OrienteeringParticipants.teamId]
+                    .takeIf { sameCommandName(req.commandName, existing[OrienteeringParticipants.commandName]) }
                 it[startNumber] = req.startNumber
                 it[startTime] = req.startTime
                 it[chipNumber] = req.chipNumber
@@ -226,6 +234,16 @@ class OrienteeringParticipantService {
             competitionYear = competitionYear(comp[Competitions.startDate], comp[Competitions.timeZoneId]),
         )?.let { throw UnprocessableEntityException(it) }
 
+        val requestedCommandName = normalizeCommandName(req.commandName)
+        if (requestedCommandName != null && requestedCommandName.length > COMMAND_NAME_MAX_LENGTH) {
+            throw UnprocessableEntityException("Название команды не должно превышать $COMMAND_NAME_MAX_LENGTH символов")
+        }
+        // Команду, в которой пользователь не состоит (вышел из неё, пока открыта регистрация),
+        // молча отбрасываем: подпись при этом сохраняется как свободный текст.
+        val teamLabel = req.teamId?.let { memberTeamLabel(it, userId) }
+        val registeredTeamId = req.teamId.takeIf { teamLabel != null }
+        val registeredCommandName = requestedCommandName ?: teamLabel
+
         val participantId = UUID.randomUUID().toString()
         OrienteeringParticipants.insert {
             it[id] = participantId
@@ -235,7 +253,8 @@ class OrienteeringParticipantService {
             it[groupId] = req.groupId
             it[OrienteeringParticipants.groupName] = groupName
             it[competitionId] = req.competitionId
-            it[commandName] = req.commandName
+            it[commandName] = registeredCommandName
+            it[teamId] = registeredTeamId
             it[startNumber] = 0
             it[startTime] = 0L
             it[chipNumber] = 0L

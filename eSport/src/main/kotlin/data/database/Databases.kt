@@ -270,6 +270,22 @@ fun Application.configureDatabases() {
             """.trimIndent()
         )
 
+        // Команда участника соревнования: ссылка на клубную команду рядом с текстовым command_name.
+        // При удалении команды ссылка обнуляется, текст в протоколе остаётся.
+        exec("ALTER TABLE orienteering_participants ADD COLUMN IF NOT EXISTS team_id VARCHAR(36)")
+        exec(
+            """
+            DO ${'$'}${'$'}
+            BEGIN
+                ALTER TABLE orienteering_participants
+                    ADD CONSTRAINT fk_orienteering_participants_team
+                    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL;
+            EXCEPTION WHEN duplicate_object THEN NULL;
+            END
+            ${'$'}${'$'};
+            """.trimIndent()
+        )
+
         // ── Миграция идентичности соревнований на единый клиентский UUID ──────────────
         // competitions.id: BIGINT → VARCHAR(36) (UUID). orienteering_competitions и все
         // дочерние таблицы переводят competition_id на тот же UUID. Прежний BIGINT

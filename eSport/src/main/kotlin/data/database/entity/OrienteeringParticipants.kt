@@ -12,6 +12,11 @@ object OrienteeringParticipants : Table("orienteering_participants") {
     val competitionId = varchar("competition_id", 36)
         .references(Competitions.id, onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
     val commandName = varchar("command_name", 200).nullable()
+    /**
+     * Клубная команда, выбранная при самостоятельной регистрации. [commandName] при этом остаётся
+     * подписью для протокола. FK на teams (ON DELETE SET NULL) добавляется миграцией в Databases.kt.
+     */
+    val teamId = varchar("team_id", 36).nullable()
     val startNumber = integer("start_number")
     val startTime = long("start_time")
     val chipNumber = long("chip_number")
