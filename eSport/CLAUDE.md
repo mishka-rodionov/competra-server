@@ -28,7 +28,7 @@ docker-compose up        # Full stack: app + PostgreSQL + RabbitMQ
 
 **Auth flow**: Register (email) → email verification code via Yandex SMTP → verify code → JWT issued. Access token TTL 15m, refresh token TTL 30d (stored in `RefreshTokens` table). JWT claim: `userId`.
 
-**Route structure**: Public endpoints at `/event/orienteering/competitions/public/...` and `/event/orienteering/participants`. Protected endpoints under JWT auth block for save/register/delete operations. Auth endpoints at `/user/register`, `/user/login`, `/user/verify_code`, `/refresh_token`.
+**Route structure**: All API routes are under the `/api` prefix (`Routing.kt`, auth routes in `data/database/Databases.kt`); only `/health`, `/health/ready` and `/openapi` live at the root. Public endpoints (e.g. `/api/event/orienteering/competitions/public/...`, `/api/event/orienteering/participants/competition`, `/api/clubs`, `/api/ratings`) and protected ones inside the `authenticate("auth-jwt")` block (save/register/delete, clubs/teams/ratings mutations, diary, devices, link requests). Auth endpoints: `/api/user/register`, `/api/user/login`, `/api/user/verify_code`, `/api/refresh_token`. Live tracking (`/api/live-track/...`) is served by a separate process (`APP_MODE=tracking`). Full list: `docs/API.md`.
 
 ## Environment Variables
 
@@ -48,6 +48,7 @@ SMTP_USER, SMTP_PASSWORD  # Yandex Mail
 - **DB transactions**: Suspended with `Dispatchers.IO`
 - **RabbitMQ**: `test-queue → test-exchange` (direct), `dlq → dlx` (dead-letter)
 - **OpenAPI**: Served at `/openapi`
+- **Список эндпоинтов**: `docs/API.md` — держать в актуальном состоянии (см. правило ниже)
 
 ## Conflict Detection (Server-Wins)
 
@@ -74,6 +75,8 @@ SMTP_USER, SMTP_PASSWORD  # Yandex Mail
 | **mapper** | `/Users/rodionov/android_projects/mapper` | Qt/C++ редактор карт, поставщик IOF XML |
 
 ### Правила для Claude
+
+**Документация эндпоинтов** — полный список запросов ведётся в [`docs/API.md`](docs/API.md). При добавлении, изменении (путь, метод, тело, query-параметры, auth) или удалении эндпоинта **в том же изменении** обнови `docs/API.md`: строка в таблице нужного раздела (метод, путь, тело/параметры, краткое описание, 🔒 если под JWT). Новый файл роутинга → новый раздел.
 
 **При добавлении или изменении эндпоинта** — **спроси пользователя**: нужно ли обновить клиентский код в `competra-android` и/или `competra-web-ts`? Оба клиента зависят от одного API-контракта.
 
