@@ -116,4 +116,54 @@ class IOFXmlParserTest {
         assertNull(distance.controlPoints.single().latitude)
         assertNull(distance.controlPoints.single().longitude)
     }
+
+    /** Курс с одним обязательным и одним обычным КП и необязательным блоком Extensions курса. */
+    private fun freeOrderXml(courseExtensions: String) = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <CourseData xmlns="http://www.orienteering.org/datastandard/3.0" iofVersion="3.0">
+            <RaceCourseData>
+                <Course>
+                    <Name>M21</Name>
+                    <CourseControl type="Control">
+                        <Control>31</Control>
+                        <Extensions><Required>true</Required></Extensions>
+                    </CourseControl>
+                    <CourseControl type="Control">
+                        <Control>32</Control>
+                    </CourseControl>
+                    $courseExtensions
+                </Course>
+            </RaceCourseData>
+        </CourseData>
+    """.trimIndent()
+
+    @Test
+    fun `required control from extensions gets the required role`() {
+        val distance = IOFXmlParser.parse(freeOrderXml("").toByteArray(), competitionId = "c1").first()
+
+        assertEquals(listOf("required", "ordinary"), distance.controlPoints.map { it.role })
+    }
+
+    @Test
+    fun `free order course keeps its minimum number of controls`() {
+        val xml = freeOrderXml("""<Extensions><FreeOrder minControls="1"/></Extensions>""")
+        val distance = IOFXmlParser.parse(xml.toByteArray(), competitionId = "c1").first()
+
+        assertEquals(1, distance.minControlsCount)
+    }
+
+    @Test
+    fun `free order course without minimum means all controls`() {
+        val xml = freeOrderXml("""<Extensions><FreeOrder/></Extensions>""")
+        val distance = IOFXmlParser.parse(xml.toByteArray(), competitionId = "c1").first()
+
+        assertEquals(0, distance.minControlsCount)
+    }
+
+    @Test
+    fun `course without free order leaves the minimum unset`() {
+        val distance = IOFXmlParser.parse(freeOrderXml("").toByteArray(), competitionId = "c1").first()
+
+        assertNull(distance.minControlsCount)
+    }
 }

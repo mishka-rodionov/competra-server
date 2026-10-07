@@ -27,6 +27,9 @@ object OrienteeringCompetitions : Table("orienteering_competitions") {
     /** [com.competra.domain.orienteering.OvertimePolicy] — что делать с превысившими КВ. */
     val overtimePolicy = varchar("overtime_policy", 20).default("IGNORE")
 
+    /** [com.competra.domain.orienteering.ByChoiceMode] — итог формата «по выбору»: по баллам или по минимуму КП. */
+    val byChoiceMode = varchar("by_choice_mode", 20).default("SCORE")
+
     val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)

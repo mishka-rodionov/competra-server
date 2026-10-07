@@ -14,5 +14,10 @@ data class OrienteeringCompetitionRequest(
     @SerializedName("controlTimeMinutes") val controlTimeMinutes: Int? = null,
     /** [com.competra.domain.orienteering.OvertimePolicy]: IGNORE / DISQUALIFY / SCORE_PENALTY. */
     @SerializedName("overtimePolicy") val overtimePolicy: String? = null,
+    /**
+     * [com.competra.domain.orienteering.ByChoiceMode]: SCORE / MIN_CONTROLS. null — не менять
+     * (старые клиенты поле не знают), для нового соревнования — SCORE.
+     */
+    @SerializedName("byChoiceMode") val byChoiceMode: String? = null,
     @SerializedName("serverUpdatedAt") val serverUpdatedAt: Long? = null
 )

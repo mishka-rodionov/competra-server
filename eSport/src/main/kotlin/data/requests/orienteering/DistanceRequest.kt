@@ -17,6 +17,11 @@ data class DistanceRequest(
     @SerializedName("startLongitude") val startLongitude: Double? = null,
     @SerializedName("finishLatitude") val finishLatitude: Double? = null,
     @SerializedName("finishLongitude") val finishLongitude: Double? = null,
+    /**
+     * Минимум КП (формат «по выбору» с минимумом КП): N > 0 — минимум, 0 — взять все КП,
+     * null — не менять (старые клиенты поле не знают и затёрли бы значение из IOF XML).
+     */
+    @SerializedName("minControlsCount") val minControlsCount: Int? = null,
     @SerializedName("mapUrl") val mapUrl: String? = null,
     @SerializedName("mapTopLeftLat") val mapTopLeftLat: Double? = null,
     @SerializedName("mapTopLeftLng") val mapTopLeftLng: Double? = null,

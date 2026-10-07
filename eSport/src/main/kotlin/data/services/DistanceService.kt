@@ -73,6 +73,10 @@ class DistanceService {
                             it[finishLatitude] = req.finishLatitude
                             it[finishLongitude] = req.finishLongitude
                         }
+                        // Минимум КП — тоже только если прислан: null значит «клиент поле не знает».
+                        if (req.minControlsCount != null) {
+                            it[minControlsCount] = storedMinControlsCount(req.minControlsCount)
+                        }
                         // Карту и её привязку обновляем только если клиент её прислал. Android-клиент
                         // и формы редактирования дистанции поля карты не шлют — без этой проверки
                         // любое их сохранение стирало карту, прикреплённую через веб. Открепления
@@ -107,6 +111,7 @@ class DistanceService {
                 it[startLongitude] = req.startLongitude
                 it[finishLatitude] = req.finishLatitude
                 it[finishLongitude] = req.finishLongitude
+                it[minControlsCount] = req.minControlsCount?.let(::storedMinControlsCount)
                 it[mapUrl] = req.mapUrl
                 it[mapTopLeftLat] = req.mapTopLeftLat
                 it[mapTopLeftLng] = req.mapTopLeftLng
@@ -150,6 +155,7 @@ class DistanceService {
         startLongitude = this[Distances.startLongitude],
         finishLatitude = this[Distances.finishLatitude],
         finishLongitude = this[Distances.finishLongitude],
+        minControlsCount = this[Distances.minControlsCount],
         mapUrl = this[Distances.mapUrl],
         mapTopLeftLat = this[Distances.mapTopLeftLat],
         mapTopLeftLng = this[Distances.mapTopLeftLng],
@@ -159,6 +165,9 @@ class DistanceService {
         mapBottomRightLng = this[Distances.mapBottomRightLng],
         updatedAt = this[Distances.updatedAt]
     )
+
+    /** В запросе 0 (и любое неположительное) значит «взять все КП» — в БД это null. */
+    private fun storedMinControlsCount(requested: Int): Int? = requested.takeIf { it > 0 }
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }

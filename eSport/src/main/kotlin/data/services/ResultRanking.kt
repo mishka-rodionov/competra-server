@@ -4,6 +4,7 @@ import com.competra.data.database.entity.OrienteeringCompetitions
 import com.competra.data.database.entity.OrienteeringResults
 import com.competra.data.database.entity.ParticipantGroups
 import com.competra.domain.orienteering.OvertimePolicy
+import com.competra.domain.orienteering.ranksByScore
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
@@ -45,9 +46,10 @@ internal object ResultRanking {
     /**
      * Пересчитывает статусы КВ и места для результатов группы.
      *
-     * Для направления BY_CHOICE (score-О) места считаются по сумме баллов (убывание),
+     * Для score-О (BY_CHOICE + ByChoiceMode.SCORE) места считаются по сумме баллов (убывание),
      * тай-брейк — по времени прохождения дистанции (totalTime = finish - start участника).
-     * Для остальных направлений — по общему времени с учётом штрафа (возрастание).
+     * Для остальных направлений, в т.ч. «по выбору» с минимумом КП (ByChoiceMode.MIN_CONTROLS), —
+     * по общему времени с учётом штрафа (возрастание).
      *
      * Тай-брейк BY_CHOICE использует именно totalTime, а не finishTime (абсолютное время по
      * часам) — при интервальном/разном старте участников более раннее абсолютное время финиша
@@ -59,7 +61,10 @@ internal object ResultRanking {
             .where { OrienteeringCompetitions.id eq competitionId }
             .singleOrNull()
 
-        val direction = orient?.get(OrienteeringCompetitions.direction)
+        val byScore = ranksByScore(
+            direction = orient?.get(OrienteeringCompetitions.direction),
+            byChoiceMode = orient?.get(OrienteeringCompetitions.byChoiceMode)
+        )
         val policy = OvertimePolicy.fromString(orient?.get(OrienteeringCompetitions.overtimePolicy))
 
         val groupLimitMinutes = ParticipantGroups.selectAll()
@@ -110,7 +115,7 @@ internal object ResultRanking {
             }
         }
 
-        val comparator: Comparator<ResultRow> = if (direction == "BY_CHOICE") {
+        val comparator: Comparator<ResultRow> = if (byScore) {
             compareByDescending<ResultRow> { it[OrienteeringResults.totalScore] ?: 0 }
                 .thenBy { it[OrienteeringResults.totalTime] ?: Long.MAX_VALUE }
         } else {
@@ -119,10 +124,10 @@ internal object ResultRanking {
 
         val sortedRows = finishedRows.sortedWith(comparator)
 
-        // Для BY_CHOICE ключ должен включать totalTime — иначе два участника с одинаковыми
+        // Для score-О ключ должен включать totalTime — иначе два участника с одинаковыми
         // очками, но разным временем (тай-брейк уже учтён компаратором выше), получат одно и то
         // же место вместо разных.
-        fun rankKey(row: ResultRow): Any = if (direction == "BY_CHOICE") {
+        fun rankKey(row: ResultRow): Any = if (byScore) {
             (row[OrienteeringResults.totalScore] ?: 0) to (row[OrienteeringResults.totalTime] ?: Long.MAX_VALUE)
         } else {
             (row[OrienteeringResults.totalTime] ?: Long.MAX_VALUE) + row[OrienteeringResults.penaltyTime]

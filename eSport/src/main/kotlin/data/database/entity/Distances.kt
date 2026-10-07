@@ -20,6 +20,9 @@ object Distances : Table("distances") {
     val startLongitude = double("start_longitude").nullable()
     val finishLatitude = double("finish_latitude").nullable()
     val finishLongitude = double("finish_longitude").nullable()
+    // Минимум КП для формата «по выбору» с минимумом КП (ByChoiceMode.MIN_CONTROLS); null — взять все КП.
+    // Обязательные КП — роль "required" в control_points.
+    val minControlsCount = integer("min_controls_count").nullable()
     val mapUrl = varchar("map_url", 500).nullable()
     val mapTopLeftLat = double("map_top_left_lat").nullable()
     val mapTopLeftLng = double("map_top_left_lng").nullable()

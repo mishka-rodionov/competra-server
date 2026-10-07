@@ -17,7 +17,9 @@ import com.competra.data.response.orienteering.CoordinatesResponse
 import com.competra.data.response.orienteering.OrienteeringCompetitionResponse
 import com.competra.data.response.orienteering.ParticipantGroupDetailResponse
 import com.competra.UserService
+import com.competra.domain.orienteering.ByChoiceMode
 import com.competra.domain.orienteering.OvertimePolicy
+import com.competra.domain.orienteering.ranksByScore
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.Case
 import org.jetbrains.exposed.sql.ExpressionWithColumnType
@@ -144,12 +146,16 @@ class OrienteeringCompetitionService(
         startIntervalSeconds = orient[OrienteeringCompetitions.startIntervalSeconds],
         controlTimeMinutes = orient[OrienteeringCompetitions.controlTimeMinutes],
         overtimePolicy = orient[OrienteeringCompetitions.overtimePolicy],
+        byChoiceMode = orient[OrienteeringCompetitions.byChoiceMode],
         updatedAt = orient[OrienteeringCompetitions.updatedAt]
     )
 
-    /** Умолчание политики КВ для нового соревнования — зависит от направления. */
-    private fun defaultOvertimePolicy(direction: String): String =
-        if (direction == "BY_CHOICE") OvertimePolicy.SCORE_PENALTY.name else OvertimePolicy.DEFAULT.name
+    /**
+     * Умолчание политики КВ для нового соревнования — зависит от формата: штраф очками есть
+     * только у score-О, у «по выбору» с минимумом КП места по времени, и КВ по умолчанию справочное.
+     */
+    private fun defaultOvertimePolicy(direction: String, byChoiceMode: String): String =
+        if (ranksByScore(direction, byChoiceMode)) OvertimePolicy.SCORE_PENALTY.name else OvertimePolicy.DEFAULT.name
 
     private fun computeEffectiveStatus(
         storedStatus: String,
@@ -374,12 +380,17 @@ class OrienteeringCompetitionService(
             }
         }
 
+        // Режим «по выбору» старые клиенты не присылают (null) — сохраняем уже выбранный.
+        val newByChoiceMode = req.byChoiceMode?.let { ByChoiceMode.fromString(it).name }
+            ?: existingOrient?.get(OrienteeringCompetitions.byChoiceMode)
+            ?: ByChoiceMode.DEFAULT.name
+
         // Политику КВ старые клиенты не присылают (null) — тогда сохраняем уже выбранную, а для
-        // нового соревнования берём умолчание по направлению: у BY_CHOICE опоздание исторически
+        // нового соревнования берём умолчание по формату: у score-О опоздание исторически
         // штрафуется очками, у остальных КВ по умолчанию справочное.
         val newOvertimePolicy = req.overtimePolicy?.let { OvertimePolicy.fromString(it).name }
             ?: existingOrient?.get(OrienteeringCompetitions.overtimePolicy)
-            ?: defaultOvertimePolicy(req.direction)
+            ?: defaultOvertimePolicy(req.direction, newByChoiceMode)
 
         if (existingOrient == null) {
             OrienteeringCompetitions.insert {
@@ -392,6 +403,7 @@ class OrienteeringCompetitionService(
                 it[startIntervalSeconds] = req.startIntervalSeconds
                 it[controlTimeMinutes] = req.controlTimeMinutes
                 it[overtimePolicy] = newOvertimePolicy
+                it[byChoiceMode] = newByChoiceMode
                 it[updatedAt] = now
             }
         } else {
@@ -403,16 +415,18 @@ class OrienteeringCompetitionService(
                 it[startIntervalSeconds] = req.startIntervalSeconds
                 it[controlTimeMinutes] = req.controlTimeMinutes
                 it[overtimePolicy] = newOvertimePolicy
+                it[byChoiceMode] = newByChoiceMode
                 it[updatedAt] = now
             }
         }
 
-        // Изменение КВ, политики или направления меняет статусы и места уже сохранённых
-        // результатов — пересчитываем все группы соревнования (см. ResultRanking).
+        // Изменение КВ, политики, направления или режима «по выбору» меняет статусы и места уже
+        // сохранённых результатов — пересчитываем все группы соревнования (см. ResultRanking).
         val rankingInputsChanged = existingOrient != null && (
             existingOrient[OrienteeringCompetitions.controlTimeMinutes] != req.controlTimeMinutes ||
             existingOrient[OrienteeringCompetitions.overtimePolicy] != newOvertimePolicy ||
-            existingOrient[OrienteeringCompetitions.direction] != req.direction
+            existingOrient[OrienteeringCompetitions.direction] != req.direction ||
+            existingOrient[OrienteeringCompetitions.byChoiceMode] != newByChoiceMode
         )
         if (rankingInputsChanged) {
             ResultRanking.recalculateCompetition(competitionId)
@@ -577,6 +591,7 @@ class OrienteeringCompetitionService(
                     distanceClimbMeters = row[Distances.climbMeters],
                     distanceControlsCount = row[Distances.controlsCount],
                     distanceDescription = row[Distances.description],
+                    distanceMinControlsCount = row[Distances.minControlsCount],
                     timeLimitMinutes = groupControlTime,
                     controlTimeMinutes = ResultRanking.effectiveControlTimeMinutes(
                         groupLimitMinutes = groupControlTime,
@@ -621,6 +636,8 @@ class OrienteeringCompetitionService(
             controlTimeMinutes = competitionControlTime,
             overtimePolicy = orient?.get(OrienteeringCompetitions.overtimePolicy)
                 ?: OvertimePolicy.DEFAULT.name,
+            byChoiceMode = orient?.get(OrienteeringCompetitions.byChoiceMode)
+                ?: ByChoiceMode.DEFAULT.name,
             coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
                 CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
             else null,

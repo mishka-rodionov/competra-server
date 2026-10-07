@@ -78,7 +78,7 @@
 | DELETE | `/api/event/orienteering/results/{id}` | — | Удалить результат |
 | POST | `/api/event/orienteering/save/distances` | `List<DistanceRequest>` | Upsert дистанций |
 | DELETE | `/api/event/orienteering/distances/{id}` | — | Удалить дистанцию |
-| POST | `/api/event/orienteering/import/courses` | multipart: IOF XML-файл + `competitionId` | Импорт дистанций из IOF XML (Mapper) через `IOFXmlParser` |
+| POST | `/api/event/orienteering/import/courses` | multipart: IOF XML-файл + `competitionId` | Импорт дистанций из IOF XML (Mapper) через `IOFXmlParser`; из `<Extensions>` берутся обязательные КП (`Required`) и минимум КП (`FreeOrder minControls`) |
 | POST | `/api/event/orienteering/register` | `RegisterParticipantRequest` | Самостоятельная регистрация пользователя на соревнование (`commandName` ≤ 200 символов, необязательный `teamId` своей клубной команды) |
 | DELETE | `/api/event/orienteering/register/{competitionId}` | — | Отмена своей регистрации |
 

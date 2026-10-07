@@ -13,6 +13,8 @@ data class ParticipantGroupDetailResponse(
     val distanceClimbMeters: Int? = null,
     val distanceControlsCount: Int? = null,
     val distanceDescription: String? = null,
+    /** Минимум КП дистанции (BY_CHOICE + MIN_CONTROLS); null — взять все КП. */
+    val distanceMinControlsCount: Int? = null,
     /** Собственное КВ группы в минутах (null — наследуется от соревнования). Для BY_CHOICE — лимит времени. */
     val timeLimitMinutes: Int? = null,
     /** Итоговое контрольное время группы: `timeLimitMinutes ?: competition.controlTimeMinutes`. */
@@ -50,6 +52,8 @@ data class CompetitionDetailResponse(
     val controlTimeMinutes: Int? = null,
     /** [com.competra.domain.orienteering.OvertimePolicy]: IGNORE / DISQUALIFY / SCORE_PENALTY. */
     val overtimePolicy: String = "IGNORE",
+    /** [com.competra.domain.orienteering.ByChoiceMode]: SCORE / MIN_CONTROLS (значим только для BY_CHOICE). */
+    val byChoiceMode: String = "SCORE",
     val registrationStart: Long?,
     val registrationEnd: Long?,
     val maxParticipants: Int?,

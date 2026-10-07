@@ -14,6 +14,14 @@ object IOFXmlParser {
      * [useStartStation] (режим старта BY_START_STATION): в остальных режимах стартовой
      * станции нет и её номер не нужен. Координаты старта и финиша сохраняются всегда (если есть
      * в справочнике) — по ним клиенты считают длину первого и последнего перегона.
+     *
+     * Правила формата «по выбору», для которых в IOF 3.0 нет элементов, Mapper пишет в стандартные
+     * `<Extensions>`:
+     *  - `<CourseControl>…<Extensions><Required>true</Required></Extensions>` — обязательный КП
+     *    (роль "required");
+     *  - `<Course>…<Extensions><FreeOrder minControls="18"/></Extensions>` — дистанция в свободном
+     *    порядке с минимумом КП; без `minControls` — взять все КП ([DistanceRequest.minControlsCount] = 0).
+     *    Без `<FreeOrder>` минимум не задаётся (null).
      */
     fun parse(xmlBytes: ByteArray, competitionId: String, useStartStation: Boolean = false): List<DistanceRequest> {
         val factory = DocumentBuilderFactory.newInstance().apply {
@@ -70,11 +78,13 @@ object IOFXmlParser {
                     else -> {
                         val position = controlPositions[ctrlId]
                         val score = cc.getElementsByTagName("Score").item(0)?.textContent?.toIntOrNull() ?: 0
+                        val required = cc.getElementsByTagName("Required").item(0)
+                            ?.textContent?.trim()?.equals("true", ignoreCase = true) == true
                         // Роль должна совпадать с ControlPointRole на Android (Gson @SerializedName
                         // там в нижнем регистре) — иначе Gson роняет NPE при сборке модели дистанции.
                         controlPoints += ControlPointRequest(
                             number = code ?: j,
-                            role = "ordinary",
+                            role = if (required) "required" else "ordinary",
                             score = score,
                             latitude = position?.first,
                             longitude = position?.second
@@ -82,6 +92,10 @@ object IOFXmlParser {
                     }
                 }
             }
+
+            // getElementsByTagName рекурсивен, но FreeOrder встречается только в Extensions курса.
+            val freeOrder = course.getElementsByTagName("FreeOrder").item(0) as? Element
+            val minControlsCount = freeOrder?.let { it.getAttribute("minControls").toIntOrNull() ?: 0 }
 
             DistanceRequest(
                 distanceId = null,
@@ -98,6 +112,7 @@ object IOFXmlParser {
                 startLongitude = startPosition?.second,
                 finishLatitude = finishPosition?.first,
                 finishLongitude = finishPosition?.second,
+                minControlsCount = minControlsCount,
                 serverUpdatedAt = null
             )
         }
