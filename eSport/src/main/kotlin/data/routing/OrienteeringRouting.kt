@@ -13,6 +13,7 @@ import com.competra.data.requests.orienteering.RegisterParticipantRequest
 import com.competra.data.response.base.BaseError
 import com.competra.data.response.base.CommonModel
 import com.competra.data.requests.orienteering.OrganizerRequest
+import com.competra.data.services.TeamStandingsService
 import com.competra.data.services.CompetitionOrganizerService
 import com.competra.data.services.DistanceService
 import com.competra.data.services.OrienteeringCompetitionService
@@ -41,7 +42,8 @@ fun Route.orienteeringPublicRoutes(
     resultService: OrienteeringResultService,
     groupService: ParticipantGroupService,
     organizerService: CompetitionOrganizerService,
-    distanceService: DistanceService
+    distanceService: DistanceService,
+    teamStandingsService: TeamStandingsService
 ) {
     get("/event/orienteering/competitions/public") {
         val kindOfSports = call.request.queryParameters.getAll("kind_of_sports") ?: emptyList()
@@ -168,6 +170,20 @@ fun Route.orienteeringPublicRoutes(
         call.respond(CommonModel<Any>().also { model ->
             model.status = 1
             model.result = result
+        })
+    }
+
+    // Командный зачёт — вычисляется из результатов; result = null, если зачёт в соревновании не включён.
+    get("/event/orienteering/competitions/{id}/team-standings") {
+        val id = call.parameters["id"]
+            ?: return@get call.respond(
+                HttpStatusCode.BadRequest,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "id is required")) }
+            )
+        val standings = teamStandingsService.getByCompetition(id)
+        call.respond(CommonModel<Any>().also { model ->
+            model.status = 1
+            model.result = standings
         })
     }
 

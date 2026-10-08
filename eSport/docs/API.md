@@ -50,6 +50,7 @@
 |---|---|---|---|
 | GET | `/api/event/orienteering/competitions/public` | query: `kind_of_sports[]`, `statuses[]`, `date_from`, `date_to`, `includeTest`, `query`, `page`, `limit` | Публичный список соревнований с фильтрами и пагинацией |
 | GET | `/api/event/orienteering/competitions/public/{id}` | query: `userId` (опц.) | Детали соревнования (`CompetitionDetailResponse`); `id` — UUID или legacy-число |
+| GET | `/api/event/orienteering/competitions/{id}/team-standings` | — | Командный зачёт (`TeamStandingsResponse`): зачёт в каждой группе и общие (MEN/WOMEN/ALL), вычисляется из результатов; `result = null`, если зачёт не включён (`teamScoring` соревнования) |
 | GET | `/api/event/orienteering/competitions/{id}` | — | Orienteering-часть соревнования по UUID |
 | GET | `/api/event/orienteering/participants` | query: `groupId` | Участники группы |
 | GET | `/api/event/orienteering/participants/competition` | query: `competitionId` | Участники соревнования |
@@ -62,7 +63,7 @@
 
 | Метод | Путь | Тело / параметры | Описание |
 |---|---|---|---|
-| POST | `/api/event/orienteering/save/competitions` | `OrienteeringCompetitionRequest` | Upsert соревнования (conflict-check по `orient.updatedAt` → 409) |
+| POST | `/api/event/orienteering/save/competitions` | `OrienteeringCompetitionRequest` | Upsert соревнования (conflict-check по `orient.updatedAt` → 409); `teamScoring`: `null` — не менять, `{enabled:false}` — выключить |
 | GET | `/api/event/orienteering/competitions` | — | Соревнования, созданные пользователем |
 | GET | `/api/event/orienteering/competitions/registered` | — | Соревнования, на которые пользователь зарегистрирован |
 | DELETE | `/api/event/orienteering/competitions/{id}` | — | Удалить соревнование |

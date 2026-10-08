@@ -147,6 +147,7 @@ class OrienteeringCompetitionService(
         controlTimeMinutes = orient[OrienteeringCompetitions.controlTimeMinutes],
         overtimePolicy = orient[OrienteeringCompetitions.overtimePolicy],
         byChoiceMode = orient[OrienteeringCompetitions.byChoiceMode],
+        teamScoring = TeamScoringJson.toResponse(orient[OrienteeringCompetitions.teamScoring]),
         updatedAt = orient[OrienteeringCompetitions.updatedAt]
     )
 
@@ -385,6 +386,12 @@ class OrienteeringCompetitionService(
             ?: existingOrient?.get(OrienteeringCompetitions.byChoiceMode)
             ?: ByChoiceMode.DEFAULT.name
 
+        // Командный зачёт старые клиенты не присылают (null) — сохраняем текущий.
+        val newTeamScoring = TeamScoringJson.fromRequest(
+            req.teamScoring,
+            existingOrient?.get(OrienteeringCompetitions.teamScoring)
+        )
+
         // Политику КВ старые клиенты не присылают (null) — тогда сохраняем уже выбранную, а для
         // нового соревнования берём умолчание по формату: у score-О опоздание исторически
         // штрафуется очками, у остальных КВ по умолчанию справочное.
@@ -404,6 +411,7 @@ class OrienteeringCompetitionService(
                 it[controlTimeMinutes] = req.controlTimeMinutes
                 it[overtimePolicy] = newOvertimePolicy
                 it[byChoiceMode] = newByChoiceMode
+                it[teamScoring] = newTeamScoring
                 it[updatedAt] = now
             }
         } else {
@@ -416,6 +424,7 @@ class OrienteeringCompetitionService(
                 it[controlTimeMinutes] = req.controlTimeMinutes
                 it[overtimePolicy] = newOvertimePolicy
                 it[byChoiceMode] = newByChoiceMode
+                it[teamScoring] = newTeamScoring
                 it[updatedAt] = now
             }
         }
@@ -638,6 +647,7 @@ class OrienteeringCompetitionService(
                 ?: OvertimePolicy.DEFAULT.name,
             byChoiceMode = orient?.get(OrienteeringCompetitions.byChoiceMode)
                 ?: ByChoiceMode.DEFAULT.name,
+            teamScoring = TeamScoringJson.toResponse(orient?.get(OrienteeringCompetitions.teamScoring)),
             coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
                 CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
             else null,

@@ -30,6 +30,9 @@ object OrienteeringCompetitions : Table("orienteering_competitions") {
     /** [com.competra.domain.orienteering.ByChoiceMode] — итог формата «по выбору»: по баллам или по минимуму КП. */
     val byChoiceMode = varchar("by_choice_mode", 20).default("SCORE")
 
+    /** Настройки командного зачёта JSON-ом ([com.competra.domain.orienteering.TeamScoring]); null — зачёта нет. */
+    val teamScoring = text("team_scoring").nullable()
+
     val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)

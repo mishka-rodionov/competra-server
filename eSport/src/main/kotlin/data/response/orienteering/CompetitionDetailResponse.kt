@@ -54,6 +54,8 @@ data class CompetitionDetailResponse(
     val overtimePolicy: String = "IGNORE",
     /** [com.competra.domain.orienteering.ByChoiceMode]: SCORE / MIN_CONTROLS (значим только для BY_CHOICE). */
     val byChoiceMode: String = "SCORE",
+    /** Настройки командного зачёта; null — зачёта нет. */
+    val teamScoring: TeamScoringResponse? = null,
     val registrationStart: Long?,
     val registrationEnd: Long?,
     val maxParticipants: Int?,

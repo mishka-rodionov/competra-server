@@ -19,5 +19,7 @@ data class OrienteeringCompetitionRequest(
      * (старые клиенты поле не знают), для нового соревнования — SCORE.
      */
     @SerializedName("byChoiceMode") val byChoiceMode: String? = null,
+    /** Командный зачёт: null — не менять, `enabled = false` — выключить. */
+    @SerializedName("teamScoring") val teamScoring: TeamScoringRequest? = null,
     @SerializedName("serverUpdatedAt") val serverUpdatedAt: Long? = null
 )
