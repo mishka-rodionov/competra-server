@@ -27,7 +27,14 @@ class TeamStandingsService {
         // Порядок групп — как в деталях соревнования (мужские → женские → остальные, по возрасту).
         val groups = ParticipantGroups.selectAll()
             .where { ParticipantGroups.competitionId eq competitionId }
-            .map { TeamStandingGroup(it[ParticipantGroups.id], it[ParticipantGroups.title], it[ParticipantGroups.gender]) }
+            .map {
+                TeamStandingGroup(
+                    groupId = it[ParticipantGroups.id],
+                    title = it[ParticipantGroups.title],
+                    gender = it[ParticipantGroups.gender],
+                    countedResults = it[ParticipantGroups.teamCountedResults]
+                )
+            }
             .sortedWith(
                 compareBy<TeamStandingGroup> { participantGroupSortPriority(it.title, it.gender) }
                     .thenBy(nullsLast()) { extractAgeFromTitle(it.title) }

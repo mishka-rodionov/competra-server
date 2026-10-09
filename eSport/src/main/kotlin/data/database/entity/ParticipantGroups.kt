@@ -15,6 +15,8 @@ object ParticipantGroups : Table("participant_groups") {
     val timeLimitMinutes = integer("time_limit_minutes").nullable()
     val scorePenaltyPerMinute = integer("score_penalty_per_minute").nullable()
     val maxLatenessMinutes = integer("max_lateness_minutes").nullable()
+    /** Своё N командного зачёта группы; null — как у соревнования (TeamScoring.groupCountedResults). */
+    val teamCountedResults = integer("team_counted_results").nullable()
     val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)

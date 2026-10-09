@@ -25,6 +25,8 @@ data class TeamStandingsResponse(
 data class GroupTeamStandingResponse(
     @SerializedName("groupId") val groupId: Long,
     @SerializedName("groupTitle") val groupTitle: String,
+    /** N этой группы — своё или унаследованное от соревнования. */
+    @SerializedName("countedResults") val countedResults: Int,
     @SerializedName("teams") val teams: List<GroupTeamResponse>
 )
 

@@ -14,5 +14,7 @@ data class ParticipantGroupResponse(
     @SerializedName("timeLimitMinutes") val timeLimitMinutes: Int? = null,
     @SerializedName("scorePenaltyPerMinute") val scorePenaltyPerMinute: Int? = null,
     @SerializedName("maxLatenessMinutes") val maxLatenessMinutes: Int? = null,
+    /** Своё N командного зачёта; null — как у соревнования. */
+    @SerializedName("teamCountedResults") val teamCountedResults: Int? = null,
     @SerializedName("updatedAt") val updatedAt: Long = 0L
 )

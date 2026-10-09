@@ -608,7 +608,8 @@ class OrienteeringCompetitionService(
                     ),
                     controlTimeInherited = groupControlTime == null && competitionControlTime != null,
                     scorePenaltyPerMinute = row[ParticipantGroups.scorePenaltyPerMinute],
-                    maxLatenessMinutes = row[ParticipantGroups.maxLatenessMinutes]
+                    maxLatenessMinutes = row[ParticipantGroups.maxLatenessMinutes],
+                    teamCountedResults = row[ParticipantGroups.teamCountedResults]
                 )
             }
             .sortedWith(

@@ -133,6 +133,20 @@ class TeamStandingsTest {
     }
 
     @Test
+    fun `group override of N takes precedence over the competition N`() {
+        val m14 = TeamStandingGroup(4, "М14", "M", countedResults = 1)
+        val entries = listOf(
+            TeamStandingEntry("a1", "И", "Ф", 4, "Азимут", "FINISHED", 1, 1800, 0),
+            TeamStandingEntry("a2", "И", "Ф", 4, "Азимут", "FINISHED", 2, 1900, 0),
+            finished(m16, "Азимут", 1, 30), finished(m16, "Азимут", 2, 31),
+        )
+
+        val groups = computeTeamStandings(points(n = 2), listOf(m14, m16), entries).groupStandings
+
+        assertEquals(listOf(1 to 100, 2 to 180), groups.map { it.countedResults to it.teams.single().points })
+    }
+
+    @Test
     fun `stored settings survive a round trip and unknown values fall back`() {
         val json = TeamScoringJson.write(TeamScoring(TeamScoringMethod.TIME, 4, listOf(TeamOverallScope.MEN)))
 

@@ -35,6 +35,7 @@ class ParticipantGroupService {
                     it[timeLimitMinutes] = req.timeLimitMinutes
                     it[scorePenaltyPerMinute] = req.scorePenaltyPerMinute
                     it[maxLatenessMinutes] = req.maxLatenessMinutes
+                    it[teamCountedResults] = req.teamCountedResults?.takeIf { n -> n > 0 }
                     it[updatedAt] = now
                 } get ParticipantGroups.id
 
@@ -68,6 +69,7 @@ class ParticipantGroupService {
                         it[timeLimitMinutes] = req.timeLimitMinutes
                         it[scorePenaltyPerMinute] = req.scorePenaltyPerMinute
                         it[maxLatenessMinutes] = req.maxLatenessMinutes
+                        it[teamCountedResults] = req.teamCountedResults?.takeIf { n -> n > 0 }
                         it[updatedAt] = now
                     }
                 } else {
@@ -89,6 +91,10 @@ class ParticipantGroupService {
                         it[timeLimitMinutes] = req.timeLimitMinutes
                         it[scorePenaltyPerMinute] = req.scorePenaltyPerMinute
                         it[maxLatenessMinutes] = req.maxLatenessMinutes
+                        // null — клиент поле не знает: не трогаем; 0 — снова как у соревнования.
+                        if (req.teamCountedResults != null) {
+                            it[teamCountedResults] = req.teamCountedResults.takeIf { n -> n > 0 }
+                        }
                         it[updatedAt] = now
                     }
                 }
@@ -133,6 +139,7 @@ class ParticipantGroupService {
         timeLimitMinutes = this[ParticipantGroups.timeLimitMinutes],
         scorePenaltyPerMinute = this[ParticipantGroups.scorePenaltyPerMinute],
         maxLatenessMinutes = this[ParticipantGroups.maxLatenessMinutes],
+        teamCountedResults = this[ParticipantGroups.teamCountedResults],
         updatedAt = this[ParticipantGroups.updatedAt]
     )
 

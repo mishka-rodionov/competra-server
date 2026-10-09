@@ -204,6 +204,7 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS min_controls_count INTEGER")
         // Настройки командного зачёта соревнования (JSON, см. TeamScoringJson); сам зачёт вычисляется.
         exec("ALTER TABLE orienteering_competitions ADD COLUMN IF NOT EXISTS team_scoring TEXT")
+        exec("ALTER TABLE participant_groups ADD COLUMN IF NOT EXISTS team_counted_results INTEGER")
         exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS total_score INTEGER")
         exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS score_penalty INTEGER NOT NULL DEFAULT 0")
         // updated_at — серверная сторона serverUpdatedAt в Android-клиенте.

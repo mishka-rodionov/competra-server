@@ -12,8 +12,16 @@ import com.competra.domain.orienteering.TeamOverallScope
 import com.competra.domain.orienteering.TeamScoring
 import com.competra.domain.orienteering.TeamScoringMethod
 
-/** Группа соревнования для командного зачёта. Пол — "M"/"F" (web) или "MALE"/"FEMALE" (Android). */
-internal data class TeamStandingGroup(val groupId: Long, val title: String, val gender: String?)
+/**
+ * Группа соревнования для командного зачёта. Пол — "M"/"F" (web) или "MALE"/"FEMALE" (Android).
+ * [countedResults] — своё N группы; null — как у соревнования.
+ */
+internal data class TeamStandingGroup(
+    val groupId: Long,
+    val title: String,
+    val gender: String?,
+    val countedResults: Int? = null
+)
 
 /** Результат участника для командного зачёта. Время и штраф — в секундах. */
 internal data class TeamStandingEntry(
@@ -34,7 +42,7 @@ internal data class TeamStandingEntry(
  *
  * - Команда — нормализованная подпись (регистр и пробелы не важны); без подписи — не участвует.
  * - В группе: POINTS — сумма очков за места N лучших (RatingPointsTable); TIME — сумма времени N
- *   лучших, финишировавших меньше N — вне зачёта.
+ *   лучших, финишировавших меньше N — вне зачёта. N — своё у группы, иначе у соревнования.
  * - Общие зачёты: сумма баллов за командные места в группах по той же таблице.
  */
 internal fun computeTeamStandings(
@@ -50,11 +58,12 @@ internal fun computeTeamStandings(
     val groupStandings = groups.mapNotNull { group ->
         val groupEntries = entriesByGroup[group.groupId].orEmpty()
         if (groupEntries.isEmpty()) return@mapNotNull null
+        val groupCounted = group.countedResults?.takeIf { it > 0 } ?: counted
         val teams = when (settings.groupMethod) {
-            TeamScoringMethod.POINTS -> pointsStanding(groupEntries, counted)
-            TeamScoringMethod.TIME -> timeStanding(groupEntries, counted)
+            TeamScoringMethod.POINTS -> pointsStanding(groupEntries, groupCounted)
+            TeamScoringMethod.TIME -> timeStanding(groupEntries, groupCounted)
         }
-        GroupTeamStandingResponse(group.groupId, group.title, teams)
+        GroupTeamStandingResponse(group.groupId, group.title, groupCounted, teams)
     }
 
     val overallStandings = TeamOverallScope.entries

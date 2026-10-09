@@ -24,7 +24,9 @@ data class ParticipantGroupDetailResponse(
     /** Штраф в очках за минуту опоздания сверх лимита (BY_CHOICE). */
     val scorePenaltyPerMinute: Int? = null,
     /** Порог сильного опоздания, после которого результат обнуляется (BY_CHOICE). */
-    val maxLatenessMinutes: Int? = null
+    val maxLatenessMinutes: Int? = null,
+    /** Своё N командного зачёта группы; null — как у соревнования. */
+    val teamCountedResults: Int? = null
 )
 
 data class CompetitionDetailResponse(
