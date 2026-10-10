@@ -1,7 +1,7 @@
 package com.competra.data.database.entity
 
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.Table
 
 /** Организатор/судья/секретарь и т.д. соревнования. Many-to-many между пользователями и соревнованиями с ролью. */
 object CompetitionOrganizers : Table("competition_organizers") {

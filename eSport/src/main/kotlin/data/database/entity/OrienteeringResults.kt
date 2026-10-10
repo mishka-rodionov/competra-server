@@ -1,11 +1,11 @@
 package com.competra.data.database.entity
 
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 
 object OrienteeringResults : Table("orienteering_results") {
     val id = varchar("id", 200)
     val competitionId = varchar("competition_id", 36)
-        .references(Competitions.id, onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+        .references(Competitions.id, onDelete = org.jetbrains.exposed.v1.core.ReferenceOption.CASCADE)
     val groupId = long("group_id")
     val participantId = varchar("participant_id", 200)
     val startTime = long("start_time").nullable()

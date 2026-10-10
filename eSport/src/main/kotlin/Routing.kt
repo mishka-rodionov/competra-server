@@ -112,7 +112,7 @@ fun Application.configureRouting() {
                             }
                             else -> {}
                         }
-                        part.dispose()
+                        part.release()
                     }
 
                     val bytes = fileBytes

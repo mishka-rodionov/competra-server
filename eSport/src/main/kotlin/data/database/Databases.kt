@@ -59,9 +59,10 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.async
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.time.Duration.Companion.days

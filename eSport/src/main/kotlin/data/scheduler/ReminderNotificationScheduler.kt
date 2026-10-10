@@ -14,12 +14,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import com.competra.data.database.ioTransaction
 
 private const val INTERVAL_MS = 60_000L * 10 // 10 минут — интервал скана окон
 
@@ -96,7 +96,7 @@ private suspend fun runTick(
     val now = System.currentTimeMillis()
     val bounds = reminderWindowBounds(now, window)
 
-    val competitionsInWindow = newSuspendedTransaction(Dispatchers.IO) {
+    val competitionsInWindow = ioTransaction {
         Competitions.selectAll()
             .where { (Competitions.startDate greaterEq bounds.first) and (Competitions.startDate lessEq bounds.last) }
             .map { it[Competitions.id] to it[Competitions.title] }
@@ -109,7 +109,7 @@ private suspend fun runTick(
     val titleById = competitionsInWindow.toMap()
     for (competitionId in unsentIds) {
         val competitionTitle = titleById.getValue(competitionId)
-        val userIds = newSuspendedTransaction(Dispatchers.IO) {
+        val userIds = ioTransaction {
             OrienteeringParticipants.selectAll()
                 .where { OrienteeringParticipants.competitionId eq competitionId }
                 .mapNotNull { it[OrienteeringParticipants.userId] }

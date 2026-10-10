@@ -1,11 +1,11 @@
 package com.competra.data.database.entity
 
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 
 object ParticipantGroups : Table("participant_groups") {
     val id = long("id").autoIncrement()
     val competitionId = varchar("competition_id", 36)
-        .references(Competitions.id, onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+        .references(Competitions.id, onDelete = org.jetbrains.exposed.v1.core.ReferenceOption.CASCADE)
     val title = varchar("title", 200)
     val gender = varchar("gender", 20).nullable()
     val minAge = integer("min_age").nullable()

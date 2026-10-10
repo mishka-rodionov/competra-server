@@ -94,7 +94,10 @@ class FcmService(
         }
         val accessToken = withContext(Dispatchers.IO) {
             creds.refreshIfExpired()
-            creds.accessToken.tokenValue
+            creds.accessToken?.tokenValue
+        } ?: run {
+            log.warn("FCM access token unavailable after refresh, skipping push to token=${token.take(12)}…")
+            return
         }
         val payload = buildMessagePayload(token, title, body, data, includeNotificationBlock)
         val url = "https://fcm.googleapis.com/v1/projects/$projectId/messages:send"

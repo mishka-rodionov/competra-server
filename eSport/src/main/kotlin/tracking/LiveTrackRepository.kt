@@ -2,22 +2,22 @@ package com.competra.tracking
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.greater
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.neq
-import org.jetbrains.exposed.sql.Transaction
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.batchInsert
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.or
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.jdbc.SchemaUtils
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.core.neq
+import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.batchInsert
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 
 /** Хранилище сессий и точек в БД трекинга. Интерфейс — ради тестов [LiveTrackService] без БД. */
 interface LiveTrackRepository {
@@ -234,7 +234,7 @@ class ExposedLiveTrackRepository(private val db: Database) : LiveTrackRepository
             .sortedBy { it.name.orEmpty() }
     }
 
-    private fun Transaction.loadPointsOf(sessionId: String): List<TrackPoint> =
+    private fun JdbcTransaction.loadPointsOf(sessionId: String): List<TrackPoint> =
         LiveTrackPoints.selectAll()
             .where { LiveTrackPoints.sessionId eq sessionId }
             .orderBy(LiveTrackPoints.t)
@@ -244,7 +244,7 @@ class ExposedLiveTrackRepository(private val db: Database) : LiveTrackRepository
      * Блокирующая транзакция на IO-диспетчере. Не `newSuspendedTransaction`: при недоступном пуле
      * Hikari тот падает фатальной ошибкой корутин вместо обычного исключения.
      */
-    private suspend fun <T> tx(block: Transaction.() -> T): T = withContext(Dispatchers.IO) { transaction(db) { block() } }
+    private suspend fun <T> tx(block: JdbcTransaction.() -> T): T = withContext(Dispatchers.IO) { transaction(db) { block() } }
 }
 
 private fun ResultRow.toSession() = LiveTrackSession(

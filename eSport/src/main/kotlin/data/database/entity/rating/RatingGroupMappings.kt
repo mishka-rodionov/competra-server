@@ -1,8 +1,8 @@
 package com.competra.data.database.entity.rating
 
 import com.competra.data.database.entity.ParticipantGroups
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.Table
 
 /** Соответствие группы конкретного соревнования (в составе рейтинга) канонической группе рейтинга. */
 object RatingGroupMappings : Table("rating_group_mappings") {

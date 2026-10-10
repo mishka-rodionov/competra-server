@@ -10,14 +10,16 @@ import com.competra.data.response.clubs.ClubMatchResponse
 import com.competra.data.response.orienteering.RegistrationTeamOptionResponse
 import com.competra.data.response.orienteering.RegistrationTeamOptionsResponse
 import io.ktor.server.plugins.NotFoundException
-import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.JoinType
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.lowerCase
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.lowerCase
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import com.competra.data.database.ioTransaction
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.neq
+import org.jetbrains.exposed.v1.jdbc.select
 
 /** Подсказки для поля «Команда» при самостоятельной регистрации участника на соревнование. */
 class RegistrationTeamService {
@@ -89,7 +91,7 @@ class RegistrationTeamService {
     }
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO) { block() }
+        ioTransaction { block() }
 
     private companion object {
         const val PROTOCOL_NAMES_LIMIT = 50

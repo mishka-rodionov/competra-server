@@ -496,7 +496,7 @@ fun Route.orienteeringRoutes(
                 is PartData.FormItem -> if (part.name == "competitionId") competitionId = part.value
                 else -> {}
             }
-            part.dispose()
+            part.release()
         }
 
         if (xmlBytes == null || competitionId == null)

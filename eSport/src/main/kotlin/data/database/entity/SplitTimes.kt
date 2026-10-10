@@ -1,6 +1,6 @@
 package com.competra.data.database.entity
 
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 
 object SplitTimes : Table("split_times") {
     val id = integer("id").autoIncrement()

@@ -26,7 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jetbrains.exposed.sql.transactions.TransactionManager
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 
 /**
  * Процесс онлайн-трекинга (`APP_MODE=tracking`): отдельный контейнер из того же образа.

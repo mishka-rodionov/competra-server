@@ -1,8 +1,8 @@
 package com.competra.data.database.entity.rating
 
 import com.competra.data.database.entity.clubs.Clubs
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.Table
 
 /** Рейтинг соревнований, принадлежащий клубу. Удаляется вместе с клубом-владельцем. */
 object RatingSeries : Table("rating_series") {

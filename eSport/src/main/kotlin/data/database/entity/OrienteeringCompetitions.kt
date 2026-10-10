@@ -1,6 +1,6 @@
 package com.competra.data.database.entity
 
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 
 /**
  * Расширение ядра [Competitions] специфичными для ориентирования полями.
@@ -10,7 +10,7 @@ import org.jetbrains.exposed.sql.Table
  * Отдельной колонки competition_id больше нет, владелец (ownerId) переехал в [Competitions].
  */
 object OrienteeringCompetitions : Table("orienteering_competitions") {
-    val id = varchar("id", 36).references(Competitions.id, onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+    val id = varchar("id", 36).references(Competitions.id, onDelete = org.jetbrains.exposed.v1.core.ReferenceOption.CASCADE)
     val direction = varchar("direction", 100)
     val punchingSystem = varchar("punching_system", 100)
     val startTimeMode = varchar("start_time_mode", 100)

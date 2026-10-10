@@ -1,6 +1,6 @@
 package com.competra.tracking
 
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 
 /** Сессии онлайн-трекинга (БД `competra_tracking`). См. [LiveTrackSession]. */
 object LiveTrackSessions : Table("live_track_sessions") {

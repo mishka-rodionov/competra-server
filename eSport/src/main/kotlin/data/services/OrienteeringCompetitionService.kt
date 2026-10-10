@@ -21,27 +21,29 @@ import com.competra.domain.orienteering.ByChoiceMode
 import com.competra.domain.orienteering.DrawMode
 import com.competra.domain.orienteering.OvertimePolicy
 import com.competra.domain.orienteering.ranksByScore
-import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.Case
-import org.jetbrains.exposed.sql.ExpressionWithColumnType
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.SqlExpressionBuilder
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.greater
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.andWhere
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.JoinType
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.or
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.stringLiteral
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.Case
+import org.jetbrains.exposed.v1.core.ExpressionWithColumnType
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.andWhere
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.core.stringLiteral
+import com.competra.data.database.ioTransaction
+import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.notInList
 
 /**
  * `true`, если переход resultsStatus означает первую публикацию результатов
@@ -248,7 +250,7 @@ class OrienteeringCompetitionService(
     /** Уведомляет зарегистрированных участников о публикации результатов. Сеть — вне DB-транзакции upsert(). */
     private suspend fun notifyResultsPublished(competitionId: String, competitionTitle: String) {
         if (notificationLogService.hasSent(competitionId, CompetitionNotificationType.RESULTS_PUBLISHED)) return
-        val userIds = newSuspendedTransaction(Dispatchers.IO) {
+        val userIds = ioTransaction {
             OrienteeringParticipants.selectAll()
                 .where { OrienteeringParticipants.competitionId eq competitionId }
                 .mapNotNull { it[OrienteeringParticipants.userId] }
@@ -524,7 +526,7 @@ class OrienteeringCompetitionService(
      * здесь не нужна. Должна давать тот же результат, что и Kotlin-версия при startTime == null,
      * иначе фильтр по статусу и отображаемые карточки разъедутся.
      */
-    private fun SqlExpressionBuilder.effectiveStatusExpr(now: Long): ExpressionWithColumnType<String> =
+    private fun effectiveStatusExpr(now: Long): ExpressionWithColumnType<String> =
         Case()
             .When(Competitions.status inList TERMINAL_STATUSES, Competitions.status)
             .When(
@@ -730,5 +732,5 @@ class OrienteeringCompetitionService(
     }
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO) { block() }
+        ioTransaction { block() }
 }

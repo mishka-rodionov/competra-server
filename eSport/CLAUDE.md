@@ -16,7 +16,7 @@ docker-compose up        # Full stack: app + PostgreSQL + RabbitMQ
 
 ## Architecture
 
-**Stack**: Kotlin + Ktor 3.2.3, Exposed ORM, Koin DI, PostgreSQL, RabbitMQ
+**Stack**: Kotlin 2.4 + Ktor 3.6, Exposed 1.x ORM (пакеты `org.jetbrains.exposed.v1.*`; suspend-транзакции — через `ioTransaction {}`), Koin 4 DI, PostgreSQL, RabbitMQ
 
 **Layers**:
 - `data/routing/` — HTTP route handlers (split into public routes and JWT-protected routes)
@@ -77,6 +77,8 @@ SMTP_USER, SMTP_PASSWORD  # Yandex Mail
 ### Правила для Claude
 
 **Документация эндпоинтов** — полный список запросов ведётся в [`docs/API.md`](docs/API.md). При добавлении, изменении (путь, метод, тело, query-параметры, auth) или удалении эндпоинта **в том же изменении** обнови `docs/API.md`: строка в таблице нужного раздела (метод, путь, тело/параметры, краткое описание, 🔒 если под JWT). Новый файл роутинга → новый раздел.
+
+**Фичевая документация** — при реализации новой фичи или изменении поведения существующей **в том же изменении** создай/обнови `docs/features/<feature-name>/README.md` в репо `competra-android` (`/Users/rodionov/android_projects/competra-android/docs/features/`) по шаблону из `docs/features/README.md` там же и добавь фичу в список. Документ один на всю экосистему (Android, web, backend): изменения бэкенда описываются в разделе «Как устроено» (модель данных, эндпоинты, ключевые файлы eSport). Фича не считается готовой без документации.
 
 **При добавлении или изменении эндпоинта** — **спроси пользователя**: нужно ли обновить клиентский код в `competra-android` и/или `competra-web-ts`? Оба клиента зависят от одного API-контракта.
 

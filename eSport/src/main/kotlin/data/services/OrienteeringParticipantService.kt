@@ -11,15 +11,14 @@ import com.competra.data.exception.UnprocessableEntityException
 import com.competra.data.requests.orienteering.OrienteeringParticipantRequest
 import com.competra.data.requests.orienteering.RegisterParticipantRequest
 import com.competra.data.response.orienteering.OrienteeringParticipantResponse
-import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import com.competra.data.database.ioTransaction
+import org.jetbrains.exposed.v1.jdbc.update
 import java.util.UUID
 
 class OrienteeringParticipantService {
@@ -388,7 +387,7 @@ class OrienteeringParticipantService {
     )
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO) { block() }
+        ioTransaction { block() }
 
     companion object {
         /** Статусы, после которых участника нельзя удалить. */

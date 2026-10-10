@@ -4,10 +4,11 @@ import com.competra.data.database.entity.CompetitionOrganizers
 import com.competra.data.database.entity.Competitions
 import com.competra.data.database.entity.clubs.ClubMembers
 import com.competra.data.exception.ForbiddenException
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.select
 
 /**
  * Права, которыми может обладать организатор соревнования (роль в [CompetitionOrganizers]).

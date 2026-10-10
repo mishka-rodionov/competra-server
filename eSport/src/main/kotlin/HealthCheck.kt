@@ -7,7 +7,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 fun Route.healthRoutes() {
     // Liveness: процесс жив. Внешний пингер (UptimeRobot, Better Stack) должен бить сюда.

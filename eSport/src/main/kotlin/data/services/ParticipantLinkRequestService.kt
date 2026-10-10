@@ -13,24 +13,25 @@ import com.competra.data.response.orienteering.LinkRequestResponse
 import com.competra.data.response.orienteering.LinkResultSummary
 import com.competra.data.response.orienteering.LinkSuggestionResponse
 import io.ktor.server.plugins.NotFoundException
-import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.JoinType
-import org.jetbrains.exposed.sql.Op
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.neq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.count
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.or
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.Op
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.neq
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.count
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import com.competra.data.database.ioTransaction
+import org.jetbrains.exposed.v1.jdbc.update
 import org.slf4j.LoggerFactory
 import java.util.UUID
+import org.jetbrains.exposed.v1.core.not
+import org.jetbrains.exposed.v1.jdbc.select
 
 /**
  * Заявки «этот участник протокола — я»: пользователь находит результаты, которые организатор внёс
@@ -555,7 +556,7 @@ class ParticipantLinkRequestService(private val fcmService: FcmService) {
     private data class Notice(val userId: String, val title: String, val body: String, val data: Map<String, String>)
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO) { block() }
+        ioTransaction { block() }
 
     companion object {
         const val STATUS_PENDING = "PENDING"

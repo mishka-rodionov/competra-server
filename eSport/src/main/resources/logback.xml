@@ -30,33 +30,36 @@
             <connectionTimeoutMs>5000</connectionTimeoutMs>
             <requestTimeoutMs>5000</requestTimeoutMs>
         </http>
-        <format>
-            <label>
-                <pattern>app=competra,service=${APP_MODE:-main},level=%level,host=${HOSTNAME:-local}</pattern>
-                <readMarker>true</readMarker>
-            </label>
-            <!-- Layout, а не Encoder: loki4j ожидает именно Layout. -->
-            <message class="net.logstash.logback.layout.LogstashLayout">
-                <includeMdcKeyName>call_id</includeMdcKeyName>
-                <includeMdcKeyName>http_method</includeMdcKeyName>
-                <includeMdcKeyName>http_path</includeMdcKeyName>
-                <includeMdcKeyName>http_status</includeMdcKeyName>
-                <includeMdcKeyName>duration_ms</includeMdcKeyName>
-                <includeMdcKeyName>user_id</includeMdcKeyName>
-                <includeMdcKeyName>remote_host</includeMdcKeyName>
-                <includeMdcKeyName>user_agent</includeMdcKeyName>
-                <includeMdcKeyName>query</includeMdcKeyName>
-                <fieldNames>
-                    <timestamp>ts</timestamp>
-                    <message>msg</message>
-                    <thread>thread</thread>
-                    <levelValue>[ignore]</levelValue>
-                    <logger>logger</logger>
-                    <stackTrace>stack_trace</stackTrace>
-                </fieldNames>
-            </message>
-            <sortByTime>true</sortByTime>
-        </format>
+        <!-- loki4j 2.x: одна пара ключ=значение на строку, без запятых. -->
+        <labels>
+            app=competra
+            service=${APP_MODE:-main}
+            level=%level
+            host=${HOSTNAME:-local}
+        </labels>
+        <!-- MDC-поля уже уходят в JSON-теле сообщения; structured metadata (дефолт 2.x) не нужна. -->
+        <structuredMetadata>off</structuredMetadata>
+        <readMarkers>true</readMarkers>
+        <!-- Layout, а не Encoder: loki4j ожидает именно Layout. -->
+        <message class="net.logstash.logback.layout.LogstashLayout">
+            <includeMdcKeyName>call_id</includeMdcKeyName>
+            <includeMdcKeyName>http_method</includeMdcKeyName>
+            <includeMdcKeyName>http_path</includeMdcKeyName>
+            <includeMdcKeyName>http_status</includeMdcKeyName>
+            <includeMdcKeyName>duration_ms</includeMdcKeyName>
+            <includeMdcKeyName>user_id</includeMdcKeyName>
+            <includeMdcKeyName>remote_host</includeMdcKeyName>
+            <includeMdcKeyName>user_agent</includeMdcKeyName>
+            <includeMdcKeyName>query</includeMdcKeyName>
+            <fieldNames>
+                <timestamp>ts</timestamp>
+                <message>msg</message>
+                <thread>thread</thread>
+                <levelValue>[ignore]</levelValue>
+                <logger>logger</logger>
+                <stackTrace>stack_trace</stackTrace>
+            </fieldNames>
+        </message>
     </appender>
 
     <!-- SQL запросы Exposed (включить, если нужно отлаживать запросы) -->

@@ -3,8 +3,8 @@ package com.competra.tracking
 import com.competra.data.util.requireEnv
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.DatabaseConfig
+import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.core.DatabaseConfig
 
 /** Пул к собственной БД трекинга по умолчанию; роль в Postgres ограничена `CONNECTION LIMIT 10`. */
 private const val DEFAULT_TRACKING_POOL_SIZE = 8

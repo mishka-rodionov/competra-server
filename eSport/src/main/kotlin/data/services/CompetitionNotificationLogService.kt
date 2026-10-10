@@ -2,12 +2,12 @@ package com.competra.data.services
 
 import com.competra.data.database.entity.CompetitionNotificationType
 import com.competra.data.database.entity.CompetitionNotifications
-import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.insertIgnore
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.insertIgnore
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import com.competra.data.database.ioTransaction
+import org.jetbrains.exposed.v1.core.inList
 
 /**
  * Учёт того, какие push-уведомления по соревнованиям уже отправлены — см. [CompetitionNotifications].
@@ -15,7 +15,7 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 class CompetitionNotificationLogService {
 
     suspend fun hasSent(competitionId: String, type: CompetitionNotificationType): Boolean =
-        newSuspendedTransaction(Dispatchers.IO) {
+        ioTransaction {
             CompetitionNotifications.selectAll()
                 .where {
                     (CompetitionNotifications.competitionId eq competitionId) and
@@ -26,7 +26,7 @@ class CompetitionNotificationLogService {
 
     /** Идемпотентно: повторный вызов для уже отмеченной пары не приводит к ошибке. */
     suspend fun markSent(competitionId: String, type: CompetitionNotificationType) {
-        newSuspendedTransaction(Dispatchers.IO) {
+        ioTransaction {
             CompetitionNotifications.insertIgnore {
                 it[CompetitionNotifications.competitionId] = competitionId
                 it[notificationType] = type.name
@@ -38,7 +38,7 @@ class CompetitionNotificationLogService {
     /** Из [candidateIds] возвращает те, для которых уведомление [type] ещё не отправлялось. */
     suspend fun unsentCompetitionIds(type: CompetitionNotificationType, candidateIds: List<String>): List<String> {
         if (candidateIds.isEmpty()) return emptyList()
-        val alreadySent = newSuspendedTransaction(Dispatchers.IO) {
+        val alreadySent = ioTransaction {
             CompetitionNotifications.selectAll()
                 .where {
                     (CompetitionNotifications.notificationType eq type.name) and

@@ -1,5 +1,5 @@
 # Stage 1: Build fat JAR
-FROM gradle:8.5-jdk17 AS builder
+FROM gradle:9.8.1-jdk17 AS builder
 WORKDIR /app
 COPY . .
 RUN gradle buildFatJar --no-daemon --info

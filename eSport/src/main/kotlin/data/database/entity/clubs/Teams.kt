@@ -1,7 +1,7 @@
 package com.competra.data.database.entity.clubs
 
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.Table
 
 object Teams : Table("teams") {
     val id = varchar("id", 36)

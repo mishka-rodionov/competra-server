@@ -1,6 +1,6 @@
 package com.competra.data.database.entity
 
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 
 object Competitions : Table("competitions") {
     /** Глобально-уникальный клиентский UUID — единый идентификатор соревнования на всех платформах. */

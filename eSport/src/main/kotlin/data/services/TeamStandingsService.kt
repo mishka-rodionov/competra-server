@@ -5,10 +5,9 @@ import com.competra.data.database.entity.OrienteeringParticipants
 import com.competra.data.database.entity.OrienteeringResults
 import com.competra.data.database.entity.ParticipantGroups
 import com.competra.data.response.orienteering.TeamStandingsResponse
-import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import com.competra.data.database.ioTransaction
 
 /**
  * Командный зачёт соревнования — вычисляется при каждом запросе из результатов
@@ -65,5 +64,5 @@ class TeamStandingsService {
     }
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO) { block() }
+        ioTransaction { block() }
 }

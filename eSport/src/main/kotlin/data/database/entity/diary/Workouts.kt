@@ -1,7 +1,7 @@
 package com.competra.data.database.entity.diary
 
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.Table
 
 /** Тренировочный дневник — независимый домен, не связан с Competitions. */
 object Workouts : Table("workouts") {

@@ -1,7 +1,7 @@
 package com.competra.data.database.entity.clubs
 
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.Table
 
 /** Членство зарегистрированного пользователя в клубе. Гостевые/анонимные участники не допускаются. */
 object ClubMembers : Table("club_members") {

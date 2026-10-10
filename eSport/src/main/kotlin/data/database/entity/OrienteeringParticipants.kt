@@ -1,6 +1,6 @@
 package com.competra.data.database.entity
 
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 
 object OrienteeringParticipants : Table("orienteering_participants") {
     val id = varchar("id", 200)
@@ -10,7 +10,7 @@ object OrienteeringParticipants : Table("orienteering_participants") {
     val groupId = long("group_id")
     val groupName = varchar("group_name", 200)
     val competitionId = varchar("competition_id", 36)
-        .references(Competitions.id, onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+        .references(Competitions.id, onDelete = org.jetbrains.exposed.v1.core.ReferenceOption.CASCADE)
     val commandName = varchar("command_name", 200).nullable()
     /**
      * Клубная команда, выбранная при самостоятельной регистрации. [commandName] при этом остаётся

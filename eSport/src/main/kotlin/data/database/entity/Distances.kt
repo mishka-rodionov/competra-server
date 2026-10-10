@@ -1,11 +1,11 @@
 package com.competra.data.database.entity
 
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 
 object Distances : Table("distances") {
     val id = long("id").autoIncrement()
     val competitionId = varchar("competition_id", 36)
-        .references(Competitions.id, onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+        .references(Competitions.id, onDelete = org.jetbrains.exposed.v1.core.ReferenceOption.CASCADE)
     val name = varchar("name", 200).nullable()
     val lengthMeters = integer("length_meters")
     val climbMeters = integer("climb_meters")
