@@ -18,6 +18,7 @@ import com.competra.data.response.orienteering.OrienteeringCompetitionResponse
 import com.competra.data.response.orienteering.ParticipantGroupDetailResponse
 import com.competra.UserService
 import com.competra.domain.orienteering.ByChoiceMode
+import com.competra.domain.orienteering.DrawMode
 import com.competra.domain.orienteering.OvertimePolicy
 import com.competra.domain.orienteering.ranksByScore
 import kotlinx.coroutines.Dispatchers
@@ -148,6 +149,9 @@ class OrienteeringCompetitionService(
         overtimePolicy = orient[OrienteeringCompetitions.overtimePolicy],
         byChoiceMode = orient[OrienteeringCompetitions.byChoiceMode],
         teamScoring = TeamScoringJson.toResponse(orient[OrienteeringCompetitions.teamScoring]),
+        drawMode = orient[OrienteeringCompetitions.drawMode],
+        drawCorridors = orient[OrienteeringCompetitions.drawCorridors],
+        drawGap = orient[OrienteeringCompetitions.drawGap],
         updatedAt = orient[OrienteeringCompetitions.updatedAt]
     )
 
@@ -392,6 +396,14 @@ class OrienteeringCompetitionService(
             existingOrient?.get(OrienteeringCompetitions.teamScoring)
         )
 
+        // Режим жеребьёвки присылает только клиент, который её провёл; null — сохраняем текущий.
+        val requestedDrawMode = DrawMode.fromStringOrNull(req.drawMode)
+        val newDrawMode = requestedDrawMode?.name ?: existingOrient?.get(OrienteeringCompetitions.drawMode)
+        val newDrawCorridors = if (requestedDrawMode != null) req.drawCorridors
+            else existingOrient?.get(OrienteeringCompetitions.drawCorridors)
+        val newDrawGap = if (requestedDrawMode != null) req.drawGap
+            else existingOrient?.get(OrienteeringCompetitions.drawGap)
+
         // Политику КВ старые клиенты не присылают (null) — тогда сохраняем уже выбранную, а для
         // нового соревнования берём умолчание по формату: у score-О опоздание исторически
         // штрафуется очками, у остальных КВ по умолчанию справочное.
@@ -412,6 +424,9 @@ class OrienteeringCompetitionService(
                 it[overtimePolicy] = newOvertimePolicy
                 it[byChoiceMode] = newByChoiceMode
                 it[teamScoring] = newTeamScoring
+                it[drawMode] = newDrawMode
+                it[drawCorridors] = newDrawCorridors
+                it[drawGap] = newDrawGap
                 it[updatedAt] = now
             }
         } else {
@@ -425,6 +440,9 @@ class OrienteeringCompetitionService(
                 it[overtimePolicy] = newOvertimePolicy
                 it[byChoiceMode] = newByChoiceMode
                 it[teamScoring] = newTeamScoring
+                it[drawMode] = newDrawMode
+                it[drawCorridors] = newDrawCorridors
+                it[drawGap] = newDrawGap
                 it[updatedAt] = now
             }
         }

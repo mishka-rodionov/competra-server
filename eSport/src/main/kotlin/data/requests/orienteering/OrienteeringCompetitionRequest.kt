@@ -21,5 +21,12 @@ data class OrienteeringCompetitionRequest(
     @SerializedName("byChoiceMode") val byChoiceMode: String? = null,
     /** Командный зачёт: null — не менять, `enabled = false` — выключить. */
     @SerializedName("teamScoring") val teamScoring: TeamScoringRequest? = null,
+    /**
+     * [com.competra.domain.orienteering.DrawMode] проведённой жеребьёвки. null — не менять (старые
+     * клиенты и веб, который жеребьёвку не проводит); вместе с ним сохраняются [drawCorridors] и [drawGap].
+     */
+    @SerializedName("drawMode") val drawMode: String? = null,
+    @SerializedName("drawCorridors") val drawCorridors: Int? = null,
+    @SerializedName("drawGap") val drawGap: Int? = null,
     @SerializedName("serverUpdatedAt") val serverUpdatedAt: Long? = null
 )

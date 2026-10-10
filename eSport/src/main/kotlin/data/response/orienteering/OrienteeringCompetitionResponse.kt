@@ -19,5 +19,11 @@ data class OrienteeringCompetitionResponse(
     @SerializedName("byChoiceMode") val byChoiceMode: String = "SCORE",
     /** Настройки командного зачёта; null — зачёта нет. */
     @SerializedName("teamScoring") val teamScoring: TeamScoringResponse? = null,
+    /** [com.competra.domain.orienteering.DrawMode] проведённой жеребьёвки; null — не проводилась. */
+    @SerializedName("drawMode") val drawMode: String? = null,
+    /** Коридоры жеребьёвки по дистанциям. */
+    @SerializedName("drawCorridors") val drawCorridors: Int? = null,
+    /** Зазор жеребьёвки по дистанциям (в стартовых интервалах). */
+    @SerializedName("drawGap") val drawGap: Int? = null,
     @SerializedName("updatedAt") val updatedAt: Long = 0L
 )

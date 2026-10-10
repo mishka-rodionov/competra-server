@@ -33,6 +33,15 @@ object OrienteeringCompetitions : Table("orienteering_competitions") {
     /** Настройки командного зачёта JSON-ом ([com.competra.domain.orienteering.TeamScoring]); null — зачёта нет. */
     val teamScoring = text("team_scoring").nullable()
 
+    /** [com.competra.domain.orienteering.DrawMode] проведённой жеребьёвки; null — не проводилась. */
+    val drawMode = varchar("draw_mode", 20).nullable()
+
+    /** Число коридоров жеребьёвки по дистанциям (только для DISTANCE). */
+    val drawCorridors = integer("draw_corridors").nullable()
+
+    /** Минимальный зазор между стартами одной дистанции в интервалах (только для DISTANCE). */
+    val drawGap = integer("draw_gap").nullable()
+
     val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)
