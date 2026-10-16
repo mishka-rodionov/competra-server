@@ -9,6 +9,12 @@ data class OrienteeringCompetitionRequest(
     @SerializedName("punchingSystem") val punchingSystem: String,
     @SerializedName("startTimeMode") val startTimeMode: String,
     @SerializedName("countdownTimer") val countdownTimer: Long?,
+    /**
+     * Фактическое время старта соревнования (Unix ms). null — не менять у стартовавшего
+     * соревнования (старые клиенты и веб поле не присылают) и сбросить у нестартовавшего
+     * (отмена предстартового таймера возвращает соревнование в DRAFT).
+     */
+    @SerializedName("startTime") val startTime: Long? = null,
     @SerializedName("startIntervalSeconds") val startIntervalSeconds: Int? = null,
     /** Контрольное время соревнования в минутах; группа может переопределить его своим timeLimitMinutes. */
     @SerializedName("controlTimeMinutes") val controlTimeMinutes: Int? = null,

@@ -413,6 +413,14 @@ class OrienteeringCompetitionService(
             ?: existingOrient?.get(OrienteeringCompetitions.overtimePolicy)
             ?: defaultOvertimePolicy(req.direction, newByChoiceMode)
 
+        // Время старта нужно клиенту, чтобы секундомер старта пережил переустановку приложения.
+        // Старые клиенты и веб его не присылают — у идущего/завершённого соревнования сохраняем
+        // текущее; у нестартовавшего null означает сброс (отмена предстартового таймера), иначе
+        // computeEffectiveStatus по прошедшему startTime вернул бы IN_PROGRESS.
+        val newStartTime = req.startTime
+            ?: existingOrient?.get(OrienteeringCompetitions.startTime)
+                ?.takeIf { req.competition.status in TERMINAL_STATUSES }
+
         if (existingOrient == null) {
             OrienteeringCompetitions.insert {
                 it[id] = competitionId
@@ -420,7 +428,7 @@ class OrienteeringCompetitionService(
                 it[punchingSystem] = req.punchingSystem
                 it[startTimeMode] = req.startTimeMode
                 it[countdownTimer] = req.countdownTimer
-                it[startTime] = null
+                it[startTime] = newStartTime
                 it[startIntervalSeconds] = req.startIntervalSeconds
                 it[controlTimeMinutes] = req.controlTimeMinutes
                 it[overtimePolicy] = newOvertimePolicy
@@ -437,6 +445,7 @@ class OrienteeringCompetitionService(
                 it[punchingSystem] = req.punchingSystem
                 it[startTimeMode] = req.startTimeMode
                 it[countdownTimer] = req.countdownTimer
+                it[startTime] = newStartTime
                 it[startIntervalSeconds] = req.startIntervalSeconds
                 it[controlTimeMinutes] = req.controlTimeMinutes
                 it[overtimePolicy] = newOvertimePolicy
