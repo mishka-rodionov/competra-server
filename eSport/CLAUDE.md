@@ -66,19 +66,13 @@ SMTP_USER, SMTP_PASSWORD  # Yandex Mail
 
 ## Межпроектные связи
 
-Этот проект — центральный сервер экосистемы из четырёх репозиториев:
-
-| Проект | Путь | Роль |
-|---|---|---|
-| **competra-android** | `/Users/rodionov/android_projects/competra-android` | Android-клиент (Retrofit + Room + NFC) |
-| **competra-web-ts** | `/Users/rodionov/web_projects/competra-web-ts` | Веб-клиент (React + TypeScript + Vite + TanStack Query, `fetch`) — деплоится на `competra.ru` через GitHub Pages. Заменил собой прежний Kotlin/Wasm веб-клиент (`competra-web`, теперь архивный) |
-| **mapper** | `/Users/rodionov/android_projects/mapper` | Qt/C++ редактор карт, поставщик IOF XML |
+Этот проект — центральный сервер рабочего пространства `~/projects/competra/`. Корень git-репозитория — `competra-server/` (на уровень выше, там `.github/` с CI/CD), сам eSport — `competra-server/eSport/`. Соседи: Android-клиент (`../../competra-android`), веб-клиент (`../../competra-web-ts`), редактор карт (`../../mapper`). Состав экосистемы, общий контракт и общие правила — в `../../CLAUDE.md`, он подгружается автоматически.
 
 ### Правила для Claude
 
 **Документация эндпоинтов** — полный список запросов ведётся в [`docs/API.md`](docs/API.md). При добавлении, изменении (путь, метод, тело, query-параметры, auth) или удалении эндпоинта **в том же изменении** обнови `docs/API.md`: строка в таблице нужного раздела (метод, путь, тело/параметры, краткое описание, 🔒 если под JWT). Новый файл роутинга → новый раздел.
 
-**Фичевая документация** — при реализации новой фичи или изменении поведения существующей **в том же изменении** создай/обнови `docs/features/<feature-name>/README.md` в репо `competra-android` (`/Users/rodionov/android_projects/competra-android/docs/features/`) по шаблону из `docs/features/README.md` там же и добавь фичу в список. Документ один на всю экосистему (Android, web, backend): изменения бэкенда описываются в разделе «Как устроено» (модель данных, эндпоинты, ключевые файлы eSport). Фича не считается готовой без документации.
+**Фичевая документация** — при реализации новой фичи или изменении поведения существующей **в том же изменении** создай/обнови `docs/features/<feature-name>/README.md` в репо `competra-android` (`../../competra-android/docs/features/`) по шаблону из `docs/features/README.md` там же и добавь фичу в список. Документ один на всю экосистему (Android, web, backend): изменения бэкенда описываются в разделе «Как устроено» (модель данных, эндпоинты, ключевые файлы eSport). Фича не считается готовой без документации.
 
 **При добавлении или изменении эндпоинта** — **спроси пользователя**: нужно ли обновить клиентский код в `competra-android` и/или `competra-web-ts`? Оба клиента зависят от одного API-контракта.
 
