@@ -131,7 +131,8 @@ class OrienteeringCompetitionService(
         timeZoneId = comp[Competitions.timeZoneId],
         isTest = comp[Competitions.isTest],
         updatedAt = comp[Competitions.updatedAt],
-        organizingClubId = comp[Competitions.organizingClubId]
+        organizingClubId = comp[Competitions.organizingClubId],
+        organizerName = comp[Competitions.organizerName]
     )
 
     /** Маппинг пары (ядро, расширение) в [OrienteeringCompetitionResponse]. */

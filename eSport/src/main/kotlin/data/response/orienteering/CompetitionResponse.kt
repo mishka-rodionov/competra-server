@@ -36,7 +36,9 @@ data class CompetitionResponse(
     /** Тестовое соревнование: видно только владельцу, исключено из публичной ленты. */
     @SerializedName("isTest") val isTest: Boolean = false,
     @SerializedName("updatedAt") val updatedAt: Long = 0L,
-    @SerializedName("organizingClubId") val organizingClubId: String? = null
+    @SerializedName("organizingClubId") val organizingClubId: String? = null,
+    /** Организатор (ФИО) для показа на странице соревнования; не обязательно пользователь системы. */
+    @SerializedName("organizerName") val organizerName: String? = null
 )
 
 data class CoordinatesResponse(

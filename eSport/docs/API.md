@@ -64,7 +64,7 @@
 | Метод | Путь | Тело / параметры | Описание |
 |---|---|---|---|
 | POST | `/api/event/orienteering/save/competitions` | `OrienteeringCompetitionRequest` | Upsert соревнования (conflict-check по `orient.updatedAt` → 409); `teamScoring`: `null` — не менять, `{enabled:false}` — выключить |
-| GET | `/api/event/orienteering/competitions` | — | Соревнования, созданные пользователем |
+| GET | `/api/event/orienteering/competitions` | — | Соревнования, созданные пользователем. В `competition` (как и во всех ответах с `CompetitionResponse`) есть `organizerName` — организатор (ФИО); клиент обязан возвращать его в `save/competitions`, иначе upsert его затрёт |
 | GET | `/api/event/orienteering/competitions/registered` | — | Соревнования, на которые пользователь зарегистрирован |
 | DELETE | `/api/event/orienteering/competitions/{id}` | — | Удалить соревнование |
 | POST | `/api/event/orienteering/save/participantGroup` | `List<ParticipantGroupRequest>` | Upsert групп |
