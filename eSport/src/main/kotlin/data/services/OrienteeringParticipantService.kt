@@ -11,6 +11,10 @@ import com.competra.data.exception.UnprocessableEntityException
 import com.competra.data.requests.orienteering.OrienteeringParticipantRequest
 import com.competra.data.requests.orienteering.RegisterParticipantRequest
 import com.competra.data.response.orienteering.OrienteeringParticipantResponse
+import com.competra.data.response.orienteering.ParticipantHistoryResponse
+import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.neq
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.and
@@ -317,6 +321,35 @@ class OrienteeringParticipantService {
         OrienteeringParticipants.selectAll()
             .where { OrienteeringParticipants.competitionId eq competitionId }
             .map { row -> row.toResponse() }
+    }
+
+    /**
+     * Участия во всех соревнованиях, созданных [ownerId], кроме [excludeCompetitionId] и тестовых
+     * (в тестовых — сгенерированные участники). Склейку людей и поиск делает клиент.
+     */
+    suspend fun getHistoryByOwner(ownerId: String, excludeCompetitionId: String?): List<ParticipantHistoryResponse> = dbQuery {
+        OrienteeringParticipants
+            .join(
+                otherTable = Competitions,
+                joinType = JoinType.INNER,
+                onColumn = OrienteeringParticipants.competitionId,
+                otherColumn = Competitions.id
+            )
+            .selectAll()
+            .where { (Competitions.ownerId eq ownerId) and (Competitions.isTest eq false) }
+            .apply { excludeCompetitionId?.let { andWhere { Competitions.id neq it } } }
+            .map { row ->
+                ParticipantHistoryResponse(
+                    id = row[OrienteeringParticipants.id],
+                    userId = row[OrienteeringParticipants.userId],
+                    firstName = row[OrienteeringParticipants.firstName],
+                    lastName = row[OrienteeringParticipants.lastName],
+                    groupName = row[OrienteeringParticipants.groupName],
+                    commandName = row[OrienteeringParticipants.commandName],
+                    competitionId = row[OrienteeringParticipants.competitionId],
+                    competitionDate = row[Competitions.startDate]
+                )
+            }
     }
 
     suspend fun getByGroup(groupId: Long): List<OrienteeringParticipantResponse> = dbQuery {

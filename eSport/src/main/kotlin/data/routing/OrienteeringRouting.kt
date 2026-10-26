@@ -256,6 +256,22 @@ fun Route.orienteeringRoutes(
         })
     }
 
+    // История участников организатора: подсказки при ручном добавлении участника.
+    get("/event/orienteering/participants/history") {
+        val userId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
+            ?: return@get call.respond(
+                HttpStatusCode.Unauthorized,
+                CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(401, "Unauthorized")) }
+            )
+        val excludeCompetitionId = call.request.queryParameters["excludeCompetitionId"]?.takeIf { it.isNotBlank() }
+
+        val list = participantService.getHistoryByOwner(userId, excludeCompetitionId)
+        call.respond(CommonModel<Any>().also { model ->
+            model.status = 1
+            model.result = list
+        })
+    }
+
     get("/event/orienteering/competitions/registered") {
         val userId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
             ?: return@get call.respond(

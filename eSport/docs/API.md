@@ -74,6 +74,7 @@
 | POST | `/api/event/orienteering/save/participant` | `OrienteeringParticipantRequest` | Upsert одного участника |
 | POST | `/api/event/orienteering/save/participants` | `List<OrienteeringParticipantRequest>` | Upsert участников пачкой |
 | DELETE | `/api/event/orienteering/participants/{id}` | — | Удалить участника |
+| GET | `/api/event/orienteering/participants/history` | query: `excludeCompetitionId` (опц.) | История участников организатора (`List<ParticipantHistoryResponse>`: `id`, `userId`, `firstName`, `lastName`, `groupName`, `commandName`, `competitionId`, `competitionDate`) — все участия в соревнованиях, где пользователь `ownerId`, без тестовых и без `excludeCompetitionId`. Подсказки при ручном добавлении участника; склейку людей и поиск делает клиент |
 | POST | `/api/event/orienteering/save/result` | `OrienteeringResultRequest` | Upsert одного результата |
 | POST | `/api/event/orienteering/save/results` | `List<OrienteeringResultRequest>` | Upsert результатов пачкой |
 | DELETE | `/api/event/orienteering/results/{id}` | — | Удалить результат |
