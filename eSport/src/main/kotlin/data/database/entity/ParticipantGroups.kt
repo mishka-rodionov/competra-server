@@ -10,7 +10,8 @@ object ParticipantGroups : Table("participant_groups") {
     val gender = varchar("gender", 20).nullable()
     val minAge = integer("min_age").nullable()
     val maxAge = integer("max_age").nullable()
-    val distanceId = long("distance_id")
+    /** null — дистанция ещё не назначена (группа открыта для регистрации до планирования дистанций). */
+    val distanceId = long("distance_id").nullable()
     val maxParticipants = integer("max_participants").nullable()
     val timeLimitMinutes = integer("time_limit_minutes").nullable()
     val scorePenaltyPerMinute = integer("score_penalty_per_minute").nullable()

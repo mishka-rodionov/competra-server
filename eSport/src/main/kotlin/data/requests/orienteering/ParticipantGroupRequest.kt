@@ -9,7 +9,8 @@ data class ParticipantGroupRequest(
     @SerializedName("gender") val gender: String?,
     @SerializedName("minAge") val minAge: Int?,
     @SerializedName("maxAge") val maxAge: Int?,
-    @SerializedName("distanceId") val distanceId: Long,
+    /** null (или 0 у старых клиентов) — дистанция ещё не назначена. */
+    @SerializedName("distanceId") val distanceId: Long?,
     @SerializedName("maxParticipants") val maxParticipants: Int?,
     @SerializedName("timeLimitMinutes") val timeLimitMinutes: Int? = null,
     @SerializedName("scorePenaltyPerMinute") val scorePenaltyPerMinute: Int? = null,
@@ -20,4 +21,7 @@ data class ParticipantGroupRequest(
      */
     @SerializedName("teamCountedResults") val teamCountedResults: Int? = null,
     @SerializedName("serverUpdatedAt") val serverUpdatedAt: Long? = null
-)
+) {
+    /** Дистанция без «не назначена»-сентинела старых клиентов: Gson кладёт JSON null в `Long` как 0. */
+    fun normalizedDistanceId(): Long? = distanceId?.takeIf { it > 0 }
+}

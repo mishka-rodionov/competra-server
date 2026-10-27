@@ -5,10 +5,13 @@ import com.competra.data.database.entity.Competitions
 import com.competra.data.database.entity.Distances
 import com.competra.data.database.entity.OrienteeringCompetitions
 import com.competra.data.database.entity.OrienteeringParticipants
+import com.competra.data.database.entity.OrienteeringResults
 import com.competra.data.database.entity.ParticipantGroups
+import com.competra.data.database.entity.SplitTimes
 import com.competra.data.database.entity.clubs.ClubMembers
 import com.competra.data.exception.ConflictException
 import com.competra.data.exception.ForbiddenException
+import com.competra.data.exception.UnprocessableEntityException
 import com.competra.data.requests.orienteering.OrienteeringCompetitionRequest
 import com.competra.data.response.base.PagedResponse
 import com.competra.data.response.orienteering.CompetitionDetailResponse
@@ -36,6 +39,7 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.core.stringLiteral
 import com.competra.data.database.ioTransaction
@@ -50,7 +54,16 @@ import org.jetbrains.exposed.v1.core.notInList
  * (заслуживает push-уведомления участникам). Чистая функция — покрыта unit-тестом.
  */
 internal fun shouldNotifyResultsPublished(oldStatus: String?, newStatus: String): Boolean =
-    oldStatus == "NOT_PUBLISHED" && newStatus in listOf("PRELIMINARY", "OFFICIAL")
+    oldStatus == "NOT_PUBLISHED" && newStatus in PUBLISHED_RESULTS_STATUSES
+
+private val PUBLISHED_RESULTS_STATUSES = listOf("PRELIMINARY", "OFFICIAL")
+
+/**
+ * `true`, если переход resultsStatus публикует результаты (в т.ч. PRELIMINARY → OFFICIAL) — перед ним
+ * проверяем, что у групп с прочитанными чипами назначена дистанция. Чистая функция — покрыта unit-тестом.
+ */
+internal fun isResultsPublication(oldStatus: String?, newStatus: String): Boolean =
+    newStatus in PUBLISHED_RESULTS_STATUSES && oldStatus != newStatus
 
 /**
  * Порядок групп на экране результатов: мужские → женские → остальные (смешанные/не определено).
@@ -269,6 +282,31 @@ class OrienteeringCompetitionService(
         notificationLogService.markSent(competitionId, CompetitionNotificationType.RESULTS_PUBLISHED)
     }
 
+    /**
+     * Группы без дистанции (не назначена или удалена), у которых уже есть результаты с отметками чипа:
+     * такие результаты посчитаны по пустому списку КП и публиковать их нельзя. Группы без отметок
+     * (импорт прошедших результатов, ручной ввод времени) дистанция не нужна — их не трогаем.
+     */
+    private fun groupsWithPunchesWithoutDistance(competitionId: String): List<String> {
+        val distanceIds = Distances.select(Distances.id)
+            .where { Distances.competitionId eq competitionId }
+            .map { it[Distances.id] }
+            .toSet()
+        return ParticipantGroups.selectAll()
+            .where { ParticipantGroups.competitionId eq competitionId }
+            .filter { row -> row[ParticipantGroups.distanceId].let { it == null || it !in distanceIds } }
+            .filter { row ->
+                val resultIds = OrienteeringResults.select(OrienteeringResults.id)
+                    .where { OrienteeringResults.groupId eq row[ParticipantGroups.id] }
+                    .map { it[OrienteeringResults.id] }
+                resultIds.isNotEmpty() && !SplitTimes.select(SplitTimes.id)
+                    .where { SplitTimes.resultId inList resultIds }
+                    .limit(1)
+                    .empty()
+            }
+            .map { it[ParticipantGroups.title] }
+    }
+
     /** @return построенный [OrienteeringCompetitionResponse] и флаг «resultsStatus только что перешёл в опубликованный». */
     private suspend fun upsertInTransaction(req: OrienteeringCompetitionRequest, userId: String): Pair<OrienteeringCompetitionResponse, Boolean> = dbQuery {
         val now = System.currentTimeMillis()
@@ -303,6 +341,15 @@ class OrienteeringCompetitionService(
             oldStatus = existingComp?.get(Competitions.resultsStatus),
             newStatus = req.competition.resultsStatus,
         )
+
+        if (isResultsPublication(existingComp?.get(Competitions.resultsStatus), req.competition.resultsStatus)) {
+            val groupsWithoutDistance = groupsWithPunchesWithoutDistance(competitionId)
+            if (groupsWithoutDistance.isNotEmpty()) {
+                throw UnprocessableEntityException(
+                    "Нельзя опубликовать результаты: у групп ${groupsWithoutDistance.joinToString()} не назначена дистанция"
+                )
+            }
+        }
 
         // Задать/сменить клуба-организатора может только FOUNDER/ADMIN этого клуба.
         val newClubId = req.competition.organizingClubId

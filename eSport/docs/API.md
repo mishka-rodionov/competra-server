@@ -63,11 +63,11 @@
 
 | Метод | Путь | Тело / параметры | Описание |
 |---|---|---|---|
-| POST | `/api/event/orienteering/save/competitions` | `OrienteeringCompetitionRequest` | Upsert соревнования (conflict-check по `orient.updatedAt` → 409); `teamScoring`: `null` — не менять, `{enabled:false}` — выключить |
+| POST | `/api/event/orienteering/save/competitions` | `OrienteeringCompetitionRequest` | Upsert соревнования (conflict-check по `orient.updatedAt` → 409); `teamScoring`: `null` — не менять, `{enabled:false}` — выключить. Публикация результатов (`resultsStatus` → `PRELIMINARY`/`OFFICIAL`) отклоняется с 422, если у групп с отметками чипа (`split_times`) не назначена дистанция — в `errors` список групп |
 | GET | `/api/event/orienteering/competitions` | — | Соревнования, созданные пользователем. В `competition` (как и во всех ответах с `CompetitionResponse`) есть `organizerName` — организатор (ФИО); клиент обязан возвращать его в `save/competitions`, иначе upsert его затрёт |
 | GET | `/api/event/orienteering/competitions/registered` | — | Соревнования, на которые пользователь зарегистрирован |
 | DELETE | `/api/event/orienteering/competitions/{id}` | — | Удалить соревнование |
-| POST | `/api/event/orienteering/save/participantGroup` | `List<ParticipantGroupRequest>` | Upsert групп |
+| POST | `/api/event/orienteering/save/participantGroup` | `List<ParticipantGroupRequest>` | Upsert групп. `distanceId` необязателен: `null` (или `0` от старых клиентов) — дистанция ещё не назначена, в ответах приходит `null` |
 | DELETE | `/api/event/orienteering/participantGroups/{id}` | — | Удалить группу |
 | POST | `/api/event/orienteering/save/organizers` | `List<OrganizerRequest>` | Upsert организаторов |
 | DELETE | `/api/event/orienteering/organizers/{id}` | — | Удалить организатора |

@@ -29,7 +29,7 @@ class ParticipantGroupService {
                     it[gender] = req.gender
                     it[minAge] = req.minAge
                     it[maxAge] = req.maxAge
-                    it[distanceId] = req.distanceId
+                    it[distanceId] = req.normalizedDistanceId()
                     it[maxParticipants] = req.maxParticipants
                     it[timeLimitMinutes] = req.timeLimitMinutes
                     it[scorePenaltyPerMinute] = req.scorePenaltyPerMinute
@@ -63,7 +63,7 @@ class ParticipantGroupService {
                         it[gender] = req.gender
                         it[minAge] = req.minAge
                         it[maxAge] = req.maxAge
-                        it[distanceId] = req.distanceId
+                        it[distanceId] = req.normalizedDistanceId()
                         it[maxParticipants] = req.maxParticipants
                         it[timeLimitMinutes] = req.timeLimitMinutes
                         it[scorePenaltyPerMinute] = req.scorePenaltyPerMinute
@@ -85,7 +85,7 @@ class ParticipantGroupService {
                         it[gender] = req.gender
                         it[minAge] = req.minAge
                         it[maxAge] = req.maxAge
-                        it[distanceId] = req.distanceId
+                        it[distanceId] = req.normalizedDistanceId()
                         it[maxParticipants] = req.maxParticipants
                         it[timeLimitMinutes] = req.timeLimitMinutes
                         it[scorePenaltyPerMinute] = req.scorePenaltyPerMinute

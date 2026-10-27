@@ -138,6 +138,10 @@ fun Application.configureDatabases() {
         // Добавляем колонки, которых может не быть в уже существующей таблице
         exec("ALTER TABLE workouts ADD COLUMN IF NOT EXISTS track TEXT")
         exec("ALTER TABLE participant_groups ALTER COLUMN distance_id TYPE BIGINT USING distance_id::BIGINT")
+        // Группа может быть без дистанции (регистрация открыта до планирования дистанций). Раньше
+        // «без дистанции» хранилось как 0 — Gson клал JSON null в Kotlin `Long` нулём.
+        exec("ALTER TABLE participant_groups ALTER COLUMN distance_id DROP NOT NULL")
+        exec("UPDATE participant_groups SET distance_id = NULL WHERE distance_id = 0")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS status VARCHAR(100) NOT NULL DEFAULT 'CREATED'")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS results_status VARCHAR(100) NOT NULL DEFAULT 'NOT_PUBLISHED'")
         exec("ALTER TABLE competitions ADD COLUMN IF NOT EXISTS registration_start BIGINT")
