@@ -6,6 +6,7 @@ import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.S3Configuration
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import java.awt.RenderingHints
@@ -65,6 +66,17 @@ class UploadService {
         )
 
         return "https://$bucket.storage.yandexcloud.net/$key"
+    }
+
+    /**
+     * Удаляет файл карты дистанции по URL, который вернул [upload]. Чужие URL и файлы других
+     * типов (аватары, обложки) не трогаем — возвращаем false.
+     */
+    fun deleteDistanceMap(url: String): Boolean {
+        val key = url.removePrefix("https://$bucket.storage.yandexcloud.net/")
+        if (key == url || !key.startsWith("$DISTANCE_MAP_TYPE/")) return false
+        s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build())
+        return true
     }
 
     /**

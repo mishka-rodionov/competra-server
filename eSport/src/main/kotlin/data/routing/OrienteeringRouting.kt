@@ -1,6 +1,7 @@
 package com.competra.data.routing
 
 import com.competra.data.requests.orienteering.DistanceRequest
+import com.competra.optionalUserId
 import com.competra.data.requests.orienteering.OrienteeringCompetitionRequest
 import com.competra.data.util.IOFXmlParser
 import io.ktor.http.content.PartData
@@ -157,16 +158,16 @@ fun Route.orienteeringPublicRoutes(
     }
 
     // Дистанция (в т.ч. очки/координаты КП) нужна анонимным пользователям для темпа в сплитах и
-    // графика очков BY_CHOICE — тот же уровень доступа, что и у результатов/участников выше:
-    // публично для любого, кто знает competitionId, без проверки владельца или статуса
-    // соревнования (тот же паттерн, что и во всех остальных ручках этой группы).
+    // графика очков BY_CHOICE — ручка публичная, как и результаты/участники выше. Но до старта
+    // соревнования карту и координаты видят только организаторы (см. DistanceService.getByCompetition),
+    // поэтому токен, если он есть, читаем без обязательной авторизации.
     get("/event/orienteering/distances") {
         val competitionId = call.request.queryParameters["competitionId"]
             ?: return@get call.respond(
                 HttpStatusCode.BadRequest,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "competitionId is required")) }
             )
-        val result = distanceService.getByCompetition(competitionId)
+        val result = distanceService.getByCompetition(competitionId, call.optionalUserId())
         call.respond(CommonModel<Any>().also { model ->
             model.status = 1
             model.result = result
@@ -194,7 +195,7 @@ fun Route.orienteeringPublicRoutes(
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(400, "id is required")) }
             )
         val userId = call.request.queryParameters["userId"]
-        val detail = competitionService.getByIdOrLegacy(id, userId)
+        val detail = competitionService.getByIdOrLegacy(id, userId, call.optionalUserId())
             ?: return@get call.respond(
                 HttpStatusCode.NotFound,
                 CommonModel<Any>().also { it.status = 0; it.errors = listOf(BaseError(404, "Competition not found")) }

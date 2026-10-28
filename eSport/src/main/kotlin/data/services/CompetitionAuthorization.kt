@@ -103,6 +103,27 @@ fun hasCompetitionPermission(competitionId: String, userId: String, permission: 
     }
 
 /**
+ * true, если userId — организатор соревнования с любой ролью (включая OTHER): владелец,
+ * FOUNDER/ADMIN клуба-организатора или строка в [CompetitionOrganizers]. Шире любого
+ * отдельного [CompetitionPermission]. Внутри открытой транзакции.
+ */
+fun isCompetitionOrganizer(competitionId: String, userId: String): Boolean {
+    val comp = Competitions.selectAll()
+        .where { Competitions.id eq competitionId }
+        .singleOrNull() ?: return false
+    if (comp[Competitions.ownerId] == userId) return true
+    val isClubAdmin = comp[Competitions.organizingClubId]?.let { clubId ->
+        ClubMembers.selectAll()
+            .where { (ClubMembers.clubId eq clubId) and (ClubMembers.userId eq userId) and (ClubMembers.role inList CLUB_ADMIN_ROLES) }
+            .any()
+    } ?: false
+    if (isClubAdmin) return true
+    return CompetitionOrganizers.selectAll()
+        .where { (CompetitionOrganizers.competitionId eq competitionId) and (CompetitionOrganizers.userId eq userId) }
+        .any()
+}
+
+/**
  * Зарегистрированные пользователи, которые могут выполнить [permission] над соревнованием:
  * владелец, FOUNDER/ADMIN клуба-организатора и организаторы с подходящей ролью.
  * Внутри открытой транзакции.

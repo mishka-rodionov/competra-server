@@ -178,22 +178,6 @@ class OrienteeringCompetitionService(
     private fun defaultOvertimePolicy(direction: String, byChoiceMode: String): String =
         if (ranksByScore(direction, byChoiceMode)) OvertimePolicy.SCORE_PENALTY.name else OvertimePolicy.DEFAULT.name
 
-    private fun computeEffectiveStatus(
-        storedStatus: String,
-        registrationStart: Long?,
-        registrationEnd: Long?,
-        startTime: Long?
-    ): String {
-        if (storedStatus == "IN_PROGRESS" || storedStatus == "FINISHED") return storedStatus
-        val now = System.currentTimeMillis()
-        return when {
-            startTime != null && now >= startTime -> "IN_PROGRESS"
-            registrationEnd != null && now >= registrationEnd -> "REGISTRATION_CLOSED"
-            registrationStart == null || now >= registrationStart -> "REGISTRATION_OPEN"
-            else -> "CREATED"
-        }
-    }
-
     /**
      * Точечно обновляет [Competitions.status] для соревнований, у которых наступило
      * новое временное состояние. Не трогает ручные/терминальные статусы
@@ -643,7 +627,16 @@ class OrienteeringCompetitionService(
         PagedResponse(items = rows.take(limit), hasMore = rows.size > limit)
     }
 
-    suspend fun getById(competitionId: String, userId: String? = null): CompetitionDetailResponse? = dbQuery {
+    /**
+     * @param userId из query-параметра — только для [CompetitionDetailResponse.isUserRegistered].
+     * @param viewerUserId из проверенного токена — для [CompetitionDetailResponse.viewerIsOrganizer]:
+     *   query-параметру доверять нельзя.
+     */
+    suspend fun getById(
+        competitionId: String,
+        userId: String? = null,
+        viewerUserId: String? = null
+    ): CompetitionDetailResponse? = dbQuery {
         val comp = Competitions
             .join(UserService.Users, JoinType.LEFT, Competitions.mainOrganizerId, UserService.Users.id)
             .selectAll()
@@ -755,6 +748,7 @@ class OrienteeringCompetitionService(
             timeZoneId = comp[Competitions.timeZoneId],
             participantGroups = groups,
             isUserRegistered = isUserRegistered,
+            viewerIsOrganizer = viewerUserId != null && isCompetitionOrganizer(competitionId, viewerUserId),
             isTest = comp[Competitions.isTest],
             updatedAt = orient?.get(OrienteeringCompetitions.updatedAt) ?: comp[Competitions.updatedAt]
         )
@@ -765,8 +759,12 @@ class OrienteeringCompetitionService(
      * по [Competitions.legacyId]. Позволяет старым клиентам, ещё знающим прежний BIGINT,
      * читать соревнование во время миграции на UUID.
      */
-    suspend fun getByIdOrLegacy(rawId: String, userId: String? = null): CompetitionDetailResponse? {
-        getById(rawId, userId)?.let { return it }
+    suspend fun getByIdOrLegacy(
+        rawId: String,
+        userId: String? = null,
+        viewerUserId: String? = null
+    ): CompetitionDetailResponse? {
+        getById(rawId, userId, viewerUserId)?.let { return it }
         val legacy = rawId.toLongOrNull() ?: return null
         val resolvedId = dbQuery {
             Competitions.selectAll()
@@ -774,7 +772,7 @@ class OrienteeringCompetitionService(
                 .singleOrNull()
                 ?.get(Competitions.id)
         } ?: return null
-        return getById(resolvedId, userId)
+        return getById(resolvedId, userId, viewerUserId)
     }
 
     /**

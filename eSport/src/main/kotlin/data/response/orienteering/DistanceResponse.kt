@@ -26,5 +26,10 @@ data class DistanceResponse(
     @SerializedName("mapTopRightLng") val mapTopRightLng: Double? = null,
     @SerializedName("mapBottomRightLat") val mapBottomRightLat: Double? = null,
     @SerializedName("mapBottomRightLng") val mapBottomRightLng: Double? = null,
+    /**
+     * Прикреплена ли карта. До старта соревнования не-организаторам [mapUrl], углы карты и все
+     * координаты (КП, старт, финиш) не отдаются — флаг позволяет показать «карта откроется после старта».
+     */
+    @SerializedName("hasMap") val hasMap: Boolean = false,
     @SerializedName("updatedAt") val updatedAt: Long = 0L
 )

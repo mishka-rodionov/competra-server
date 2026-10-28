@@ -78,6 +78,11 @@ data class CompetitionDetailResponse(
     val timeZoneId: String,
     val participantGroups: List<ParticipantGroupDetailResponse>,
     val isUserRegistered: Boolean = false,
+    /**
+     * Зритель (по Bearer-токену) — организатор соревнования с любой ролью. Клиенты показывают ему
+     * онлайн-треки до старта — проверить, что трекинг работает; остальным — только после старта.
+     */
+    val viewerIsOrganizer: Boolean = false,
     /** Тестовое соревнование: видно только владельцу, исключено из публичной ленты. */
     val isTest: Boolean = false,
     val updatedAt: Long = 0L

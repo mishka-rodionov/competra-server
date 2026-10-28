@@ -62,10 +62,10 @@ fun Application.configureRouting() {
     val resultEventPublisher = ResultEventPublisher(System.getenv("RABBITMQ_URI"), log)
     monitor.subscribe(ApplicationStopping) { resultEventPublisher.close() }
     val resultService = OrienteeringResultService(resultEventPublisher)
-    val distanceService = DistanceService()
+    val uploadService = UploadService()
+    val distanceService = DistanceService(uploadService)
     val teamStandingsService = TeamStandingsService()
     val organizerService = CompetitionOrganizerService()
-    val uploadService = UploadService()
     val deviceTokenService = DeviceTokenService()
     val fcmService = FcmService(deviceTokenService)
     val notificationLogService = CompetitionNotificationLogService()

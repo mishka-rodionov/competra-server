@@ -27,22 +27,6 @@ import java.util.UUID
 
 class OrienteeringParticipantService {
 
-    private fun computeEffectiveStatus(
-        storedStatus: String,
-        registrationStart: Long?,
-        registrationEnd: Long?,
-        startTime: Long?
-    ): String {
-        if (storedStatus == "IN_PROGRESS" || storedStatus == "FINISHED") return storedStatus
-        val now = System.currentTimeMillis()
-        return when {
-            startTime != null && now >= startTime -> "IN_PROGRESS"
-            registrationEnd != null && now >= registrationEnd -> "REGISTRATION_CLOSED"
-            registrationStart == null || now >= registrationStart -> "REGISTRATION_OPEN"
-            else -> "CREATED"
-        }
-    }
-
     suspend fun upsertAll(requests: List<OrienteeringParticipantRequest>, callerUserId: String): List<OrienteeringParticipantResponse> = dbQuery {
         val now = System.currentTimeMillis()
         requests.map { req ->
@@ -380,28 +364,6 @@ class OrienteeringParticipantService {
         OrienteeringParticipants.deleteWhere { OrienteeringParticipants.id eq id } > 0
     }
 
-    /**
-     * true, если соревнование уже стартовало: сохранённый статус IN_PROGRESS/FINISHED/ARCHIVED
-     * либо наступило время старта (фоновый шедулер переводит статус с задержкой до 5 минут).
-     */
-    private fun isCompetitionStarted(competitionId: String): Boolean {
-        val comp = Competitions.selectAll()
-            .where { Competitions.id eq competitionId }
-            .singleOrNull() ?: return false
-        val storedStatus = comp[Competitions.status]
-        if (storedStatus in STARTED_STATUSES) return true
-        val orient = OrienteeringCompetitions.selectAll()
-            .where { OrienteeringCompetitions.id eq competitionId }
-            .singleOrNull()
-        val effectiveStatus = computeEffectiveStatus(
-            storedStatus = storedStatus,
-            registrationStart = comp[Competitions.registrationStart],
-            registrationEnd = comp[Competitions.registrationEnd],
-            startTime = orient?.get(OrienteeringCompetitions.startTime)
-        )
-        return storedStatus != "DRAFT" && effectiveStatus in STARTED_STATUSES
-    }
-
     private fun ResultRow.toResponse() = OrienteeringParticipantResponse(
         id = this[OrienteeringParticipants.id],
         userId = this[OrienteeringParticipants.userId],
@@ -421,9 +383,4 @@ class OrienteeringParticipantService {
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         ioTransaction { block() }
-
-    companion object {
-        /** Статусы, после которых участника нельзя удалить. */
-        private val STARTED_STATUSES = setOf("IN_PROGRESS", "FINISHED", "ARCHIVED")
-    }
 }

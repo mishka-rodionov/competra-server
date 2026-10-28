@@ -49,7 +49,7 @@
 | Метод | Путь | Тело / параметры | Описание |
 |---|---|---|---|
 | GET | `/api/event/orienteering/competitions/public` | query: `kind_of_sports[]`, `statuses[]`, `date_from`, `date_to`, `includeTest`, `query`, `page`, `limit` | Публичный список соревнований с фильтрами и пагинацией |
-| GET | `/api/event/orienteering/competitions/public/{id}` | query: `userId` (опц.) | Детали соревнования (`CompetitionDetailResponse`); `id` — UUID или legacy-число |
+| GET | `/api/event/orienteering/competitions/public/{id}` | query: `userId` (опц.); необязательный Bearer-токен | Детали соревнования (`CompetitionDetailResponse`); `id` — UUID или legacy-число. `viewerIsOrganizer` — пользователь из токена организатор соревнования (любая роль), иначе `false` |
 | GET | `/api/event/orienteering/competitions/{id}/team-standings` | — | Командный зачёт (`TeamStandingsResponse`): зачёт в каждой группе и общие (MEN/WOMEN/ALL), вычисляется из результатов; `result = null`, если зачёт не включён (`teamScoring` соревнования) |
 | GET | `/api/event/orienteering/competitions/{id}` | — | Orienteering-часть соревнования по UUID |
 | GET | `/api/event/orienteering/participants` | query: `groupId` | Участники группы |
@@ -57,7 +57,7 @@
 | GET | `/api/event/orienteering/participantGroups` | query: `competitionId` | Группы соревнования |
 | GET | `/api/event/orienteering/results/competition` | query: `competitionId` | Результаты соревнования |
 | GET | `/api/event/orienteering/organizers` | query: `competitionId` | Организаторы соревнования (с ролями) |
-| GET | `/api/event/orienteering/distances` | query: `competitionId` | Дистанции соревнования (КП, очки, координаты) |
+| GET | `/api/event/orienteering/distances` | query: `competitionId`; необязательный Bearer-токен | Дистанции соревнования (КП, очки, координаты). До старта не-организатору `mapUrl`, углы карты и координаты КП/старта/финиша приходят `null`; `hasMap` — прикреплена ли карта |
 
 ### Под JWT 🔒
 
@@ -78,7 +78,7 @@
 | POST | `/api/event/orienteering/save/result` | `OrienteeringResultRequest` | Upsert одного результата |
 | POST | `/api/event/orienteering/save/results` | `List<OrienteeringResultRequest>` | Upsert результатов пачкой |
 | DELETE | `/api/event/orienteering/results/{id}` | — | Удалить результат |
-| POST | `/api/event/orienteering/save/distances` | `List<DistanceRequest>` | Upsert дистанций |
+| POST | `/api/event/orienteering/save/distances` | `List<DistanceRequest>` | Upsert дистанций. Поля карты, координаты старта/финиша и КП без координат = «не трогать» (у КП координаты берутся из сохранённого КП с тем же номером). Новый `mapUrl` вместо старого — старый файл удаляется из хранилища, если на него не ссылается другая дистанция |
 | DELETE | `/api/event/orienteering/distances/{id}` | — | Удалить дистанцию |
 | POST | `/api/event/orienteering/import/courses` | multipart: IOF XML-файл + `competitionId` | Импорт дистанций из IOF XML (Mapper) через `IOFXmlParser`; из `<Extensions>` берутся обязательные КП (`Required`) и минимум КП (`FreeOrder minControls`) |
 | POST | `/api/event/orienteering/register` | `RegisterParticipantRequest` | Самостоятельная регистрация пользователя на соревнование (`commandName` ≤ 200 символов, необязательный `teamId` своей клубной команды) |
