@@ -48,7 +48,7 @@ class LiveTrackServiceTest {
             return closed
         }
         override suspend fun findExpired(now: Long, inactiveSince: Long) = sessions.values.filter {
-            it.status == LiveTrackStatus.ACTIVE && (it.deadlineAt < now || (it.lastPointAt ?: it.startedAt) < inactiveSince)
+            it.status == LiveTrackStatus.ACTIVE && (it.deadlineAt < now || maxOf(it.lastPointAt ?: it.startedAt, it.registeredAt) < inactiveSince)
         }
         override suspend fun loadRecent(closedAfter: Long) = emptyList<Pair<LiveTrackSession, List<TrackPoint>>>()
         override suspend fun listByDistance(distanceId: Long) =
@@ -233,5 +233,90 @@ class LiveTrackServiceTest {
 
         assertEquals(LiveTrackStatus.STOPPED, ack.status)
         assertTrue(service.tracks(7).single().trackEncoded.isEmpty())
+    }
+
+    private val offlineId = "0b7f1c52-2b55-4c8e-9a43-6f1f6f2f9a10"
+
+    @Test
+    fun `offline session keeps the client id, its start time and is idempotent`() = runBlocking<Unit> {
+        service.initialize()
+        val recordedFrom = NOW - TimeUnit.MINUTES.toMillis(20)
+        val request = startRequest.copy(clientSessionId = offlineId, recordedFrom = recordedFrom)
+
+        val first = service.start("u1", request)
+        service.appendPoints("u1", offlineId, batch(1, recordedFrom + 1_000))
+        val repeated = service.start("u1", request)
+
+        assertEquals(offlineId, first.sessionId)
+        assertEquals(LiveTrackStatus.ACTIVE, first.status)
+        assertEquals(recordedFrom, repository.sessions.getValue(offlineId).startedAt)
+        assertEquals(1, repeated.lastBatchSeq)
+        assertFailsWith<ForbiddenException> { service.start("someone-else", request) }
+    }
+
+    @Test
+    fun `offline session replaces another active session of the participant`() = runBlocking<Unit> {
+        service.initialize()
+        val online = service.start("u1", startRequest).sessionId
+
+        service.start("u1", startRequest.copy(clientSessionId = offlineId, recordedFrom = NOW))
+
+        assertEquals(LiveTrackStatus.STOPPED, repository.sessions.getValue(online).status)
+        assertEquals(LiveTrackStatus.ACTIVE, repository.sessions.getValue(offlineId).status)
+    }
+
+    @Test
+    fun `late offline session after the result is created closed and accepts its points`() = runBlocking<Unit> {
+        service.initialize()
+        val recordedFrom = NOW
+        directory.context = participant.copy(hasFinalResult = true, competitionStatus = "FINISHED")
+        now = NOW + TimeUnit.HOURS.toMillis(5)
+
+        val response = service.start("u1", startRequest.copy(clientSessionId = offlineId, recordedFrom = recordedFrom))
+        service.appendPoints("u1", offlineId, batch(1, recordedFrom + 1_000, recordedFrom + 60_000))
+
+        assertEquals(LiveTrackStatus.FINISHED, response.status)
+        assertEquals(CloseReason.RESULT_SAVED, response.closeReason)
+        assertEquals(2, TrackCodec.decode(recordedFrom, repository.encoded[offlineId]).size)
+    }
+
+    @Test
+    fun `late offline session past the deadline is created timed out`() = runBlocking<Unit> {
+        service.initialize()
+        now = NOW + TimeUnit.HOURS.toMillis(5)
+
+        val response = service.start("u1", startRequest.copy(clientSessionId = offlineId, recordedFrom = NOW))
+
+        assertEquals(LiveTrackStatus.TIMED_OUT, response.status)
+        assertEquals(CloseReason.CONTROL_TIME, response.closeReason)
+    }
+
+    @Test
+    fun `offline session is rejected when older than 48 hours, from the future or not a uuid`() = runBlocking<Unit> {
+        service.initialize()
+        now = NOW + TimeUnit.HOURS.toMillis(49)
+        directory.context = participant.copy(competitionEndDate = NOW + TimeUnit.DAYS.toMillis(3))
+        assertFailsWith<UnprocessableEntityException> {
+            service.start("u1", startRequest.copy(clientSessionId = offlineId, recordedFrom = NOW))
+        }
+        assertFailsWith<io.ktor.server.plugins.BadRequestException> {
+            service.start("u1", startRequest.copy(clientSessionId = offlineId, recordedFrom = now + TimeUnit.MINUTES.toMillis(10)))
+        }
+        assertFailsWith<io.ktor.server.plugins.BadRequestException> {
+            service.start("u1", startRequest.copy(clientSessionId = "not-a-uuid", recordedFrom = now))
+        }
+    }
+
+    @Test
+    fun `sweep counts inactivity of a late session from its registration`() = runBlocking<Unit> {
+        service.initialize()
+        val recordedFrom = NOW
+        now = NOW + TimeUnit.MINUTES.toMillis(50)
+        service.start("u1", startRequest.copy(clientSessionId = offlineId, recordedFrom = recordedFrom))
+        service.appendPoints("u1", offlineId, batch(1, recordedFrom + 1_000))
+
+        assertEquals(0, service.sweep())
+        now += TimeUnit.MINUTES.toMillis(46)
+        assertEquals(1, service.sweep())
     }
 }

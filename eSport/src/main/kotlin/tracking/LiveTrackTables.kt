@@ -22,6 +22,9 @@ object LiveTrackSessions : Table("live_track_sessions") {
     val lastBatchSeq = integer("last_batch_seq").default(0)
     val consentAt = long("consent_at")
 
+    /** Когда сервер узнал о сессии; `null` у сессий, созданных до появления колонки (= [startedAt]). */
+    val registeredAt = long("registered_at").nullable()
+
     /** Трек в формате [TrackCodec] от [startedAt]; заполняется при закрытии сессии. */
     val trackEncoded = text("track_encoded").nullable()
 

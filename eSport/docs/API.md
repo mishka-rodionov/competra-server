@@ -184,6 +184,6 @@ Nginx проксирует `/api/live-track/` в контейнер `tracking`.
 | GET | `/api/live-track/competitions/{competitionId}/distances` | — | Дистанции соревнования, по которым есть треки | `LiveTrackRouting.kt` |
 | GET | `/api/live-track/distances/{distanceId}/live` | query: `since` (курсор) | Живой снимок дистанции | `LiveTrackRouting.kt` |
 | GET | `/api/live-track/distances/{distanceId}/tracks` | — | Треки дистанции | `LiveTrackRouting.kt` |
-| POST 🔒 | `/api/live-track/sessions` | `StartSessionRequest` | Старт/возобновление сессии трекинга | `LiveTrackRouting.kt` |
+| POST 🔒 | `/api/live-track/sessions` | `StartSessionRequest` (`competitionId`, `participantId?`, `consent`, `clientSessionId?`, `recordedFrom?`) | Старт/возобновление сессии трекинга. `clientSessionId` — UUID сессии, созданной телефоном (трек мог начаться без сети), повтор с ним возвращает ту же сессию; `recordedFrom` — начало записи, не старше 48 ч (иначе 422). Сессия, о которой сервер узнал позже 5 мин после начала записи, после результата или КВ создаётся сразу закрытой — точки принимаются как досылка | `LiveTrackRouting.kt` |
 | POST 🔒 | `/api/live-track/sessions/{sessionId}/points` | `PointsBatchRequest` | Батч GPS-точек | `LiveTrackRouting.kt` |
 | POST 🔒 | `/api/live-track/sessions/{sessionId}/stop` | — | Ручная остановка сессии | `LiveTrackRouting.kt` |

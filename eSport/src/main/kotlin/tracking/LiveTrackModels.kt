@@ -53,6 +53,8 @@ enum class CloseReason {
  * @property deadlineAt Крайний срок, после которого сторож закроет сессию (Unix ms).
  * @property lastBatchSeq Номер последнего принятого батча (идемпотентность повторов).
  * @property consentAt Когда бегун согласился на публикацию трека (Unix ms).
+ * @property registeredAt Когда сервер узнал о сессии (Unix ms). Совпадает с [startedAt], кроме
+ *   трека, начатого без сети: тогда сторож отсчитывает бездействие от этого момента, а не от старых точек.
  */
 data class LiveTrackSession(
     val id: String,
@@ -71,7 +73,8 @@ data class LiveTrackSession(
     val lastPointAt: Long?,
     val deadlineAt: Long,
     val lastBatchSeq: Int,
-    val consentAt: Long
+    val consentAt: Long,
+    val registeredAt: Long = startedAt
 )
 
 /**
@@ -104,11 +107,18 @@ data class ArchivedSession(
  * @property participantId Участник, от имени которого пишется трек. Необязателен: без него
  *   участник ищется среди участников соревнования по `userId` из JWT.
  * @property consent Согласие на публикацию трека (обязательно `true`).
+ * @property clientSessionId UUID сессии, созданный телефоном: трек может начаться без сети, и
+ *   сервер узнаёт о нём позже. Повторный старт с тем же id возвращает ту же сессию. Без него id
+ *   выдаёт сервер (старые клиенты).
+ * @property recordedFrom Когда телефон начал запись (Unix ms), если сессия создана без сети.
+ *   Не старше [MAX_OFFLINE_TRACK_AGE_MS]; по нему проверяется день соревнования.
  */
 data class StartSessionRequest(
     @SerializedName("competitionId") val competitionId: String?,
     @SerializedName("participantId") val participantId: String?,
-    @SerializedName("consent") val consent: Boolean?
+    @SerializedName("consent") val consent: Boolean?,
+    @SerializedName("clientSessionId") val clientSessionId: String? = null,
+    @SerializedName("recordedFrom") val recordedFrom: Long? = null
 )
 
 /**

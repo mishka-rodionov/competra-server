@@ -42,6 +42,19 @@ val RECENT_CLOSED_WINDOW_MS: Long = TimeUnit.HOURS.toMillis(1)
  */
 private val LATE_POINTS_WINDOW_MS = TimeUnit.HOURS.toMillis(2)
 
+/**
+ * Трек, начатый без сети, принимается не позже стольких после начала записи (бегун вернулся
+ * домой без связи, многодневка).
+ */
+val MAX_OFFLINE_TRACK_AGE_MS: Long = TimeUnit.HOURS.toMillis(48)
+
+/**
+ * Сессия, о которой сервер узнал позже стольких после начала записи, считается «задним числом»:
+ * соревнование уже могло завершиться, а у участника появиться результат — её не отклоняем,
+ * а сразу закрываем и принимаем точки как досылку.
+ */
+private val LATE_REGISTRATION_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(5)
+
 /** Статусы соревнования, при которых трекинг уже не включить. */
 private val CLOSED_COMPETITION_STATUSES = setOf("FINISHED", "ARCHIVED")
 
@@ -78,12 +91,29 @@ class LiveTrackService(
     /**
      * Старт трекинга участником. Если у участника уже есть активная сессия (перезапуск приложения),
      * возвращается она.
+     *
+     * Сессия с [StartSessionRequest.clientSessionId] могла начаться на телефоне без сети: тогда
+     * повтор с тем же id возвращает её (в любом статусе), чужая активная сессия участника
+     * закрывается (новая запись с телефона важнее), а проверки дня соревнования и результата
+     * считаются от [StartSessionRequest.recordedFrom]. Если сервер узнал о записи позже
+     * [LATE_REGISTRATION_THRESHOLD_MS], а у участника уже результат или вышло контрольное время,
+     * сессия создаётся сразу закрытой — точки принимаются как досылка.
      */
     suspend fun start(userId: String, request: StartSessionRequest): SessionResponse {
         requireReady()
         val competitionId = request.competitionId?.takeIf { it.isNotBlank() }
             ?: throw BadRequestException("competitionId is required")
         if (request.consent != true) throw UnprocessableEntityException("Нужно согласие на публикацию трека")
+        val clientSessionId = request.clientSessionId?.takeIf { it.isNotBlank() }?.also { id ->
+            runCatching { UUID.fromString(id) }.getOrNull() ?: throw BadRequestException("clientSessionId must be a UUID")
+        }
+        clientSessionId?.let { id ->
+            repository.findById(id)?.let { existing ->
+                if (existing.userId != userId) throw ForbiddenException("Чужая сессия трекинга")
+                store.upsertSession(existing)
+                return existing.toSessionResponse()
+            }
+        }
         val participantId = request.participantId?.takeIf { it.isNotBlank() }
             ?: resolveParticipantId(competitionId, userId)
 
@@ -92,22 +122,34 @@ class LiveTrackService(
         if (participant.userId != userId) throw ForbiddenException("Можно включить трекинг только для своего участия")
 
         repository.findActiveByParticipant(participantId)?.let { active ->
-            store.upsertSession(active)
-            return active.toSessionResponse()
+            if (clientSessionId == null) {
+                store.upsertSession(active)
+                return active.toSessionResponse()
+            }
+            close(active.id, LiveTrackStatus.STOPPED, CloseReason.MANUAL)
         }
 
         val now = clock()
+        val startedAt = recordingStart(request.recordedFrom, now)
+        val isLate = now - startedAt > LATE_REGISTRATION_THRESHOLD_MS
         val windowStart = participant.competitionStartDate - COMPETITION_WINDOW_MS
         val windowEnd = (participant.competitionEndDate ?: participant.competitionStartDate) + COMPETITION_WINDOW_MS
-        if (now !in windowStart..windowEnd || participant.competitionStatus in CLOSED_COMPETITION_STATUSES) {
+        if (startedAt !in windowStart..windowEnd || (!isLate && participant.competitionStatus in CLOSED_COMPETITION_STATUSES)) {
             throw UnprocessableEntityException("Трекинг доступен только в день соревнования")
         }
-        if (participant.hasFinalResult) throw UnprocessableEntityException("У участника уже есть результат")
+        if (participant.hasFinalResult && !isLate) throw UnprocessableEntityException("У участника уже есть результат")
         val distanceId = participant.distanceId
             ?: throw UnprocessableEntityException("Группе участника не назначена дистанция")
 
+        val deadlineAt = deadlineFor(participant, startedAt)
+        val closedAs = when {
+            !isLate -> null
+            participant.hasFinalResult -> LiveTrackStatus.FINISHED to CloseReason.RESULT_SAVED
+            deadlineAt < now -> LiveTrackStatus.TIMED_OUT to CloseReason.CONTROL_TIME
+            else -> null
+        }
         val session = LiveTrackSession(
-            id = UUID.randomUUID().toString(),
+            id = clientSessionId ?: UUID.randomUUID().toString(),
             competitionId = competitionId,
             distanceId = distanceId,
             distanceName = participant.distanceName,
@@ -116,25 +158,38 @@ class LiveTrackService(
             displayName = participant.displayName,
             groupName = participant.groupName,
             startNumber = participant.startNumber,
-            status = LiveTrackStatus.ACTIVE,
-            closeReason = null,
-            startedAt = now,
-            closedAt = null,
+            status = closedAs?.first ?: LiveTrackStatus.ACTIVE,
+            closeReason = closedAs?.second,
+            startedAt = startedAt,
+            closedAt = if (closedAs != null) now else null,
             lastPointAt = null,
-            deadlineAt = deadlineFor(participant, now),
+            deadlineAt = deadlineAt,
             lastBatchSeq = 0,
-            consentAt = now
+            consentAt = now,
+            registeredAt = now
         )
         try {
             repository.insert(session)
         } catch (e: Exception) {
-            // Гонка двух параллельных стартов: уникальный индекс активной сессии участника.
-            val active = repository.findActiveByParticipant(participantId) ?: throw e
-            store.upsertSession(active)
-            return active.toSessionResponse()
+            // Гонка двух параллельных стартов: тот же clientSessionId или уникальный индекс активной сессии участника.
+            val existing = clientSessionId?.let { repository.findById(it) }
+                ?: repository.findActiveByParticipant(participantId)
+                ?: throw e
+            store.upsertSession(existing)
+            return existing.toSessionResponse()
         }
         store.upsertSession(session)
         return session.toSessionResponse()
+    }
+
+    /** Начало записи: [recordedFrom] от телефона (не из будущего, не старше 48 ч) или «сейчас». */
+    private fun recordingStart(recordedFrom: Long?, now: Long): Long {
+        if (recordedFrom == null) return now
+        if (recordedFrom > now + POINT_FUTURE_TOLERANCE_MS) throw BadRequestException("recordedFrom is in the future")
+        if (now - recordedFrom > MAX_OFFLINE_TRACK_AGE_MS) {
+            throw UnprocessableEntityException("Трек записан больше 48 часов назад и уже не может быть загружен")
+        }
+        return minOf(recordedFrom, now)
     }
 
     /** Принимает батч точек от владельца сессии. Повторный батч подтверждается без записи. */
@@ -276,8 +331,8 @@ class LiveTrackService(
         if (!ready) throw ServiceUnavailableException("Трекинг запускается, повторите позже")
     }
 
-    private fun deadlineFor(participant: ParticipantContext, now: Long): Long {
-        val start = maxOf(now, participant.plannedStartTime ?: now)
+    private fun deadlineFor(participant: ParticipantContext, startedAt: Long): Long {
+        val start = maxOf(startedAt, participant.plannedStartTime ?: startedAt)
         val controlTime = participant.controlTimeMinutes?.takeIf { it > 0 }
         return if (controlTime != null) {
             start + TimeUnit.MINUTES.toMillis(controlTime.toLong()) + CONTROL_TIME_GRACE_MS

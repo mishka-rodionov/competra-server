@@ -80,6 +80,8 @@ class ExposedLiveTrackRepository(private val db: Database) : LiveTrackRepository
             "CREATE UNIQUE INDEX IF NOT EXISTS ux_live_track_sessions_active_participant " +
                 "ON live_track_sessions (participant_id) WHERE status = 'ACTIVE'"
         )
+        // SchemaUtils.create не добавляет колонки в существующую таблицу.
+        exec("ALTER TABLE live_track_sessions ADD COLUMN IF NOT EXISTS registered_at BIGINT")
         Unit
     }
 
@@ -112,6 +114,7 @@ class ExposedLiveTrackRepository(private val db: Database) : LiveTrackRepository
             it[deadlineAt] = session.deadlineAt
             it[lastBatchSeq] = session.lastBatchSeq
             it[consentAt] = session.consentAt
+            it[registeredAt] = session.registeredAt
         }
         Unit
     }
@@ -191,7 +194,7 @@ class ExposedLiveTrackRepository(private val db: Database) : LiveTrackRepository
         LiveTrackSessions.selectAll()
             .where { LiveTrackSessions.status eq LiveTrackStatus.ACTIVE.name }
             .map { it.toSession() }
-            .filter { it.deadlineAt < now || (it.lastPointAt ?: it.startedAt) < inactiveSince }
+            .filter { it.deadlineAt < now || maxOf(it.lastPointAt ?: it.startedAt, it.registeredAt) < inactiveSince }
     }
 
     override suspend fun loadRecent(closedAfter: Long): List<Pair<LiveTrackSession, List<TrackPoint>>> = tx {
@@ -264,5 +267,6 @@ private fun ResultRow.toSession() = LiveTrackSession(
     lastPointAt = this[LiveTrackSessions.lastPointAt],
     deadlineAt = this[LiveTrackSessions.deadlineAt],
     lastBatchSeq = this[LiveTrackSessions.lastBatchSeq],
-    consentAt = this[LiveTrackSessions.consentAt]
+    consentAt = this[LiveTrackSessions.consentAt],
+    registeredAt = this[LiveTrackSessions.registeredAt] ?: this[LiveTrackSessions.startedAt]
 )
