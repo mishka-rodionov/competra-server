@@ -48,4 +48,16 @@ class NameMatchingTest {
         assertFalse(match("Павел", "Семенов"))
         assertFalse(namesMatch("", "", null, "", ""))
     }
+
+    @Test
+    fun `registration name from profile matches old profile name ignoring case and yo`() {
+        assertTrue(isRegistrationNameFromProfile("Пётр", "Семёнов", " петр ", "СЕМЕНОВ"))
+    }
+
+    @Test
+    fun `registration edited by organizer or swapped is not from profile`() {
+        assertFalse(isRegistrationNameFromProfile("Пётр", "Семёнов", "Пётр", "Семенова"))
+        assertFalse(isRegistrationNameFromProfile("Пётр", "Семёнов", "Семёнов", "Пётр"))
+        assertFalse(isRegistrationNameFromProfile("", "", "", ""))
+    }
 }

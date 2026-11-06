@@ -257,6 +257,45 @@ class OrienteeringParticipantService {
     }
 
     /**
+     * Переносит новое ФИО из профиля в регистрации пользователя на ещё не стартовавшие соревнования
+     * (см. [isCompetitionStarted]): прошедшие протоколы хранят имя, под которым человек бежал.
+     * Строки, где ФИО уже не совпадает со старым ФИО профиля ([isRegistrationNameFromProfile]),
+     * не трогаем — его поправил организатор. updatedAt обновляется, чтобы правку подтянул
+     * офлайн-клиент организатора. Возвращает число обновлённых строк.
+     */
+    suspend fun syncRegistrationNames(
+        userId: String,
+        oldFirstName: String,
+        oldLastName: String,
+        newFirstName: String,
+        newLastName: String,
+    ): Int = dbQuery {
+        val first = newFirstName.trim()
+        val last = newLastName.trim()
+        if (first.isEmpty() || last.isEmpty()) return@dbQuery 0
+        if (first == oldFirstName && last == oldLastName) return@dbQuery 0
+
+        val now = System.currentTimeMillis()
+        OrienteeringParticipants.selectAll()
+            .where { OrienteeringParticipants.userId eq userId }
+            .filter { row ->
+                isRegistrationNameFromProfile(
+                    oldFirstName = oldFirstName,
+                    oldLastName = oldLastName,
+                    participantFirstName = row[OrienteeringParticipants.firstName],
+                    participantLastName = row[OrienteeringParticipants.lastName],
+                ) && !isCompetitionStarted(row[OrienteeringParticipants.competitionId])
+            }
+            .sumOf { row ->
+                OrienteeringParticipants.update({ OrienteeringParticipants.id eq row[OrienteeringParticipants.id] }) {
+                    it[firstName] = first
+                    it[lastName] = last
+                    it[updatedAt] = now
+                }
+            }
+    }
+
+    /**
      * Отменяет регистрацию пользователя на соревнование.
      * Отмена доступна только пока регистрация не закрыта (статус CREATED или REGISTRATION_OPEN):
      * после окончания регистрации — в т.ч. досрочного, когда организатор кнопкой «Завершить

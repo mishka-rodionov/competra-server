@@ -33,7 +33,7 @@
 | POST | `/api/user/verify_code` | `CodeVerificationRequest` | Проверка кода → access + refresh токены |
 | POST | `/api/refresh_token` | `RefreshRequest` | Обновление access-токена по refresh-токену |
 | GET 🔒 | `/api/user/profile` | — | Профиль текущего пользователя |
-| PATCH 🔒 | `/api/user/profile` | `UserProfileRequest` | Обновить профиль |
+| PATCH 🔒 | `/api/user/profile` | `UserProfileRequest` | Обновить профиль. Смена имени/фамилии переносится в регистрации пользователя на ещё не стартовавшие соревнования, если ФИО участника совпадает со старым ФИО профиля |
 | DELETE 🔒 | `/api/user/me` | — | Удалить аккаунт (участники обезличиваются, результаты сохраняются) |
 
 ## Загрузка файлов — `Routing.kt`

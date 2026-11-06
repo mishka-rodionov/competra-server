@@ -34,3 +34,20 @@ internal fun namesMatch(
     }
     return participant in variants
 }
+
+/**
+ * Можно ли перенести новое ФИО из профиля в регистрацию: строка участника всё ещё совпадает со старым
+ * ФИО профиля (с точностью до [normalizePersonName]). Если не совпадает — ФИО правил организатор
+ * или пользователь записался под другим именем, такую строку не трогаем. Чистая функция.
+ */
+internal fun isRegistrationNameFromProfile(
+    oldFirstName: String,
+    oldLastName: String,
+    participantFirstName: String,
+    participantLastName: String,
+): Boolean {
+    val first = normalizePersonName(oldFirstName)
+    val last = normalizePersonName(oldLastName)
+    if (first.isEmpty() || last.isEmpty()) return false
+    return normalizePersonName(participantFirstName) == first && normalizePersonName(participantLastName) == last
+}

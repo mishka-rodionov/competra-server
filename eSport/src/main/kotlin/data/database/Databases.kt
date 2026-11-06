@@ -4,6 +4,7 @@ import com.rodionov.remote.request.user.UserRequest
 import com.competra.UserEntity
 import com.competra.UserService
 import com.competra.data.requests.UserProfileRequest
+import com.competra.data.services.OrienteeringParticipantService
 import com.competra.data.util.requireEnv
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.authenticate
@@ -107,6 +108,7 @@ fun Application.configureDatabases() {
 
     val database = Database.connect(createMainDataSource())
     val userService = UserService(database)
+    val participantService = OrienteeringParticipantService()
     transaction(database) {
         SchemaUtils.create(
             Competitions,
@@ -627,6 +629,13 @@ fun Application.configureDatabases() {
                     gender = request.gender ?: current.gender,
                 ))
                 val updated = userService.read(userId)!!
+                participantService.syncRegistrationNames(
+                    userId = userId,
+                    oldFirstName = current.firstName,
+                    oldLastName = current.lastName,
+                    newFirstName = updated.firstName,
+                    newLastName = updated.lastName,
+                )
                 call.respond(CommonModel<UserResponse>().also {
                     it.status = 1
                     it.result = UserResponse(
