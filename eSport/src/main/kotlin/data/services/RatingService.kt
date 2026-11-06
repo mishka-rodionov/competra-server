@@ -229,10 +229,12 @@ class RatingService {
             .where { RatingCompetitions.ratingId eq ratingId }
             .toList()
 
-        data class Contribution(val competitionId: String, val place: Int, val points: Int)
+        data class Contribution(val competitionId: String, val place: Int, val points: Int, val participantId: String)
+        data class Identity(val userId: String?, val firstName: String, val lastName: String)
 
         val contributionsByParticipant = mutableMapOf<String, MutableList<Contribution>>()
         val displayNameByParticipant = mutableMapOf<String, String>()
+        val identityByParticipant = mutableMapOf<String, Identity>()
 
         ratingCompetitionRows.forEach { ratingCompetitionRow ->
             val ratingCompetitionId = ratingCompetitionRow[RatingCompetitions.id]
@@ -267,8 +269,17 @@ class RatingService {
                 val key = participantKey(participantUserId, firstName, lastName)
 
                 displayNameByParticipant.putIfAbsent(key, "$firstName $lastName".trim())
+                identityByParticipant.putIfAbsent(
+                    key,
+                    Identity(participantUserId?.takeIf { it.isNotBlank() }, firstName, lastName),
+                )
                 contributionsByParticipant.getOrPut(key) { mutableListOf() }
-                    .add(Contribution(competitionId, place, RatingPointsTable.pointsForPlace(place)))
+                    .add(
+                        Contribution(
+                            competitionId, place, RatingPointsTable.pointsForPlace(place),
+                            resultRow[OrienteeringResults.participantId],
+                        )
+                    )
             }
         }
 
@@ -285,24 +296,34 @@ class RatingService {
             }
             prevTotal = total
 
+            val identity = identityByParticipant.getValue(key)
             RatingStandingEntry(
                 participantKey = key,
                 displayName = displayNameByParticipant.getValue(key),
                 totalPoints = total,
                 rank = rank,
                 breakdown = contributionsByParticipant.getValue(key).map {
-                    RatingStandingBreakdownEntry(it.competitionId, it.place, it.points)
-                }
+                    RatingStandingBreakdownEntry(it.competitionId, it.place, it.points, it.participantId)
+                },
+                userId = identity.userId,
+                firstName = identity.firstName,
+                lastName = identity.lastName,
             )
         }
 
-        RatingStandingsResponse(ratingGroupId, standings)
+        val duplicates = findDuplicateGroups(
+            standings.map { StandingIdentity(it.participantKey, it.userId, it.firstName, it.lastName) }
+        )
+        RatingStandingsResponse(ratingGroupId, standings, duplicates)
     }
 
-    /** Ключ участника для сопоставления между стартами: userId, если он есть, иначе нормализованные фамилия+имя. */
+    /**
+     * Ключ участника для сопоставления между стартами: userId, если он есть, иначе нормализованные
+     * фамилия+имя (регистр, ё/е, лишние пробелы — «Изгарёв» и «Изгарев» один человек).
+     */
     private fun participantKey(userId: String?, firstName: String, lastName: String): String =
         if (!userId.isNullOrBlank()) "user:$userId"
-        else "guest:${lastName.trim().lowercase()}:${firstName.trim().lowercase()}"
+        else "guest:${normalizePersonName(lastName)}:${normalizePersonName(firstName)}"
 
     /**
      * Подсказка маппинга: если для группы соревнования уже есть сохранённый маппинг — возвращается он,

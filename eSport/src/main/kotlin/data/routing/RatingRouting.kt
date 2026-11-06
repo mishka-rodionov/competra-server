@@ -2,10 +2,12 @@ package com.competra.data.routing
 
 import com.competra.data.requests.rating.AddCompetitionToRatingRequest
 import com.competra.data.requests.rating.CreateRatingRequest
+import com.competra.data.requests.rating.MergeStandingsRequest
 import com.competra.data.requests.rating.SetGroupMappingRequest
 import com.competra.data.requests.rating.UpdateRatingRequest
 import com.competra.data.response.base.BaseError
 import com.competra.data.response.base.CommonModel
+import com.competra.data.services.ParticipantLinkRequestService
 import com.competra.data.services.RatingService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
@@ -65,7 +67,7 @@ fun Route.ratingPublicRoutes(ratingService: RatingService) {
     }
 }
 
-fun Route.ratingRoutes(ratingService: RatingService) {
+fun Route.ratingRoutes(ratingService: RatingService, participantLinkService: ParticipantLinkRequestService) {
     post("/clubs/{clubId}/ratings") {
         val userId = call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString()
         val clubId = call.parameters["clubId"]!!
@@ -112,5 +114,15 @@ fun Route.ratingRoutes(ratingService: RatingService) {
         val request = call.receive<SetGroupMappingRequest>()
         ratingService.setGroupMapping(id, competitionId, request, userId)
         call.respond(CommonModel<Any>().also { it.status = 1 })
+    }
+
+    /** Объединить дубли в таблице рейтинга (см. ParticipantLinkRequestService.mergeStandings). */
+    post("/ratings/{id}/standings/merge") {
+        val userId = call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString()
+        val id = call.parameters["id"]!!
+        val request = call.receive<MergeStandingsRequest>()
+        val standings = ratingService.getStandings(id, request.ratingGroupId).standings
+        val result = participantLinkService.mergeStandings(userId, standings, request.targetKey, request.sourceKeys)
+        call.respond(CommonModel<Any>().also { it.status = 1; it.result = result })
     }
 }

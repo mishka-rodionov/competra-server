@@ -107,6 +107,9 @@
 | PUT | `/api/event/orienteering/link-requests/{id}` | `ReviewParticipantLinkRequest` | Одобрить/отклонить заявку |
 | DELETE | `/api/event/orienteering/link-requests/{id}` | — | Отозвать свою заявку |
 | POST | `/api/event/orienteering/participants/{id}/unlink` | — | Отвязать участника от аккаунта |
+| GET | `/api/event/orienteering/participants/{id}/link-candidates` | query: `query` (по умолчанию — фамилия участника, ≥2 символов) | Аккаунты, к которым организатор может привязать участника (`LinkCandidateResponse[]`, до 20; без email/телефона; `nameMatches`, `eligibilityWarning`, `alreadyInCompetition`). Нужно право `MANAGE_PARTICIPANTS` |
+| POST | `/api/event/orienteering/participants/link` | `OrganizerLinkParticipantsRequest` `{userId, participantIds}` | Организатор сам привязывает участников к аккаунту, без заявки. Всё или ничего: `MANAGE_PARTICIPANTS` на каждое соревнование, 422 — участник привязан к другому / у аккаунта уже есть участник в соревновании. PENDING-заявки на участника закрываются (своя — APPROVED, чужие — REJECTED), пользователю пуш `participant_link_reviewed`. Ответ `{updatedCount}` |
+| POST | `/api/event/orienteering/participants/rename` | `RenameParticipantsRequest` `{participantIds, firstName, lastName}` | Привести непривязанных участников к одному ФИО (422 для привязанных). `MANAGE_PARTICIPANTS` на каждое соревнование. Ответ `{updatedCount}` |
 
 ## Клубы — `data/routing/ClubsRouting.kt`
 
@@ -149,13 +152,14 @@
 | GET | `/api/ratings/{id}` | — | Рейтинг по id |
 | GET | `/api/ratings/{id}/competitions` | — | Соревнования, входящие в рейтинг |
 | GET | `/api/ratings/{id}/competitions/{competitionId}/mapping-suggestions` | — | Подсказки маппинга групп соревнования на группы рейтинга |
-| GET | `/api/ratings/{id}/standings` | query: `groupId` | Таблица рейтинга по группе |
+| GET | `/api/ratings/{id}/standings` | query: `groupId` | Таблица рейтинга по группе. Строка склеивается по `user:<userId>`, иначе `guest:<фамилия>:<имя>` (регистр, ё/е и пробелы нормализуются); в строке `userId`, `firstName`, `lastName`, в `breakdown[]` — `participantId`; `possibleDuplicates` — группы `participantKey`, похожих на одного человека (та же фамилия, имя «М.» ~ «Михаил») |
 | POST 🔒 | `/api/clubs/{clubId}/ratings` | `CreateRatingRequest` | Создать рейтинг |
 | PUT 🔒 | `/api/ratings/{id}` | `UpdateRatingRequest` | Обновить рейтинг |
 | DELETE 🔒 | `/api/ratings/{id}` | — | Удалить рейтинг |
 | POST 🔒 | `/api/ratings/{id}/competitions` | `AddCompetitionToRatingRequest` | Добавить соревнование в рейтинг |
 | DELETE 🔒 | `/api/ratings/{id}/competitions/{competitionId}` | — | Убрать соревнование из рейтинга |
 | PUT 🔒 | `/api/ratings/{id}/competitions/{competitionId}/mapping` | `SetGroupMappingRequest` | Сохранить маппинг групп |
+| POST 🔒 | `/api/ratings/{id}/standings/merge` | `MergeStandingsRequest` `{ratingGroupId, targetKey, sourceKeys}` | Объединить дубли: основная строка — аккаунт → участники остальных строк привязываются к нему (как `participants/link`); обе без аккаунта → переименовываются в ФИО основной (как `participants/rename`). 422: два аккаунта / основная без аккаунта при источнике-аккаунте. Права — `MANAGE_PARTICIPANTS` на каждое затронутое соревнование. Ответ `{updatedCount}` |
 
 ## Тренировочный дневник — `data/routing/DiaryRouting.kt` 🔒
 

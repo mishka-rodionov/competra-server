@@ -140,7 +140,7 @@ fun Application.configureRouting() {
                 diaryRoutes(diaryWorkoutService)
                 clubsRoutes(clubService, clubMemberService, clubJoinRequestService)
                 teamsRoutes(teamService, teamMemberService)
-                ratingRoutes(ratingService)
+                ratingRoutes(ratingService, participantLinkRequestService)
                 participantLinkRoutes(participantLinkRequestService)
                 registrationTeamRoutes(registrationTeamService)
             }

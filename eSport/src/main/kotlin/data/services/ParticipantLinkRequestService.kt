@@ -12,6 +12,9 @@ import com.competra.data.response.orienteering.CompetitionLinkRequestResponse
 import com.competra.data.response.orienteering.LinkRequestResponse
 import com.competra.data.response.orienteering.LinkResultSummary
 import com.competra.data.response.orienteering.LinkSuggestionResponse
+import com.competra.data.response.orienteering.LinkCandidateResponse
+import com.competra.data.response.orienteering.OrganizerLinkResultResponse
+import com.competra.data.response.rating.RatingStandingEntry
 import io.ktor.server.plugins.NotFoundException
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.Op
@@ -483,6 +486,234 @@ class ParticipantLinkRequestService(private val fcmService: FcmService) {
         }.onFailure { log.warn("Failed to send link request push to userId=${notice.userId}", it) }
     }
 
+    /**
+     * Аккаунты, к которым организатор может привязать участника [participantId]: фамилия (или
+     * «фамилия имя») начинается с [query], по умолчанию — с фамилии участника. Полное совпадение ФИО — первыми.
+     */
+    suspend fun linkCandidates(participantId: String, requesterId: String, query: String?): List<LinkCandidateResponse> =
+        dbQuery {
+            val participant = OrienteeringParticipants.selectAll()
+                .where { OrienteeringParticipants.id eq participantId }
+                .singleOrNull() ?: throw NotFoundException("Участник не найден")
+            val competitionId = participant[OrienteeringParticipants.competitionId]
+            requireParticipantEditAccess(competitionId, requesterId)
+
+            val needle = normalizePersonName(query?.takeIf { it.isNotBlank() } ?: participant[OrienteeringParticipants.lastName])
+            if (needle.length < MIN_CANDIDATE_QUERY) return@dbQuery emptyList()
+
+            val competition = Competitions.selectAll().where { Competitions.id eq competitionId }.single()
+            val year = competitionYear(competition[Competitions.startDate], competition[Competitions.timeZoneId])
+            val group = ParticipantGroups.selectAll()
+                .where { ParticipantGroups.id eq participant[OrienteeringParticipants.groupId] }
+                .singleOrNull()
+            val usersInCompetition = OrienteeringParticipants.select(OrienteeringParticipants.userId)
+                .where { OrienteeringParticipants.competitionId eq competitionId }
+                .mapNotNullTo(mutableSetOf()) { it[OrienteeringParticipants.userId]?.takeIf(String::isNotBlank) }
+            val pFirst = participant[OrienteeringParticipants.firstName]
+            val pLast = participant[OrienteeringParticipants.lastName]
+
+            UserService.Users.selectAll()
+                .mapNotNull { row ->
+                    val first = row[UserService.Users.firstName]
+                    val last = row[UserService.Users.lastName]
+                    val middle = row[UserService.Users.middleName].ifBlank { null }
+                    val nameMatches = namesMatch(first, last, middle, pFirst, pLast)
+                    val matchesQuery = normalizePersonName(last).startsWith(needle) ||
+                        normalizePersonName("$last $first").startsWith(needle)
+                    if (!nameMatches && !matchesQuery) return@mapNotNull null
+                    val userBirthDate = row[UserService.Users.birthDate]
+                    val userGender = row[UserService.Users.gender]
+                    LinkCandidateResponse(
+                        userId = row[UserService.Users.id],
+                        firstName = first,
+                        lastName = last,
+                        middleName = middle,
+                        birthYear = parseBirthYear(userBirthDate),
+                        gender = userGender,
+                        nameMatches = nameMatches,
+                        eligibilityWarning = group?.let {
+                            linkEligibilityWarning(
+                                groupTitle = it[ParticipantGroups.title],
+                                groupGender = it[ParticipantGroups.gender],
+                                minAge = it[ParticipantGroups.minAge],
+                                maxAge = it[ParticipantGroups.maxAge],
+                                userGender = userGender,
+                                userBirthDate = userBirthDate,
+                                competitionYear = year,
+                            )
+                        },
+                        alreadyInCompetition = row[UserService.Users.id] in usersInCompetition,
+                    )
+                }
+                .sortedWith(
+                    compareByDescending<LinkCandidateResponse> { it.nameMatches }
+                        .thenBy { normalizePersonName(it.lastName) }
+                        .thenBy { normalizePersonName(it.firstName) }
+                )
+                .take(MAX_CANDIDATES)
+        }
+
+    /**
+     * Организатор сам привязывает вручную внесённых участников к аккаунту [userId] — без заявки
+     * пользователя. Всё или ничего: права на каждое соревнование, один участник на аккаунт в соревновании.
+     * Заявки на этих участников закрываются, пользователь получает пуш и может отвязать результат сам.
+     */
+    suspend fun linkByOrganizer(organizerId: String, userId: String, participantIds: List<String>): OrganizerLinkResultResponse {
+        if (participantIds.isEmpty()) throw UnprocessableEntityException("Не выбраны результаты")
+        val (count, notices) = dbQuery {
+            linkLocked(organizerId, userId, participantIds.distinct(), System.currentTimeMillis())
+        }
+        notices.forEach { send(it) }
+        return OrganizerLinkResultResponse(count)
+    }
+
+    /** Организатор приводит непривязанных участников к одному написанию ФИО. */
+    suspend fun renameByOrganizer(
+        organizerId: String,
+        participantIds: List<String>,
+        firstName: String,
+        lastName: String,
+    ): OrganizerLinkResultResponse {
+        val first = firstName.trim()
+        val last = lastName.trim()
+        if (last.isEmpty()) throw UnprocessableEntityException("Укажите фамилию")
+        if (first.length > NAME_MAX_LENGTH || last.length > NAME_MAX_LENGTH) {
+            throw UnprocessableEntityException("Слишком длинное имя")
+        }
+        if (participantIds.isEmpty()) throw UnprocessableEntityException("Не выбраны результаты")
+        return dbQuery {
+            OrganizerLinkResultResponse(renameLocked(organizerId, participantIds.distinct(), first, last))
+        }
+    }
+
+    /**
+     * Объединение строк таблицы рейтинга: если основная строка — аккаунт, участники остальных строк
+     * привязываются к нему; если обе без аккаунта — переименовываются в ФИО основной.
+     */
+    suspend fun mergeStandings(
+        organizerId: String,
+        standings: List<RatingStandingEntry>,
+        targetKey: String,
+        sourceKeys: List<String>,
+    ): OrganizerLinkResultResponse {
+        val byKey = standings.associateBy { it.participantKey }
+        val target = byKey[targetKey] ?: throw NotFoundException("Строка рейтинга не найдена")
+        val sources = sourceKeys.distinct()
+            .filter { it != targetKey }
+            .map { byKey[it] ?: throw NotFoundException("Строка рейтинга не найдена") }
+        if (sources.isEmpty()) throw UnprocessableEntityException("Выберите строки для объединения")
+        val participantIds = sources.flatMap { source -> source.breakdown.map { it.participantId } }.distinct()
+
+        val targetUserId = target.userId
+        if (targetUserId != null) {
+            if (sources.any { it.userId != null }) throw UnprocessableEntityException("Нельзя объединить два аккаунта")
+            return linkByOrganizer(organizerId, targetUserId, participantIds)
+        }
+        if (sources.any { it.userId != null }) {
+            throw UnprocessableEntityException("Основной выберите строку с аккаунтом — к ней привяжутся остальные")
+        }
+        return renameByOrganizer(organizerId, participantIds, target.firstName, target.lastName)
+    }
+
+    private fun linkLocked(
+        organizerId: String,
+        userId: String,
+        participantIds: List<String>,
+        now: Long,
+    ): Pair<Int, List<Notice>> {
+        UserService.Users.selectAll()
+            .where { UserService.Users.id eq userId }
+            .singleOrNull() ?: throw NotFoundException("Пользователь не найден")
+        val notices = mutableListOf<Notice>()
+        val linkedCompetitions = mutableListOf<String>()
+
+        for (participantId in participantIds) {
+            val participant = OrienteeringParticipants.selectAll()
+                .where { OrienteeringParticipants.id eq participantId }
+                .forUpdate()
+                .singleOrNull() ?: throw NotFoundException("Участник не найден")
+            val competitionId = participant[OrienteeringParticipants.competitionId]
+            requireParticipantEditAccess(competitionId, organizerId)
+            val linkedUserId = participant[OrienteeringParticipants.userId]?.takeIf { it.isNotBlank() }
+            if (linkedUserId == userId) continue
+            if (linkedUserId != null) {
+                throw UnprocessableEntityException("Результат «${participant.fullName()}» уже привязан к другому пользователю")
+            }
+            if (userParticipantIn(competitionId, userId, exceptParticipantId = participantId) != null) {
+                throw UnprocessableEntityException(
+                    "У пользователя уже есть результат в соревновании «${competitionTitle(competitionId)}». " +
+                        "Удалите дубль, затем привяжите"
+                )
+            }
+            OrienteeringParticipants.update({ OrienteeringParticipants.id eq participantId }) {
+                it[OrienteeringParticipants.userId] = userId
+                it[updatedAt] = now
+            }
+
+            // Заявки на этого участника решены: свою — одобряем, чужие — отклоняем.
+            ParticipantLinkRequests.selectAll()
+                .where {
+                    (ParticipantLinkRequests.participantId eq participantId) and
+                        (ParticipantLinkRequests.status eq STATUS_PENDING)
+                }
+                .toList()
+                .forEach { request ->
+                    val claimantId = request[ParticipantLinkRequests.userId]
+                    val approved = claimantId == userId
+                    ParticipantLinkRequests.update({ ParticipantLinkRequests.id eq request[ParticipantLinkRequests.id] }) {
+                        it[status] = if (approved) STATUS_APPROVED else STATUS_REJECTED
+                        if (!approved) it[comment] = AUTO_REJECT_COMMENT
+                        it[reviewedBy] = organizerId
+                        it[reviewedAt] = now
+                        it[updatedAt] = now
+                    }
+                    if (!approved) notices += rejectedNotice(claimantId, competitionId, AUTO_REJECT_COMMENT)
+                }
+            linkedCompetitions += competitionId
+        }
+
+        if (linkedCompetitions.isNotEmpty() && userId != organizerId) {
+            val first = linkedCompetitions.first()
+            val what = if (linkedCompetitions.size == 1) "результат — «${competitionTitle(first)}»"
+            else "результаты: ${linkedCompetitions.size}"
+            notices += Notice(
+                userId = userId,
+                title = "Результаты привязаны к профилю",
+                body = "Организатор привязал к вашему профилю $what. Если это не вы — отвяжите в профиле",
+                // Тот же kind, что у одобренной заявки: клиенты уже ведут его на экран привязок.
+                data = mapOf("competition_id" to first, "kind" to KIND_REVIEWED, "approved" to "true"),
+            )
+        }
+        return linkedCompetitions.size to notices
+    }
+
+    private fun renameLocked(organizerId: String, participantIds: List<String>, firstName: String, lastName: String): Int {
+        val now = System.currentTimeMillis()
+        var count = 0
+        for (participantId in participantIds) {
+            val participant = OrienteeringParticipants.selectAll()
+                .where { OrienteeringParticipants.id eq participantId }
+                .forUpdate()
+                .singleOrNull() ?: throw NotFoundException("Участник не найден")
+            requireParticipantEditAccess(participant[OrienteeringParticipants.competitionId], organizerId)
+            if (!participant[OrienteeringParticipants.userId].isNullOrBlank()) {
+                throw UnprocessableEntityException(
+                    "«${participant.fullName()}» привязан к аккаунту — объедините с ним, а не переименовывайте"
+                )
+            }
+            if (participant[OrienteeringParticipants.firstName] == firstName &&
+                participant[OrienteeringParticipants.lastName] == lastName
+            ) continue
+            OrienteeringParticipants.update({ OrienteeringParticipants.id eq participantId }) {
+                it[OrienteeringParticipants.firstName] = firstName
+                it[OrienteeringParticipants.lastName] = lastName
+                it[updatedAt] = now
+            }
+            count++
+        }
+        return count
+    }
+
     private fun isUnlinked(): Op<Boolean> =
         OrienteeringParticipants.userId.isNull() or (OrienteeringParticipants.userId eq "")
 
@@ -574,5 +805,8 @@ class ParticipantLinkRequestService(private val fcmService: FcmService) {
         private const val MAX_PENDING_PER_USER = 50L
         private const val MAX_SUGGESTIONS = 100
         private const val COMMENT_MAX_LENGTH = 500
+        private const val MIN_CANDIDATE_QUERY = 2
+        private const val MAX_CANDIDATES = 20
+        private const val NAME_MAX_LENGTH = 200
     }
 }

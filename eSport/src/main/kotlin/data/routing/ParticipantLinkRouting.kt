@@ -1,6 +1,8 @@
 package com.competra.data.routing
 
 import com.competra.data.requests.orienteering.CreateParticipantLinkRequest
+import com.competra.data.requests.orienteering.OrganizerLinkParticipantsRequest
+import com.competra.data.requests.orienteering.RenameParticipantsRequest
 import com.competra.data.requests.orienteering.ReviewParticipantLinkRequest
 import com.competra.data.response.base.BaseError
 import com.competra.data.response.base.CommonModel
@@ -70,5 +72,28 @@ fun Route.participantLinkRoutes(service: ParticipantLinkRequestService) {
         val participantId = call.parameters["id"]!!
         service.unlink(participantId, userId)
         call.respond(CommonModel<Any>().also { it.status = 1 })
+    }
+
+    // ── Организатор сам связывает участников протокола с людьми ──
+
+    get("/event/orienteering/participants/{id}/link-candidates") {
+        val userId = call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString()
+        val participantId = call.parameters["id"]!!
+        val result = service.linkCandidates(participantId, userId, call.request.queryParameters["query"])
+        call.respond(CommonModel<Any>().also { it.status = 1; it.result = result })
+    }
+
+    post("/event/orienteering/participants/link") {
+        val userId = call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString()
+        val request = call.receive<OrganizerLinkParticipantsRequest>()
+        val result = service.linkByOrganizer(userId, request.userId, request.participantIds)
+        call.respond(CommonModel<Any>().also { it.status = 1; it.result = result })
+    }
+
+    post("/event/orienteering/participants/rename") {
+        val userId = call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString()
+        val request = call.receive<RenameParticipantsRequest>()
+        val result = service.renameByOrganizer(userId, request.participantIds, request.firstName, request.lastName)
+        call.respond(CommonModel<Any>().also { it.status = 1; it.result = result })
     }
 }

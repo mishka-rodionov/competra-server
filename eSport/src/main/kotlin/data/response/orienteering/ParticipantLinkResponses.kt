@@ -68,3 +68,24 @@ data class CompetitionLinkRequestResponse(
     /** У заявителя уже есть свой участник в этом соревновании — одобрить нельзя, нужно удалить дубль. */
     @SerializedName("userAlreadyInCompetition") val userAlreadyInCompetition: Boolean
 )
+
+/** Аккаунт, к которому организатор может привязать участника. Email и телефон не отдаём. */
+data class LinkCandidateResponse(
+    @SerializedName("userId") val userId: String,
+    @SerializedName("firstName") val firstName: String,
+    @SerializedName("lastName") val lastName: String,
+    @SerializedName("middleName") val middleName: String?,
+    @SerializedName("birthYear") val birthYear: Int?,
+    @SerializedName("gender") val gender: Gender?,
+    /** ФИО в профиле совпадает с участником протокола. */
+    @SerializedName("nameMatches") val nameMatches: Boolean,
+    /** Текст, если пол/возраст пользователя не подходят к группе участника; null — подходят. */
+    @SerializedName("eligibilityWarning") val eligibilityWarning: String?,
+    /** У пользователя уже есть свой участник в этом соревновании — привязать нельзя, сначала удалите дубль. */
+    @SerializedName("alreadyInCompetition") val alreadyInCompetition: Boolean
+)
+
+/** Итог привязки или переименования организатором. */
+data class OrganizerLinkResultResponse(
+    @SerializedName("updatedCount") val updatedCount: Int
+)
