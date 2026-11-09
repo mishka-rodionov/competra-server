@@ -113,6 +113,8 @@ class OrienteeringResultService(private val eventPublisher: ResultEventPublisher
                 it[scorePenalty] = req.scorePenalty
                 it[isEditable] = req.isEditable
                 it[isEdited] = req.isEdited
+                it[isStatusManual] = req.isStatusManual ?: false
+                it[readAt] = req.readAt
                 it[updatedAt] = now
             }
         } else {
@@ -130,6 +132,9 @@ class OrienteeringResultService(private val eventPublisher: ResultEventPublisher
                 it[scorePenalty] = req.scorePenalty
                 it[isEditable] = req.isEditable
                 it[isEdited] = req.isEdited
+                // Старые клиенты и веб эти поля не присылают — сохраняем текущие значения.
+                req.isStatusManual?.let { manual -> it[isStatusManual] = manual }
+                req.readAt?.let { read -> it[readAt] = read }
                 it[updatedAt] = now
             }
         }
@@ -183,6 +188,8 @@ class OrienteeringResultService(private val eventPublisher: ResultEventPublisher
         splits = splits,
         isEditable = this[OrienteeringResults.isEditable],
         isEdited = this[OrienteeringResults.isEdited],
+        isStatusManual = this[OrienteeringResults.isStatusManual],
+        readAt = this[OrienteeringResults.readAt],
         updatedAt = this[OrienteeringResults.updatedAt]
     )
 

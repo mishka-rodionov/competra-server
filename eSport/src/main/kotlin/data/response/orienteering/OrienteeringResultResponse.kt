@@ -18,6 +18,10 @@ data class OrienteeringResultResponse(
     @SerializedName("splits") val splits: List<SplitTimeResponse>?,
     @SerializedName("isEditable") val isEditable: Boolean,
     @SerializedName("isEdited") val isEdited: Boolean,
+    /** Статус выставлен организатором вручную («Снят» / «Засчитать»). */
+    @SerializedName("isStatusManual") val isStatusManual: Boolean = false,
+    /** Время считывания чипа на финише (Unix ms); null — неизвестно. */
+    @SerializedName("readAt") val readAt: Long? = null,
     @SerializedName("updatedAt") val updatedAt: Long = 0L
 )
 

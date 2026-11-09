@@ -92,8 +92,10 @@ internal object ResultRanking {
         // Снимаем только при DISQUALIFY: при IGNORE КВ носит справочный характер, при
         // SCORE_PENALTY (BY_CHOICE) опоздание штрафуется очками, а не снятием.
         val disqualifiesOvertime = policy == OvertimePolicy.DISQUALIFY && limitSeconds != null
+        // Ручной статус организатора («Засчитать») КВ не перетирает.
         val (overtimeRows, finishedRows) = rows.partition {
-            disqualifiesOvertime && isOvertime(it[OrienteeringResults.totalTime], limitSeconds)
+            disqualifiesOvertime && !it[OrienteeringResults.isStatusManual] &&
+                isOvertime(it[OrienteeringResults.totalTime], limitSeconds)
         }
 
         // Статус пишем только при фактическом изменении, места — как раньше, всем FINISHED.

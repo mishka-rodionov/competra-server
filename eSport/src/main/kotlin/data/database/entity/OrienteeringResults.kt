@@ -18,6 +18,12 @@ object OrienteeringResults : Table("orienteering_results") {
     val scorePenalty = integer("score_penalty").default(0)
     val isEditable = bool("is_editable")
     val isEdited = bool("is_edited")
+
+    /** Статус выставлен организатором вручную («Снят» / «Засчитать») — пересчёт его не перетирает. */
+    val isStatusManual = bool("is_status_manual").default(false)
+
+    /** Время считывания чипа на финише (Unix ms); null — неизвестно. */
+    val readAt = long("read_at").nullable()
     val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)

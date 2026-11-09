@@ -58,6 +58,8 @@ data class CompetitionDetailResponse(
     val byChoiceMode: String = "SCORE",
     /** Настройки командного зачёта; null — зачёта нет. */
     val teamScoring: TeamScoringResponse? = null,
+    /** Режим «Регистрация на финише»: участники заводятся при считывании чипа на финише. */
+    val isFinishRegistration: Boolean = false,
     val registrationStart: Long?,
     val registrationEnd: Long?,
     val maxParticipants: Int?,

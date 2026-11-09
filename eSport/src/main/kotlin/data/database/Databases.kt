@@ -215,6 +215,10 @@ fun Application.configureDatabases() {
         exec("ALTER TABLE orienteering_competitions ADD COLUMN IF NOT EXISTS draw_mode VARCHAR(20)")
         exec("ALTER TABLE orienteering_competitions ADD COLUMN IF NOT EXISTS draw_corridors INTEGER")
         exec("ALTER TABLE orienteering_competitions ADD COLUMN IF NOT EXISTS draw_gap INTEGER")
+        // «Регистрация на финише»: флаг соревнования, ручной статус и время считывания чипа у результата.
+        exec("ALTER TABLE orienteering_competitions ADD COLUMN IF NOT EXISTS is_finish_registration BOOLEAN NOT NULL DEFAULT FALSE")
+        exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS is_status_manual BOOLEAN NOT NULL DEFAULT FALSE")
+        exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS read_at BIGINT")
         exec("ALTER TABLE participant_groups ADD COLUMN IF NOT EXISTS team_counted_results INTEGER")
         exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS total_score INTEGER")
         exec("ALTER TABLE orienteering_results ADD COLUMN IF NOT EXISTS score_penalty INTEGER NOT NULL DEFAULT 0")

@@ -165,6 +165,7 @@ class OrienteeringCompetitionService(
         overtimePolicy = orient[OrienteeringCompetitions.overtimePolicy],
         byChoiceMode = orient[OrienteeringCompetitions.byChoiceMode],
         teamScoring = TeamScoringJson.toResponse(orient[OrienteeringCompetitions.teamScoring]),
+        isFinishRegistration = orient[OrienteeringCompetitions.isFinishRegistration],
         drawMode = orient[OrienteeringCompetitions.drawMode],
         drawCorridors = orient[OrienteeringCompetitions.drawCorridors],
         drawGap = orient[OrienteeringCompetitions.drawGap],
@@ -430,6 +431,11 @@ class OrienteeringCompetitionService(
             existingOrient?.get(OrienteeringCompetitions.teamScoring)
         )
 
+        // «Регистрацию на финише» старые клиенты не присылают (null) — сохраняем текущую.
+        val newIsFinishRegistration = req.isFinishRegistration
+            ?: existingOrient?.get(OrienteeringCompetitions.isFinishRegistration)
+            ?: false
+
         // Режим жеребьёвки присылает только клиент, который её провёл; null — сохраняем текущий.
         val requestedDrawMode = DrawMode.fromStringOrNull(req.drawMode)
         val newDrawMode = requestedDrawMode?.name ?: existingOrient?.get(OrienteeringCompetitions.drawMode)
@@ -466,6 +472,7 @@ class OrienteeringCompetitionService(
                 it[overtimePolicy] = newOvertimePolicy
                 it[byChoiceMode] = newByChoiceMode
                 it[teamScoring] = newTeamScoring
+                it[isFinishRegistration] = newIsFinishRegistration
                 it[drawMode] = newDrawMode
                 it[drawCorridors] = newDrawCorridors
                 it[drawGap] = newDrawGap
@@ -483,6 +490,7 @@ class OrienteeringCompetitionService(
                 it[overtimePolicy] = newOvertimePolicy
                 it[byChoiceMode] = newByChoiceMode
                 it[teamScoring] = newTeamScoring
+                it[isFinishRegistration] = newIsFinishRegistration
                 it[drawMode] = newDrawMode
                 it[drawCorridors] = newDrawCorridors
                 it[drawGap] = newDrawGap
@@ -719,6 +727,7 @@ class OrienteeringCompetitionService(
             byChoiceMode = orient?.get(OrienteeringCompetitions.byChoiceMode)
                 ?: ByChoiceMode.DEFAULT.name,
             teamScoring = TeamScoringJson.toResponse(orient?.get(OrienteeringCompetitions.teamScoring)),
+            isFinishRegistration = orient?.get(OrienteeringCompetitions.isFinishRegistration) ?: false,
             coordinates = if (comp[Competitions.latitude] != null && comp[Competitions.longitude] != null)
                 CoordinatesResponse(comp[Competitions.latitude]!!, comp[Competitions.longitude]!!)
             else null,

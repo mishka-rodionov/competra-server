@@ -28,6 +28,11 @@ data class OrienteeringCompetitionRequest(
     /** Командный зачёт: null — не менять, `enabled = false` — выключить. */
     @SerializedName("teamScoring") val teamScoring: TeamScoringRequest? = null,
     /**
+     * Режим «Регистрация на финише». null — не менять (старые клиенты поле не знают),
+     * для нового соревнования — false.
+     */
+    @SerializedName("isFinishRegistration") val isFinishRegistration: Boolean? = null,
+    /**
      * [com.competra.domain.orienteering.DrawMode] проведённой жеребьёвки. null — не менять (старые
      * клиенты и веб, который жеребьёвку не проводит); вместе с ним сохраняются [drawCorridors] и [drawGap].
      */

@@ -18,6 +18,10 @@ data class OrienteeringResultRequest(
     @SerializedName("splits") val splits: List<SplitTimeRequest>?,
     @SerializedName("isEditable") val isEditable: Boolean,
     @SerializedName("isEdited") val isEdited: Boolean,
+    /** Статус выставлен организатором вручную. null — не менять (старые клиенты и веб поле не знают). */
+    @SerializedName("isStatusManual") val isStatusManual: Boolean? = null,
+    /** Время считывания чипа на финише (Unix ms). null — не менять. */
+    @SerializedName("readAt") val readAt: Long? = null,
     @SerializedName("serverUpdatedAt") val serverUpdatedAt: Long? = null
 )
 

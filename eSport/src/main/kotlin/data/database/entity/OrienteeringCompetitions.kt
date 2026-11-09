@@ -33,6 +33,12 @@ object OrienteeringCompetitions : Table("orienteering_competitions") {
     /** Настройки командного зачёта JSON-ом ([com.competra.domain.orienteering.TeamScoring]); null — зачёта нет. */
     val teamScoring = text("team_scoring").nullable()
 
+    /**
+     * Режим «Регистрация на финише»: участники заводятся организатором при считывании незнакомого
+     * чипа на финише (Android). Задаётся при создании соревнования.
+     */
+    val isFinishRegistration = bool("is_finish_registration").default(false)
+
     /** [com.competra.domain.orienteering.DrawMode] проведённой жеребьёвки; null — не проводилась. */
     val drawMode = varchar("draw_mode", 20).nullable()
 
