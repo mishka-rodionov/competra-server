@@ -16,5 +16,7 @@ data class OrienteeringParticipantResponse(
     @SerializedName("chipNumber") val chipNumber: Long,
     @SerializedName("comment") val comment: String?,
     @SerializedName("isChipGiven") val isChipGiven: Boolean,
+    /** Участник вне конкурса (ВК): результат без места, не идёт в командный зачёт и рейтинг. */
+    @SerializedName("isOutOfCompetition") val isOutOfCompetition: Boolean = false,
     @SerializedName("updatedAt") val updatedAt: Long = 0L
 )

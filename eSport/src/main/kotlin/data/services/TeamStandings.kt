@@ -33,7 +33,9 @@ internal data class TeamStandingEntry(
     val status: String,
     val rank: Int?,
     val totalTime: Long?,
-    val penaltyTime: Long
+    val penaltyTime: Long,
+    /** Участник вне конкурса — в командный зачёт не идёт ни по очкам, ни по времени. */
+    val isOutOfCompetition: Boolean = false
 )
 
 /**
@@ -41,6 +43,8 @@ internal data class TeamStandingEntry(
  * зачёт не хранится. Та же логика — в Android (`:domain`, офлайн-подсчёт в Центре).
  *
  * - Команда — нормализованная подпись (регистр и пробелы не важны); без подписи — не участвует.
+ * - Участник вне конкурса ([TeamStandingEntry.isOutOfCompetition]) не участвует и не занимает
+ *   место среди N результатов команды.
  * - В группе: POINTS — сумма очков за места N лучших (RatingPointsTable); TIME — сумма времени N
  *   лучших, финишировавших меньше N — вне зачёта. N — своё у группы, иначе у соревнования.
  * - Общие зачёты: сумма баллов за командные места в группах по той же таблице.
@@ -52,7 +56,7 @@ internal fun computeTeamStandings(
 ): TeamStandingsResponse {
     val counted = settings.groupCountedResults.coerceAtLeast(1)
     val entriesByGroup = entries
-        .filter { normalizeCommandName(it.commandName) != null }
+        .filter { !it.isOutOfCompetition && normalizeCommandName(it.commandName) != null }
         .groupBy { it.groupId }
 
     val groupStandings = groups.mapNotNull { group ->

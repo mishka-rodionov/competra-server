@@ -56,7 +56,8 @@ class TeamStandingsService {
                     status = row[OrienteeringResults.status],
                     rank = row[OrienteeringResults.rank],
                     totalTime = row[OrienteeringResults.totalTime],
-                    penaltyTime = row[OrienteeringResults.penaltyTime]
+                    penaltyTime = row[OrienteeringResults.penaltyTime],
+                    isOutOfCompetition = participant[OrienteeringParticipants.isOutOfCompetition]
                 )
             }
 

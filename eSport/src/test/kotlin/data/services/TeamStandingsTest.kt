@@ -147,6 +147,18 @@ class TeamStandingsTest {
     }
 
     @Test
+    fun `out of competition participant is not counted by time`() {
+        val outOfCompetition = finished(m16, "Азимут", 1, 20).copy(rank = null, isOutOfCompetition = true)
+        val entries = listOf(outOfCompetition, finished(m16, "Азимут", 1, 30), finished(m16, "Компас", 2, 32))
+
+        val group = computeTeamStandings(TeamScoring(TeamScoringMethod.TIME, 1, emptyList()), listOf(m16), entries)
+            .groupStandings.single()
+
+        assertEquals(listOf("Азимут" to 1800L, "Компас" to 1920L), group.teams.map { it.teamName to it.timeSeconds })
+        assertTrue(group.teams.flatMap { it.members }.none { it.participantId == outOfCompetition.participantId })
+    }
+
+    @Test
     fun `stored settings survive a round trip and unknown values fall back`() {
         val json = TeamScoringJson.write(TeamScoring(TeamScoringMethod.TIME, 4, listOf(TeamOverallScope.MEN)))
 

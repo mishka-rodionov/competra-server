@@ -294,6 +294,8 @@ fun Application.configureDatabases() {
         // Команда участника соревнования: ссылка на клубную команду рядом с текстовым command_name.
         // При удалении команды ссылка обнуляется, текст в протоколе остаётся.
         exec("ALTER TABLE orienteering_participants ADD COLUMN IF NOT EXISTS team_id VARCHAR(36)")
+        // Участник вне конкурса (ВК): результат без места, не идёт в командный зачёт и рейтинг.
+        exec("ALTER TABLE orienteering_participants ADD COLUMN IF NOT EXISTS is_out_of_competition BOOLEAN NOT NULL DEFAULT false")
         exec(
             """
             DO ${'$'}${'$'}

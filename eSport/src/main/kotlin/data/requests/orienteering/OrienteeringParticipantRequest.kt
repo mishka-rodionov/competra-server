@@ -16,5 +16,10 @@ data class OrienteeringParticipantRequest(
     @SerializedName("chipNumber") val chipNumber: Long,
     @SerializedName("comment") val comment: String?,
     @SerializedName("isChipGiven") val isChipGiven: Boolean,
+    /**
+     * Участник вне конкурса (ВК). null — не менять (старые клиенты поле не присылают
+     * и не должны сбрасывать флаг); для нового участника null означает false.
+     */
+    @SerializedName("isOutOfCompetition") val isOutOfCompetition: Boolean? = null,
     @SerializedName("serverUpdatedAt") val serverUpdatedAt: Long? = null
 )

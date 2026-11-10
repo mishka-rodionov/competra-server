@@ -3,7 +3,9 @@ package com.competra.data.services
 import com.competra.data.database.entity.OrienteeringCompetitions
 import com.competra.data.database.entity.OrienteeringResults
 import com.competra.data.database.entity.ParticipantGroups
+import com.competra.data.database.entity.OrienteeringParticipants
 import com.competra.domain.orienteering.OvertimePolicy
+import com.competra.domain.orienteering.competitionRanks
 import com.competra.domain.orienteering.ranksByScore
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.eq
@@ -56,6 +58,10 @@ internal object ResultRanking {
      * часам) — при интервальном/разном старте участников более раннее абсолютное время финиша
      * не означает более быстрый забег. См. аналогичную логику и комментарий в Android-клиенте:
      * OrienteeringCompetitionInteractor.recalculateRanksV2.
+     *
+     * Участники вне конкурса ([OrienteeringParticipants.isOutOfCompetition]) места не получают
+     * (rank = null) и места остальных не сдвигают; статус КВ к ним применяется как обычно.
+     * Равные результаты делят место по [competitionRanks] (1, 1, 3).
      */
     fun recalculateGroup(competitionId: String, groupId: Long) {
         val orient = OrienteeringCompetitions.selectAll()
@@ -125,7 +131,25 @@ internal object ResultRanking {
             compareBy { (it[OrienteeringResults.totalTime] ?: Long.MAX_VALUE) + it[OrienteeringResults.penaltyTime] }
         }
 
-        val sortedRows = finishedRows.sortedWith(comparator)
+        val outOfCompetitionIds = OrienteeringParticipants.selectAll()
+            .where {
+                (OrienteeringParticipants.competitionId eq competitionId) and
+                    (OrienteeringParticipants.isOutOfCompetition eq true)
+            }
+            .map { it[OrienteeringParticipants.id] }
+            .toSet()
+        val (outOfCompetitionRows, rankedRows) = finishedRows.partition {
+            it[OrienteeringResults.participantId] in outOfCompetitionIds
+        }
+        outOfCompetitionRows.forEach { row ->
+            if (row[OrienteeringResults.rank] != null) {
+                OrienteeringResults.update({ OrienteeringResults.id eq row[OrienteeringResults.id] }) {
+                    it[rank] = null
+                }
+            }
+        }
+
+        val sortedRows = rankedRows.sortedWith(comparator)
 
         // Для score-О ключ должен включать totalTime — иначе два участника с одинаковыми
         // очками, но разным временем (тай-брейк уже учтён компаратором выше), получат одно и то
@@ -136,22 +160,10 @@ internal object ResultRanking {
             (row[OrienteeringResults.totalTime] ?: Long.MAX_VALUE) + row[OrienteeringResults.penaltyTime]
         }
 
-        var rank = 1
-        var prevKey: Any? = null
-        var skipCount = 0
-
+        val ranks = competitionRanks(sortedRows.map(::rankKey))
         sortedRows.forEachIndexed { index, row ->
-            val key = rankKey(row)
-
-            if (prevKey != null && key == prevKey) {
-                skipCount++
-            } else {
-                rank = index + 1 - skipCount
-                prevKey = key
-            }
-
             OrienteeringResults.update({ OrienteeringResults.id eq row[OrienteeringResults.id] }) {
-                it[OrienteeringResults.rank] = rank
+                it[OrienteeringResults.rank] = ranks[index]
             }
         }
     }

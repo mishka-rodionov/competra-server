@@ -31,73 +31,21 @@ class OrienteeringParticipantService {
 
     suspend fun upsertAll(requests: List<OrienteeringParticipantRequest>, callerUserId: String): List<OrienteeringParticipantResponse> = dbQuery {
         val now = System.currentTimeMillis()
-        requests.map { req ->
-            val existing = OrienteeringParticipants.selectAll()
-                .where { OrienteeringParticipants.id eq req.id }
-                .singleOrNull()
-
-            val serverTs = existing?.get(OrienteeringParticipants.updatedAt) ?: 0L
-            if (existing != null && req.serverUpdatedAt != null && req.serverUpdatedAt > 0L &&
-                req.serverUpdatedAt < serverTs
-            ) {
-                throw ConflictException(existing.toResponse(), req.serverUpdatedAt, serverTs)
-            }
-
-            if (existing == null) {
-                requireParticipantEditAccess(req.competitionId, callerUserId)
-                OrienteeringParticipants.insert {
-                    it[id] = req.id
-                    it[userId] = req.userId
-                    it[firstName] = req.firstName
-                    it[lastName] = req.lastName
-                    it[groupId] = req.groupId
-                    it[groupName] = req.groupName
-                    it[competitionId] = req.competitionId
-                    it[commandName] = req.commandName
-                    it[startNumber] = req.startNumber
-                    it[startTime] = req.startTime
-                    it[chipNumber] = req.chipNumber
-                    it[comment] = req.comment
-                    it[isChipGiven] = req.isChipGiven
-                    it[updatedAt] = now
-                }
-            } else {
-                if (existing[OrienteeringParticipants.competitionId] != req.competitionId) {
-                    throw ForbiddenException("Участник принадлежит другому соревнованию")
-                }
-                requireParticipantEditAccess(req.competitionId, callerUserId)
-                OrienteeringParticipants.update({ OrienteeringParticipants.id eq req.id }) {
-                    // userId меняется только через заявки на привязку/отвязку (ParticipantLinkRequestService),
-                    // а не через редактирование: иначе устаревшая копия у организатора сотрёт привязку.
-                    it[userId] = existing[OrienteeringParticipants.userId]
-                    it[firstName] = req.firstName
-                    it[lastName] = req.lastName
-                    it[groupId] = req.groupId
-                    it[groupName] = req.groupName
-                    it[competitionId] = req.competitionId
-                    it[commandName] = req.commandName
-                    // Ссылка на клубную команду живёт, пока организатор не поменял подпись: иначе
-                    // протокол и teamId разъедутся. Клиенты teamId не присылают — берём из БД.
-                    it[teamId] = existing[OrienteeringParticipants.teamId]
-                        .takeIf { sameCommandName(req.commandName, existing[OrienteeringParticipants.commandName]) }
-                    it[startNumber] = req.startNumber
-                    it[startTime] = req.startTime
-                    it[chipNumber] = req.chipNumber
-                    it[comment] = req.comment
-                    it[isChipGiven] = req.isChipGiven
-                    it[updatedAt] = now
-                }
-            }
-
-            OrienteeringParticipants.selectAll()
-                .where { OrienteeringParticipants.id eq req.id }
-                .single()
-                .toResponse()
-        }
+        requests.map { req -> upsertOne(req, callerUserId, now) }
     }
 
     suspend fun upsert(req: OrienteeringParticipantRequest, callerUserId: String): OrienteeringParticipantResponse = dbQuery {
-        val now = System.currentTimeMillis()
+        upsertOne(req, callerUserId, System.currentTimeMillis())
+    }
+
+    /**
+     * Создаёт или обновляет участника внутри уже открытой транзакции. Общая часть [upsertAll] и [upsert].
+     *
+     * Если у существующего участника изменился флаг «вне конкурса» или группа, места пересчитываются
+     * во всех группах, где у участника есть результаты: участник ВК в зачёт не идёт, и места
+     * остальных сдвигаются.
+     */
+    private fun upsertOne(req: OrienteeringParticipantRequest, callerUserId: String, now: Long): OrienteeringParticipantResponse {
         val existing = OrienteeringParticipants.selectAll()
             .where { OrienteeringParticipants.id eq req.id }
             .singleOrNull()
@@ -125,6 +73,7 @@ class OrienteeringParticipantService {
                 it[chipNumber] = req.chipNumber
                 it[comment] = req.comment
                 it[isChipGiven] = req.isChipGiven
+                it[isOutOfCompetition] = req.isOutOfCompetition ?: false
                 it[updatedAt] = now
             }
         } else {
@@ -132,6 +81,9 @@ class OrienteeringParticipantService {
                 throw ForbiddenException("Участник принадлежит другому соревнованию")
             }
             requireParticipantEditAccess(req.competitionId, callerUserId)
+            val wasOutOfCompetition = existing[OrienteeringParticipants.isOutOfCompetition]
+            // null — клиент поле не знает (старая версия Android): флаг не трогаем.
+            val outOfCompetition = req.isOutOfCompetition ?: wasOutOfCompetition
             OrienteeringParticipants.update({ OrienteeringParticipants.id eq req.id }) {
                 // userId меняется только через заявки на привязку/отвязку (ParticipantLinkRequestService),
                 // а не через редактирование: иначе устаревшая копия у организатора сотрёт привязку.
@@ -151,11 +103,29 @@ class OrienteeringParticipantService {
                 it[chipNumber] = req.chipNumber
                 it[comment] = req.comment
                 it[isChipGiven] = req.isChipGiven
+                it[isOutOfCompetition] = outOfCompetition
                 it[updatedAt] = now
+            }
+            val groupChanged = existing[OrienteeringParticipants.groupId] != req.groupId
+            if (outOfCompetition != wasOutOfCompetition || groupChanged) {
+                recalculateParticipantGroups(req.competitionId, req.id, existing[OrienteeringParticipants.groupId], req.groupId)
             }
         }
 
-        OrienteeringParticipants.selectAll().where { OrienteeringParticipants.id eq req.id }.single().toResponse()
+        return OrienteeringParticipants.selectAll().where { OrienteeringParticipants.id eq req.id }.single().toResponse()
+    }
+
+    /**
+     * Пересчитывает места в группах участника: прежней, новой и тех, где лежат его результаты
+     * (результат может ещё ссылаться на прежнюю группу, пока клиент его не пересохранил).
+     */
+    private fun recalculateParticipantGroups(competitionId: String, participantId: String, oldGroupId: Long, newGroupId: Long) {
+        val resultGroups = OrienteeringResults.selectAll()
+            .where { OrienteeringResults.participantId eq participantId }
+            .map { it[OrienteeringResults.groupId] }
+        (resultGroups + oldGroupId + newGroupId).distinct().forEach { groupId ->
+            ResultRanking.recalculateGroup(competitionId, groupId)
+        }
     }
 
     /**
@@ -439,6 +409,7 @@ class OrienteeringParticipantService {
         chipNumber = this[OrienteeringParticipants.chipNumber],
         comment = this[OrienteeringParticipants.comment],
         isChipGiven = this[OrienteeringParticipants.isChipGiven],
+        isOutOfCompetition = this[OrienteeringParticipants.isOutOfCompetition],
         updatedAt = this[OrienteeringParticipants.updatedAt]
     )
 

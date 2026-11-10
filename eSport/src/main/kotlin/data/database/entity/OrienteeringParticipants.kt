@@ -22,6 +22,12 @@ object OrienteeringParticipants : Table("orienteering_participants") {
     val chipNumber = long("chip_number")
     val comment = varchar("comment", 500).nullable()
     val isChipGiven = bool("is_chip_given")
+    /**
+     * Участник вне конкурса (ВК): результат показывается в протоколе, но не получает места
+     * и не идёт в командный зачёт и рейтинг (см. [com.competra.data.services.ResultRanking]).
+     * Колонка добавляется миграцией в Databases.kt.
+     */
+    val isOutOfCompetition = bool("is_out_of_competition").default(false)
     val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)
