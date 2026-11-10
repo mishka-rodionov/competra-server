@@ -73,7 +73,7 @@
 | DELETE | `/api/event/orienteering/organizers/{id}` | — | Удалить организатора |
 | POST | `/api/event/orienteering/save/participant` | `OrienteeringParticipantRequest` | Upsert одного участника |
 | POST | `/api/event/orienteering/save/participants` | `List<OrienteeringParticipantRequest>` | Upsert участников пачкой |
-| DELETE | `/api/event/orienteering/participants/{id}` | — | Удалить участника |
+| DELETE | `/api/event/orienteering/participants/{id}` | — | Удалить участника. После старта соревнования — 422 («отметьте как «Не стартовал»»), кроме режима «Регистрация на финише» (`isFinishRegistration`): там участник удаляется вместе со своими результатами, места в группах пересчитываются |
 | GET | `/api/event/orienteering/participants/history` | query: `excludeCompetitionId` (опц.) | История участников организатора (`List<ParticipantHistoryResponse>`: `id`, `userId`, `firstName`, `lastName`, `groupName`, `commandName`, `competitionId`, `competitionDate`) — все участия в соревнованиях, где пользователь `ownerId`, без тестовых и без `excludeCompetitionId`. Подсказки при ручном добавлении участника; склейку людей и поиск делает клиент |
 | POST | `/api/event/orienteering/save/result` | `OrienteeringResultRequest` | Upsert одного результата. `isStatusManual` (статус выставлен организатором вручную — пересчёт КВ его не перетирает) и `readAt` (время считывания чипа на финише, Unix ms): `null` — не менять; в ответах приходят всегда (`false` / `null`) |
 | POST | `/api/event/orienteering/save/results` | `List<OrienteeringResultRequest>` | Upsert результатов пачкой |

@@ -4,6 +4,8 @@ import com.competra.UserService
 import com.competra.data.database.entity.Competitions
 import com.competra.data.database.entity.OrienteeringCompetitions
 import com.competra.data.database.entity.OrienteeringParticipants
+import com.competra.data.database.entity.OrienteeringResults
+import com.competra.data.database.entity.SplitTimes
 import com.competra.data.database.entity.ParticipantGroups
 import com.competra.data.exception.ConflictException
 import com.competra.data.exception.ForbiddenException
@@ -387,6 +389,10 @@ class OrienteeringParticipantService {
      * чип и результат, а удаление сдвигает места в протоколе. Неявку в этом случае отмечают
      * результатом со статусом DNS.
      *
+     * Исключение — режим «Регистрация на финише» ([OrienteeringCompetitions.isFinishRegistration]):
+     * участников заводят прямо на финише при считывании чипа, и ошибочно внесённого организатор
+     * удаляет после старта. Его результаты удаляются вместе с ним, места в группах пересчитываются.
+     *
      * @throws UnprocessableEntityException если соревнование уже стартовало (HTTP 422).
      */
     suspend fun deleteById(id: String, callerUserId: String): Boolean = dbQuery {
@@ -395,9 +401,25 @@ class OrienteeringParticipantService {
         val competitionId = existing[OrienteeringParticipants.competitionId]
         requireParticipantEditAccess(competitionId, callerUserId)
         if (isCompetitionStarted(competitionId)) {
-            throw UnprocessableEntityException(
-                "Соревнование уже стартовало — удалить участника нельзя, отметьте его как «Не стартовал»"
-            )
+            val isFinishRegistration = OrienteeringCompetitions.selectAll()
+                .where { OrienteeringCompetitions.id eq competitionId }
+                .singleOrNull()?.get(OrienteeringCompetitions.isFinishRegistration) == true
+            if (!isFinishRegistration) {
+                throw UnprocessableEntityException(
+                    "Соревнование уже стартовало — удалить участника нельзя, отметьте его как «Не стартовал»"
+                )
+            }
+            val results = OrienteeringResults.selectAll().where { OrienteeringResults.participantId eq id }.toList()
+            results.forEach { result ->
+                val resultId = result[OrienteeringResults.id]
+                @Suppress("DEPRECATION")
+                SplitTimes.deleteWhere { SplitTimes.resultId eq resultId }
+                @Suppress("DEPRECATION")
+                OrienteeringResults.deleteWhere { OrienteeringResults.id eq resultId }
+            }
+            results.map { it[OrienteeringResults.groupId] }.distinct().forEach { groupId ->
+                ResultRanking.recalculateGroup(competitionId, groupId)
+            }
         }
         @Suppress("DEPRECATION")
         OrienteeringParticipants.deleteWhere { OrienteeringParticipants.id eq id } > 0
