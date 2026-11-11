@@ -3,6 +3,10 @@ package com.competra.data.services
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.competra.data.database.entity.Distances
+import com.competra.data.database.entity.ParticipantGroups
+import com.competra.domain.orienteering.RequestedValue
+import com.competra.domain.orienteering.requestedDistanceByChoiceMode
+import com.competra.domain.orienteering.requestedDistanceDirection
 import com.competra.data.exception.ConflictException
 import com.competra.data.exception.ForbiddenException
 import com.competra.data.requests.orienteering.ControlPointRequest
@@ -37,7 +41,16 @@ class DistanceService(private val uploadService: UploadService) {
     suspend fun upsertAll(requests: List<DistanceRequest>, userId: String): List<DistanceResponse> {
         val replacedMapUrls = mutableSetOf<String>()
         val responses = dbQuery {
-            val saved = upsertAllInTransaction(requests, userId, replacedMapUrls)
+            val formatChanged = mutableSetOf<Long>()
+            val saved = upsertAllInTransaction(requests, userId, replacedMapUrls, formatChanged)
+            // Формат дистанции определяет, как считаются места её групп, — пересчитываем их.
+            formatChanged.forEach { distanceId ->
+                ParticipantGroups.selectAll()
+                    .where { ParticipantGroups.distanceId eq distanceId }
+                    .forEach { group ->
+                        ResultRanking.recalculateGroup(group[ParticipantGroups.competitionId], group[ParticipantGroups.id])
+                    }
+            }
             // Один файл карты может висеть на нескольких дистанциях — удаляем только тот,
             // на который после сохранения не ссылается уже никто.
             replacedMapUrls.retainAll { url -> Distances.selectAll().where { Distances.mapUrl eq url }.empty() }
@@ -58,11 +71,14 @@ class DistanceService(private val uploadService: UploadService) {
     private fun upsertAllInTransaction(
         requests: List<DistanceRequest>,
         userId: String,
-        replacedMapUrls: MutableSet<String>
+        replacedMapUrls: MutableSet<String>,
+        formatChanged: MutableSet<Long>
     ): List<DistanceResponse> {
         val now = System.currentTimeMillis()
         return requests.map { req ->
             val cpJson = serializeControlPoints(req.controlPoints)
+            val requestedDirection = requestedDistanceDirection(req.direction)
+            val requestedByChoiceMode = requestedDistanceByChoiceMode(req.byChoiceMode)
 
             if (req.distanceId != null) {
                 val existing = Distances.selectAll()
@@ -84,6 +100,13 @@ class DistanceService(private val uploadService: UploadService) {
                     val oldMapUrl = existing[Distances.mapUrl]
                     if (req.mapUrl != null && oldMapUrl != null && oldMapUrl != req.mapUrl) {
                         replacedMapUrls += oldMapUrl
+                    }
+                    if (requestedDirection is RequestedValue.Set &&
+                        requestedDirection.value != existing[Distances.direction] ||
+                        requestedByChoiceMode is RequestedValue.Set &&
+                        requestedByChoiceMode.value != existing[Distances.byChoiceMode]
+                    ) {
+                        formatChanged += req.distanceId
                     }
                     val mergedCpJson = serializeControlPoints(
                         keepStoredCoordinates(req.controlPoints, deserializeControlPoints(existing[Distances.controlPoints]))
@@ -113,6 +136,9 @@ class DistanceService(private val uploadService: UploadService) {
                         if (req.minControlsCount != null) {
                             it[minControlsCount] = storedMinControlsCount(req.minControlsCount)
                         }
+                        // Формат — тоже только если прислан (null — клиент поле не знает).
+                        if (requestedDirection is RequestedValue.Set) it[direction] = requestedDirection.value
+                        if (requestedByChoiceMode is RequestedValue.Set) it[byChoiceMode] = requestedByChoiceMode.value
                         // Карту и её привязку обновляем только если клиент её прислал. Android-клиент
                         // и формы редактирования дистанции поля карты не шлют — без этой проверки
                         // любое их сохранение стирало карту, прикреплённую через веб. Открепления
@@ -148,6 +174,8 @@ class DistanceService(private val uploadService: UploadService) {
                 it[finishLatitude] = req.finishLatitude
                 it[finishLongitude] = req.finishLongitude
                 it[minControlsCount] = req.minControlsCount?.let(::storedMinControlsCount)
+                it[direction] = (requestedDirection as? RequestedValue.Set)?.value
+                it[byChoiceMode] = (requestedByChoiceMode as? RequestedValue.Set)?.value
                 it[mapUrl] = req.mapUrl
                 it[mapTopLeftLat] = req.mapTopLeftLat
                 it[mapTopLeftLng] = req.mapTopLeftLng
@@ -202,6 +230,8 @@ class DistanceService(private val uploadService: UploadService) {
         finishLatitude = this[Distances.finishLatitude],
         finishLongitude = this[Distances.finishLongitude],
         minControlsCount = this[Distances.minControlsCount],
+        direction = this[Distances.direction],
+        byChoiceMode = this[Distances.byChoiceMode],
         mapUrl = this[Distances.mapUrl],
         mapTopLeftLat = this[Distances.mapTopLeftLat],
         mapTopLeftLng = this[Distances.mapTopLeftLng],

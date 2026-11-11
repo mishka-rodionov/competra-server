@@ -24,8 +24,18 @@ object OrienteeringCompetitions : Table("orienteering_competitions") {
      */
     val controlTimeMinutes = integer("control_time_minutes").nullable()
 
-    /** [com.competra.domain.orienteering.OvertimePolicy] — что делать с превысившими КВ. */
+    /**
+     * [com.competra.domain.orienteering.OvertimePolicy] — что делать с превысившими КВ на дистанциях
+     * формата по умолчанию (legacy-поле для клиентов без формата на дистанции; всегда равно
+     * [timeOvertimePolicy] или [scoreOvertimePolicy] — см. OvertimePolicies.legacy).
+     */
     val overtimePolicy = varchar("overtime_policy", 20).default("IGNORE")
+
+    /** Политика КВ для дистанций, где места по времени; null — соревнование до фичи (см. OvertimePolicies.resolve). */
+    val timeOvertimePolicy = varchar("time_overtime_policy", 20).nullable()
+
+    /** Политика КВ для дистанций с баллами (score-О); null — соревнование до фичи. */
+    val scoreOvertimePolicy = varchar("score_overtime_policy", 20).nullable()
 
     /** [com.competra.domain.orienteering.ByChoiceMode] — итог формата «по выбору»: по баллам или по минимуму КП. */
     val byChoiceMode = varchar("by_choice_mode", 20).default("SCORE")

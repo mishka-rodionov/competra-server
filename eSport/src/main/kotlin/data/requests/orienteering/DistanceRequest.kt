@@ -22,6 +22,13 @@ data class DistanceRequest(
      * null — не менять (старые клиенты поле не знают и затёрли бы значение из IOF XML).
      */
     @SerializedName("minControlsCount") val minControlsCount: Int? = null,
+    /**
+     * Направление дистанции (FORWARD / BY_CHOICE / MARKING), `"INHERIT"` — как у соревнования,
+     * null — не менять (старые клиенты поле не знают).
+     */
+    @SerializedName("direction") val direction: String? = null,
+    /** Режим «по выбору» дистанции (SCORE / MIN_CONTROLS), `"INHERIT"` — как у соревнования, null — не менять. */
+    @SerializedName("byChoiceMode") val byChoiceMode: String? = null,
     @SerializedName("mapUrl") val mapUrl: String? = null,
     @SerializedName("mapTopLeftLat") val mapTopLeftLat: Double? = null,
     @SerializedName("mapTopLeftLng") val mapTopLeftLng: Double? = null,

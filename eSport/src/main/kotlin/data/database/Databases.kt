@@ -209,6 +209,11 @@ fun Application.configureDatabases() {
         // Формат «по выбору» с минимумом КП: режим итога у соревнования и минимум КП у дистанции.
         exec("ALTER TABLE orienteering_competitions ADD COLUMN IF NOT EXISTS by_choice_mode VARCHAR(20) NOT NULL DEFAULT 'SCORE'")
         exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS min_controls_count INTEGER")
+        // Формат на дистанции (null — как у соревнования) и политики КВ по виду дистанции.
+        exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS direction VARCHAR(20)")
+        exec("ALTER TABLE distances ADD COLUMN IF NOT EXISTS by_choice_mode VARCHAR(20)")
+        exec("ALTER TABLE orienteering_competitions ADD COLUMN IF NOT EXISTS time_overtime_policy VARCHAR(20)")
+        exec("ALTER TABLE orienteering_competitions ADD COLUMN IF NOT EXISTS score_overtime_policy VARCHAR(20)")
         // Настройки командного зачёта соревнования (JSON, см. TeamScoringJson); сам зачёт вычисляется.
         exec("ALTER TABLE orienteering_competitions ADD COLUMN IF NOT EXISTS team_scoring TEXT")
         // Режим проведённой жеребьёвки — по нему клиенты подбирают свободную минуту для дозаявки.

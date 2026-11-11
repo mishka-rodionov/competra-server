@@ -23,6 +23,10 @@ object Distances : Table("distances") {
     // Минимум КП для формата «по выбору» с минимумом КП (ByChoiceMode.MIN_CONTROLS); null — взять все КП.
     // Обязательные КП — роль "required" в control_points.
     val minControlsCount = integer("min_controls_count").nullable()
+    // Формат дистанции (OrienteeringDirection / ByChoiceMode); null — как у соревнования.
+    // См. com.competra.domain.orienteering.effectiveCourseFormat.
+    val direction = varchar("direction", 20).nullable()
+    val byChoiceMode = varchar("by_choice_mode", 20).nullable()
     val mapUrl = varchar("map_url", 500).nullable()
     val mapTopLeftLat = double("map_top_left_lat").nullable()
     val mapTopLeftLng = double("map_top_left_lng").nullable()

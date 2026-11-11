@@ -21,6 +21,13 @@ data class OrienteeringCompetitionRequest(
     /** [com.competra.domain.orienteering.OvertimePolicy]: IGNORE / DISQUALIFY / SCORE_PENALTY. */
     @SerializedName("overtimePolicy") val overtimePolicy: String? = null,
     /**
+     * Политика КВ для дистанций, где места по времени (IGNORE / DISQUALIFY). null — клиент не знает
+     * о формате на дистанции: тогда [overtimePolicy] обновляет политику вида формата по умолчанию.
+     */
+    @SerializedName("timeOvertimePolicy") val timeOvertimePolicy: String? = null,
+    /** Политика КВ для дистанций с баллами (IGNORE / DISQUALIFY / SCORE_PENALTY); null — см. [timeOvertimePolicy]. */
+    @SerializedName("scoreOvertimePolicy") val scoreOvertimePolicy: String? = null,
+    /**
      * [com.competra.domain.orienteering.ByChoiceMode]: SCORE / MIN_CONTROLS. null — не менять
      * (старые клиенты поле не знают), для нового соревнования — SCORE.
      */

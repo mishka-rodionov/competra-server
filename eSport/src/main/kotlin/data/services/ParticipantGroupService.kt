@@ -76,7 +76,10 @@ class ParticipantGroupService {
                         throw ForbiddenException("Группа участников принадлежит другому соревнованию")
                     }
                     requireGroupEditAccess(req.competitionId, userId)
-                    if (existing[ParticipantGroups.timeLimitMinutes] != req.timeLimitMinutes) {
+                    // Смена дистанции может сменить формат группы (места по времени ↔ по баллам).
+                    if (existing[ParticipantGroups.timeLimitMinutes] != req.timeLimitMinutes ||
+                        existing[ParticipantGroups.distanceId] != req.normalizedDistanceId()
+                    ) {
                         groupsWithChangedControlTime += req.competitionId to req.groupId
                     }
                     ParticipantGroups.update({ ParticipantGroups.id eq req.groupId }) {

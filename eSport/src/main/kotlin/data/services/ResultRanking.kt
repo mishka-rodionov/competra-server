@@ -4,7 +4,10 @@ import com.competra.data.database.entity.OrienteeringCompetitions
 import com.competra.data.database.entity.OrienteeringResults
 import com.competra.data.database.entity.ParticipantGroups
 import com.competra.data.database.entity.OrienteeringParticipants
+import com.competra.data.database.entity.Distances
+import com.competra.domain.orienteering.OvertimePolicies
 import com.competra.domain.orienteering.OvertimePolicy
+import com.competra.domain.orienteering.effectiveCourseFormat
 import com.competra.domain.orienteering.competitionRanks
 import com.competra.domain.orienteering.ranksByScore
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -49,6 +52,9 @@ internal object ResultRanking {
     /**
      * Пересчитывает статусы КВ и места для результатов группы.
      *
+     * Формат берётся у дистанции группы (см. effectiveCourseFormat), политика КВ — по виду
+     * формата (OvertimePolicies.forCourse).
+     *
      * Для score-О (BY_CHOICE + ByChoiceMode.SCORE) места считаются по сумме баллов (убывание),
      * тай-брейк — по времени прохождения дистанции (totalTime = finish - start участника).
      * Для остальных направлений, в т.ч. «по выбору» с минимумом КП (ByChoiceMode.MIN_CONTROLS), —
@@ -68,16 +74,29 @@ internal object ResultRanking {
             .where { OrienteeringCompetitions.id eq competitionId }
             .singleOrNull()
 
-        val byScore = ranksByScore(
-            direction = orient?.get(OrienteeringCompetitions.direction),
-            byChoiceMode = orient?.get(OrienteeringCompetitions.byChoiceMode)
-        )
-        val policy = OvertimePolicy.fromString(orient?.get(OrienteeringCompetitions.overtimePolicy))
-
-        val groupLimitMinutes = ParticipantGroups.selectAll()
+        val group = ParticipantGroups.selectAll()
             .where { ParticipantGroups.id eq groupId }
             .singleOrNull()
-            ?.get(ParticipantGroups.timeLimitMinutes)
+        val groupLimitMinutes = group?.get(ParticipantGroups.timeLimitMinutes)
+
+        // Формат — у дистанции группы, иначе соревнования (группа без дистанции — соревнования).
+        val distance = group?.get(ParticipantGroups.distanceId)?.let { distanceId ->
+            Distances.selectAll().where { Distances.id eq distanceId }.singleOrNull()
+        }
+        val competitionDirection = orient?.get(OrienteeringCompetitions.direction)
+        val competitionByChoiceMode = orient?.get(OrienteeringCompetitions.byChoiceMode)
+        val byScore = effectiveCourseFormat(
+            distanceDirection = distance?.get(Distances.direction),
+            distanceByChoiceMode = distance?.get(Distances.byChoiceMode),
+            competitionDirection = competitionDirection,
+            competitionByChoiceMode = competitionByChoiceMode
+        ).ranksByScore
+        val policy = OvertimePolicies.resolve(
+            legacy = orient?.get(OrienteeringCompetitions.overtimePolicy),
+            time = orient?.get(OrienteeringCompetitions.timeOvertimePolicy),
+            score = orient?.get(OrienteeringCompetitions.scoreOvertimePolicy),
+            competitionRanksByScore = ranksByScore(competitionDirection, competitionByChoiceMode)
+        ).forCourse(byScore)
 
         // totalTime и penaltyTime хранятся в СЕКУНДАХ (см. OrienteeringResult в Android-клиенте),
         // поэтому лимит переводим в секунды, а не в миллисекунды.

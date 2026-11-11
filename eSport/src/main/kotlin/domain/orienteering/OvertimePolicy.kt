@@ -3,9 +3,10 @@ package com.competra.domain.orienteering
 /**
  * Что делать с результатом, превысившим контрольное время (КВ).
  *
- * Политика задаётся один раз на всё соревнование ([OrienteeringCompetitions.overtimePolicy]),
- * само КВ — на уровне соревнования с переопределением на уровне группы
- * (`group.timeLimitMinutes ?: competition.controlTimeMinutes`).
+ * Политика задаётся на соревновании отдельно для дистанций по времени и по баллам
+ * ([OvertimePolicies], колонки `time_overtime_policy` / `score_overtime_policy`; legacy
+ * `overtime_policy` — для формата по умолчанию), само КВ — на уровне соревнования с
+ * переопределением на уровне группы (`group.timeLimitMinutes ?: competition.controlTimeMinutes`).
  */
 enum class OvertimePolicy {
     /** КВ показывается в информации о соревновании, но на результаты не влияет. */

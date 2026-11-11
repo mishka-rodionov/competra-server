@@ -15,6 +15,13 @@ data class ParticipantGroupDetailResponse(
     val distanceDescription: String? = null,
     /** Минимум КП дистанции (BY_CHOICE + MIN_CONTROLS); null — взять все КП. */
     val distanceMinControlsCount: Int? = null,
+    /**
+     * Эффективное направление группы: своё у её дистанции, иначе соревнования (группа без
+     * дистанции — соревнования). FORWARD / BY_CHOICE / MARKING.
+     */
+    val direction: String = "FORWARD",
+    /** Эффективный режим «по выбору» группы (SCORE / MIN_CONTROLS); значим только при BY_CHOICE. */
+    val byChoiceMode: String = "SCORE",
     /** Собственное КВ группы в минутах (null — наследуется от соревнования). Для BY_CHOICE — лимит времени. */
     val timeLimitMinutes: Int? = null,
     /** Итоговое контрольное время группы: `timeLimitMinutes ?: competition.controlTimeMinutes`. */
@@ -52,8 +59,14 @@ data class CompetitionDetailResponse(
     val direction: String = "FORWARD",
     /** Контрольное время соревнования в минутах — умолчание для групп без своего КВ. */
     val controlTimeMinutes: Int? = null,
-    /** [com.competra.domain.orienteering.OvertimePolicy]: IGNORE / DISQUALIFY / SCORE_PENALTY. */
+    /** [com.competra.domain.orienteering.OvertimePolicy]: IGNORE / DISQUALIFY / SCORE_PENALTY — для формата по умолчанию (legacy). */
     val overtimePolicy: String = "IGNORE",
+    /** Политика КВ для дистанций, где места по времени: IGNORE / DISQUALIFY. */
+    val timeOvertimePolicy: String = "IGNORE",
+    /** Политика КВ для дистанций с баллами: IGNORE / DISQUALIFY / SCORE_PENALTY. */
+    val scoreOvertimePolicy: String = "SCORE_PENALTY",
+    /** true, если у какой-то дистанции эффективный формат отличается от формата соревнования. */
+    val isMixedFormat: Boolean = false,
     /** [com.competra.domain.orienteering.ByChoiceMode]: SCORE / MIN_CONTROLS (значим только для BY_CHOICE). */
     val byChoiceMode: String = "SCORE",
     /** Настройки командного зачёта; null — зачёта нет. */

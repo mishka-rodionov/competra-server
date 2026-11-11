@@ -63,7 +63,7 @@
 
 | Метод | Путь | Тело / параметры | Описание |
 |---|---|---|---|
-| POST | `/api/event/orienteering/save/competitions` | `OrienteeringCompetitionRequest` | Upsert соревнования (conflict-check по `orient.updatedAt` → 409); `teamScoring`: `null` — не менять, `{enabled:false}` — выключить. `isFinishRegistration` (режим «Регистрация на финише», в ответах соревнования и деталях события): `null` — не менять, у нового — `false`. Публикация результатов (`resultsStatus` → `PRELIMINARY`/`OFFICIAL`) отклоняется с 422, если у групп с отметками чипа (`split_times`) не назначена дистанция — в `errors` список групп |
+| POST | `/api/event/orienteering/save/competitions` | `OrienteeringCompetitionRequest` | Upsert соревнования (conflict-check по `orient.updatedAt` → 409); `teamScoring`: `null` — не менять, `{enabled:false}` — выключить. `isFinishRegistration` (режим «Регистрация на финише», в ответах соревнования и деталях события): `null` — не менять, у нового — `false`. Политики КВ по виду дистанции: `timeOvertimePolicy` (места по времени: `IGNORE`/`DISQUALIFY`) и `scoreOvertimePolicy` (по баллам: + `SCORE_PENALTY`); `null` — не менять, тогда legacy `overtimePolicy` обновляет политику вида формата по умолчанию. В ответах (и в деталях события) приходят все три: `overtimePolicy` = политика для формата соревнования по умолчанию Публикация результатов (`resultsStatus` → `PRELIMINARY`/`OFFICIAL`) отклоняется с 422, если у групп с отметками чипа (`split_times`) не назначена дистанция — в `errors` список групп |
 | GET | `/api/event/orienteering/competitions` | — | Соревнования, созданные пользователем. В `competition` (как и во всех ответах с `CompetitionResponse`) есть `organizerName` — организатор (ФИО); клиент обязан возвращать его в `save/competitions`, иначе upsert его затрёт |
 | GET | `/api/event/orienteering/competitions/registered` | — | Соревнования, на которые пользователь зарегистрирован |
 | DELETE | `/api/event/orienteering/competitions/{id}` | — | Удалить соревнование |
@@ -78,13 +78,15 @@
 | POST | `/api/event/orienteering/save/result` | `OrienteeringResultRequest` | Upsert одного результата. `isStatusManual` (статус выставлен организатором вручную — пересчёт КВ его не перетирает) и `readAt` (время считывания чипа на финише, Unix ms): `null` — не менять; в ответах приходят всегда (`false` / `null`). `rank` из запроса сервер пересчитывает по группе: равные результаты делят место (1, 1, 3), участники вне конкурса места не получают |
 | POST | `/api/event/orienteering/save/results` | `List<OrienteeringResultRequest>` | Upsert результатов пачкой |
 | DELETE | `/api/event/orienteering/results/{id}` | — | Удалить результат |
-| POST | `/api/event/orienteering/save/distances` | `List<DistanceRequest>` | Upsert дистанций. Поля карты, координаты старта/финиша и КП без координат = «не трогать» (у КП координаты берутся из сохранённого КП с тем же номером). Новый `mapUrl` вместо старого — старый файл удаляется из хранилища, если на него не ссылается другая дистанция |
+| POST | `/api/event/orienteering/save/distances` | `List<DistanceRequest>` | Upsert дистанций. Поля карты, координаты старта/финиша и КП без координат = «не трогать» (у КП координаты берутся из сохранённого КП с тем же номером). Формат дистанции `direction` (`FORWARD`/`BY_CHOICE`/`MARKING`) и `byChoiceMode` (`SCORE`/`MIN_CONTROLS`): `"INHERIT"` — как у соревнования, `null` — не менять; в ответах `null` = как у соревнования. Смена формата пересчитывает места в группах дистанции. Новый `mapUrl` вместо старого — старый файл удаляется из хранилища, если на него не ссылается другая дистанция |
 | DELETE | `/api/event/orienteering/distances/{id}` | — | Удалить дистанцию |
 | POST | `/api/event/orienteering/import/courses` | multipart: IOF XML-файл + `competitionId` | Импорт дистанций из IOF XML (Mapper) через `IOFXmlParser`; из `<Extensions>` берутся обязательные КП (`Required`) и минимум КП (`FreeOrder minControls`) |
 | POST | `/api/event/orienteering/register` | `RegisterParticipantRequest` | Самостоятельная регистрация пользователя на соревнование (`commandName` ≤ 200 символов, необязательный `teamId` своей клубной команды) |
 | DELETE | `/api/event/orienteering/register/{competitionId}` | — | Отмена своей регистрации |
 
 Права на save/delete проверяются по ролям организаторов (MAIN/JUDGE/SECRETARY/COURSE_SETTER/OTHER).
+
+Формат дистанции: эффективный формат группы = формат её дистанции ?: формат соревнования (группа без дистанции — соревнования). Места и политика КВ считаются по нему. В деталях события у групп — эффективные `direction`/`byChoiceMode`, у события — `isMixedFormat` (есть дистанция с форматом, отличным от соревнования). Спека — `competra-android/docs/specs/per-distance-format.md`.
 
 ### Команда при регистрации — `data/routing/RegistrationTeamRouting.kt` 🔒
 
